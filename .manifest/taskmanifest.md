@@ -197,7 +197,7 @@ Status: <draft|planned|in-progress|blocked|done|dropped>
 ## Открытые вопросы
 - [ ] <вопрос 1>
 - [ ] <вопрос 2>
-````
+```
 
 ---
 
