@@ -1,0 +1,10 @@
+[
+  {
+    "name": "pdd-scan",
+    "path": ".tools/pdd/pdd-scan",
+    "entry": ".tools/pdd/pdd-scan --format md",
+    "desc": "Scan @todo and update .tasks/pdd/@todoregistry.md",
+    "tags": ["pdd","scan"],
+    "exec": true
+  }
+]

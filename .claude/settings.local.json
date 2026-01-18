@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "pdd-scan"
+    ]
+  },
+  "tools": {
+    "registry_path": ".tools/registry.json"
+  },
+  "agent": "local",
+  "agent_settings": {
+    "allow_task_create": true,
+    "allow_issue_create": false,
+    "timeout_seconds": 30
+  }
+}

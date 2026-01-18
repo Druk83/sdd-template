@@ -1,0 +1,78 @@
+{
+  "version": "1.0",
+  "description": "Canonical project structure used by humans and agents (tool discovery, templates, and CI).",
+  "folders": [
+    {
+      "name": ".manifest",
+      "path": ".manifest",
+      "description": "Project manifests (PDD, Task, Issue, TDD, Docker etc.).",
+      "required": true
+    },
+    {
+      "name": ".tasks",
+      "path": ".tasks",
+      "description": "Project tasks (machine‑readable task files). Subfolder `.tasks/pdd/` holds PDD registry.",
+      "required": true
+    },
+    {
+      "name": ".issues",
+      "path": ".issues",
+      "description": "Repository issues / problem reports (markdown files).",
+      "required": false
+    },
+    {
+      "name": ".requirements",
+      "path": ".requirements",
+      "description": "Requirements, scenarios, architecture and related specs.",
+      "required": false
+    },
+    {
+      "name": ".tools",
+      "path": ".tools",
+      "description": "Tooling and helper scripts for automation (scanners, linters, generators).",
+      "required": true
+    },
+    {
+      "name": "docs",
+      "path": "docs",
+      "description": "Documentation and diagrams.",
+      "required": false
+    },
+    {
+      "name": "src",
+      "path": "src",
+      "description": "Source code (language specific layout lives here).",
+      "required": true
+    },
+    {
+      "name": "tests",
+      "path": "tests",
+      "description": "Automated tests (unit/integration/e2e).",
+      "required": true
+    },
+    {
+      "name": ".github",
+      "path": ".github",
+      "description": "CI workflows, ISSUE_TEMPLATE, PULL_REQUEST_TEMPLATE, community files.",
+      "required": false
+    }
+  ],
+  "tools": {
+    "pdd": {
+      "scanner": ".tools/pdd/pdd-scan",
+      "scanner_script": ".tools/pdd/pdd_scan.py",
+      "registry_md": ".tasks/pdd/@todoregistry.md"
+    }
+  },
+  "agents": {
+    "registry_path": ".tools/registry.json",
+    "preferred_invocation": "./.tools/<tool> [args]",
+    "notes": "Agents should only run trusted scripts; registry.json is the canonical list of executable helper tools for agents."
+  },
+  "templates": {
+    "issue_template_dir": "ISSUE_TEMPLATE/ or .github/ISSUE_TEMPLATE/",
+    "task_template": ".manifest/taskmanifest.md (template section)",
+    "pdd_manifest": ".manifest/pddmanifest.md"
+  },
+  "notes": "Keep sensitive local settings (for example .claude/settings.local.json) out of the repo; use .gitignore for machine-local config. History of generated registries is preserved by git — scanner overwrites .tasks/pdd/@todoregistry.md by default."
+}

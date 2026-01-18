@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Lightweight wrapper to run the Python scanner
+PYTHON=${PYTHON:-python3}
+exec "$PYTHON" "$(dirname "$0")/pdd_scan.py" "$@"
