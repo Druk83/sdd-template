@@ -12,13 +12,16 @@
 **Перед заполнением этого документа ОБЯЗАТЕЛЬНО должны существовать:**
 
 ```
-1. docs/requirements/архитектура/сущности.md      <- Object N (номера сущностей)
-2. docs/requirements/архитектура/описание AL.md   <- Процесс AL: N (номера сценариев)
+1. docs/requirements/архитектура/сущности.md      <- ID сущностей (TN-*, SW-*, TS-*, AR-*)
+2. docs/requirements/архитектура/описание AL.md   <- ID сценариев (AP-*)
 ```
 
-В сценариях TL ссылки указываются:
-- На Technology Components из каталога сущностей: `Object N: <ComponentName>`
-- На прикладные сценарии из AL: `Процесс AL: 1, 2, 4`
+В сценариях TL ссылки указываются по типизированным ID:
+- На Nodes: `TN-001: app-container`, `TN-002: db-server`
+- На System Software: `SW-001: PostgreSQL`, `SW-002: Docker`
+- На Technology Services: `TS-001: Database Service`, `TS-002: Monitoring`
+- На Artifacts: `AR-001: docker-image`, `AR-002: helm-chart`
+- На прикладные сценарии из AL: `AP-001, AP-002`
 
 **Если зависимости не созданы** — сначала выполни шаблоны:
 - `.requirements/архитектура/сущности архитекутры.md`

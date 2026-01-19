@@ -12,13 +12,16 @@
 **Перед заполнением этого документа ОБЯЗАТЕЛЬНО должны существовать:**
 
 ```
-1. docs/requirements/архитектура/сущности.md      <- Object N (номера сущностей)
-2. docs/requirements/архитектура/описание BL.md   <- Процесс BL: N (номера процессов)
-3. docs/requirements/архитектура/описание AL.md   <- Процесс AL: N (номера сценариев)
-4. docs/requirements/архитектура/описание TL.md   <- Процесс TL: N (номера сценариев)
+1. docs/requirements/архитектура/сущности.md      <- ID сущностей (BA-*, AC-*, TN-*, ...)
+2. docs/requirements/архитектура/описание BL.md   <- ID процессов BL (BP-*, BE-*)
+3. docs/requirements/архитектура/описание AL.md   <- ID сценариев AL (AP-*, AE-*)
+4. docs/requirements/архитектура/описание TL.md   <- ID сценариев TL (TP-*, TE-*)
 ```
 
-Связи указываются между сущностями из каталога и сценариями из описаний слоёв.
+Связи указываются между сущностями по типизированным ID:
+- `AC-001 --Serving--> BS-001` (Application Component обслуживает Business Service)
+- `AR-001 --Realization--> AC-001` (Artifact реализует Application Component)
+- `TN-001 --Assignment--> AR-001` (Node назначен для Artifact)
 
 **Если зависимости не созданы** — сначала выполни шаблоны:
 - `.requirements/архитектура/сущности архитекутры.md`

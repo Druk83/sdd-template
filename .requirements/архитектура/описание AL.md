@@ -12,13 +12,15 @@
 **Перед заполнением этого документа ОБЯЗАТЕЛЬНО должны существовать:**
 
 ```
-1. docs/requirements/архитектура/сущности.md      <- Object N (номера сущностей)
-2. docs/requirements/архитектура/описание BL.md   <- Процесс BL: N (номера процессов)
+1. docs/requirements/архитектура/сущности.md      <- ID сущностей (AC-*, AI-*, AS-*, DO-*)
+2. docs/requirements/архитектура/описание BL.md   <- ID процессов (BP-*)
 ```
 
-В сценариях AL ссылки указываются:
-- На Application Components из каталога сущностей: `Object N: <ComponentName>`
-- На бизнес-процессы из BL: `Процесс BL: 16, 17, 18`
+В сценариях AL ссылки указываются по типизированным ID:
+- На Application Components: `AC-001: API Gateway`, `AC-002: User Service`
+- На Application Interfaces: `AI-001: REST API`, `AI-002: gRPC API`
+- На бизнес-процессы из BL: `BP-001, BP-002`
+- На Data Objects: `DO-001: UserDTO`, `DO-002: OrderEvent`
 
 **Если зависимости не созданы** — сначала выполни шаблоны:
 - `.requirements/архитектура/сущности архитекутры.md`

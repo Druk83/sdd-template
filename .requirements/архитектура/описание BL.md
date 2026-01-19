@@ -13,14 +13,22 @@
 docs/requirements/архитектура/сущности.md
 ```
 
-Каталог сущностей содержит пронумерованные Business Objects (Object 1, Object 2, ... Object N).
-В сценариях BL ссылки на объекты указываются по номерам из каталога:
+Каталог сущностей содержит типизированные ID сущностей по схеме `<PREFIX>-<NNN>`.
+В сценариях BL ссылки указываются по ID из каталога:
 
 ```
 **Объекты:**
-- Object 3: User Account Profile
-- Object 10: Apartment Config
-- Object 44: Audit Log
+- BO-001: User Account Profile
+- BO-002: Apartment Config
+- BO-003: Audit Log
+
+**Актёры:**
+- BA-001: Customer
+- BA-002: Operator
+
+**Процессы:**
+- BP-001: User Registration
+- BP-002: Order Processing
 ```
 
 **Если каталог сущностей не создан** — сначала выполни шаблон:
