@@ -31,6 +31,63 @@
 
 ---
 
+## МИНИМАЛЬНЫЙ НАБОР СВЯЗЕЙ (MUST)
+
+> **Для простых проектов:** достаточно заполнить только этот раздел.
+> **Для сложных проектов:** после минимума переходи к полному перечню в "ЧАСТЬ 1".
+
+### Обязательные межслойные связи (10 типов)
+
+| # | Source | Relation | Target | Описание | Пример |
+|---|--------|----------|--------|----------|--------|
+| 1 | **AR-*** (Artifact) | Realization | **AC-*** (App Component) | Артефакт реализует компонент | `AR-001 --Realization--> AC-001` |
+| 2 | **TN-*** (Node) | Assignment | **AR-*** (Artifact) | Узел размещает артефакт | `TN-001 --Assignment--> AR-001` |
+| 3 | **SW-*** (System Software) | Assignment | **AC-*** (App Component) | ПО хостит компонент | `SW-001 --Assignment--> AC-001` |
+| 4 | **TS-*** (Tech Service) | Serving | **AC-*** (App Component) | Тех. сервис обслуживает компонент | `TS-001 --Serving--> AC-001` |
+| 5 | **AC-*** (App Component) | Realization | **AI-*** (App Interface) | Компонент реализует интерфейс | `AC-001 --Realization--> AI-001` |
+| 6 | **AS-*** (App Service) | Realization | **BS-*** (Business Service) | Прикл. сервис реализует бизнес-сервис | `AS-001 --Realization--> BS-001` |
+| 7 | **AS-*** (App Service) | Serving | **BP-*** (Business Process) | Прикл. сервис обслуживает процесс | `AS-001 --Serving--> BP-001` |
+| 8 | **AI-*** (App Interface) | Serving | **BR-*** (Business Role) | Интерфейс обслуживает роль | `AI-001 --Serving--> BR-001` |
+| 9 | **DO-*** (Data Object) | Realization | **BO-*** (Business Object) | Данные реализуют бизнес-объект | `DO-001 --Realization--> BO-001` |
+| 10 | **AE-*** (App Event) | Triggering | **BE-*** (Business Event) | Прикл. событие триггерит бизнес-событие | `AE-001 --Triggering--> BE-001` |
+
+### Обязательные внутрислойные связи (5 типов)
+
+| # | Source | Relation | Target | Описание | Пример |
+|---|--------|----------|--------|----------|--------|
+| 1 | **BA-*** (Actor) | Assignment | **BR-*** (Role) | Актор исполняет роль | `BA-001 --Assignment--> BR-001` |
+| 2 | **BR-*** (Role) | Assignment | **BP-*** (Process) | Роль выполняет процесс | `BR-001 --Assignment--> BP-001` |
+| 3 | **BP-*** (Process) | Access | **BO-*** (Object) | Процесс читает/пишет объект | `BP-001 --Access--> BO-001` |
+| 4 | **AC-*** (Component) | Access | **DO-*** (Data Object) | Компонент читает/пишет данные | `AC-001 --Access--> DO-001` |
+| 5 | **BE-*** (Event) | Triggering | **BP-*** (Process) | Событие запускает процесс | `BE-001 --Triggering--> BP-001` |
+
+### Минимальная цепочка трассировки
+
+```
+[Business Layer]
+BA-001 (Actor) --Assignment--> BR-001 (Role) --Assignment--> BP-001 (Process)
+                                                                    |
+                                                            --Access--> BO-001 (Object)
+                                                                    |
+                                                            <--Realization--
+[Application Layer]                                                 |
+AC-001 (Component) --Realization--> AS-001 (Service) --Realization--> BS-001
+         |                                    |
+         --Access--> DO-001 (Data) --Realization--> BO-001
+         |
+         <--Realization--
+[Technology Layer]    |
+AR-001 (Artifact) --deployed on--> TN-001 (Node)
+         ^
+         |
+SW-001 (Software) --Assignment--> AC-001
+```
+
+> **Порог готовности:** минимум 15 связей (10 межслойных + 5 внутрислойных) для базового сценария.
+> После заполнения минимума — переходи к полному перечню для детализации.
+
+---
+
 ## Подсказка: типы связей ArchiMate 3.2
 
 ### Структурные связи (Structural Relations)
