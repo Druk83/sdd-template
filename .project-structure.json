@@ -39,16 +39,22 @@
       "required": false
     },
     {
+      "name": ".claude",
+      "path": ".claude",
+      "description": "Claude Code local settings and agent configuration.",
+      "required": false
+    },
+    {
       "name": "src",
       "path": "src",
       "description": "Source code (language specific layout lives here).",
-      "required": true
+      "required": false
     },
     {
       "name": "tests",
       "path": "tests",
       "description": "Automated tests (unit/integration/e2e).",
-      "required": true
+      "required": false
     },
     {
       "name": ".github",
