@@ -1,19 +1,24 @@
 [
   {
     "name": "pdd-scan",
-    "path": ".tools/pdd/pdd-scan",
-    "entry": ".tools/pdd/pdd-scan --format md",
+    "path": ".tools/pdd/pdd_scan.py",
+    "entry": "python .tools/pdd/pdd_scan.py --format md",
+    "entry_win": ".tools/pdd/pdd-scan.bat --format md",
+    "entry_unix": ".tools/pdd/pdd-scan --format md",
     "desc": "Scan @todo and update .tasks/pdd/@todoregistry.md",
     "tags": ["pdd","scan"],
-    "exec": true
+    "exec": true,
+    "runtime": "python"
   },
   {
     "name": "plantuml-render",
-    "path": ".tools/plantuml-render/plantuml-render",
-    "entry": ".tools/plantuml-render/plantuml-render --format png",
+    "path": ".tools/plantuml-render/plantuml_render.py",
+    "entry": "python .tools/plantuml-render/plantuml_render.py --format png",
+    "entry_win": ".tools/plantuml-render/plantuml-render.bat --format png",
+    "entry_unix": ".tools/plantuml-render/plantuml-render --format png",
     "desc": "Render .plantuml files to PNG/SVG using Kroki.io API",
     "tags": ["plantuml", "diagram", "render", "visualization"],
     "exec": true,
-    "runtime": "python3"
+    "runtime": "python"
   }
 ]

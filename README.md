@@ -1,6 +1,6 @@
 # Шаблоны для разработки требований
 
-> **Версия:** 1.4.6
+> **Версия:** 1.4.9
 
 Набор шаблонов для создания технической документации программных проектов с помощью AI-агентов.
 
@@ -22,6 +22,7 @@
 
 ### Создание нового проекта
 
+**Linux / macOS / Git Bash (Windows):**
 ```bash
 # Клонировать шаблон
 git clone --depth 1 https://github.com/Druk83/sdd-template.git <project-name>
@@ -36,6 +37,26 @@ mkdir -p docs/requirements
 git add .
 git commit -m "Initial commit from sdd-template"
 ```
+
+<details>
+<summary><b>Windows PowerShell</b></summary>
+
+```powershell
+# Клонировать шаблон
+git clone --depth 1 https://github.com/Druk83/sdd-template.git <project-name>
+cd <project-name>
+
+# Отвязать от исходного репозитория
+Remove-Item -Recurse -Force .git
+
+# Инициализировать свой репозиторий
+git init
+New-Item -ItemType Directory -Force -Path docs/requirements
+git add .
+git commit -m "Initial commit from sdd-template"
+```
+
+</details>
 
 ### Запуск документирования
 
