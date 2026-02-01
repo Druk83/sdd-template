@@ -112,7 +112,7 @@
 
 ## pdd.H4.7 Сканирование и реестр @todo
 **Канонический инструмент:**
-`.tools/pdd/pdd-scan` (запуск/опции/форматы - см. [.tools/pdd/README.md](.tools/pdd/README.md))
+`.tools/pdd/pdd-scan` (запуск/опции/форматы - см. [.tools/pdd/README.md](../.tools/pdd/README.md))
 **Рекомендуемый порядок:**
 1. Обновить реестр: запусти сканер PDD (см. `.tools/pdd/README.md`)
    - Результат: обновленный реестр в `.tasks/pdd/`

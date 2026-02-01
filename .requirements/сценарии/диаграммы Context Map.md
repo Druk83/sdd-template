@@ -1,7 +1,115 @@
-# Диаграммы Context Map (DDD) — шаблон построения
+# Создай диаграмму Context Map (H6)
 
-> **Важно:** этот файл в `.requirements/**` — **методика** (read-only).
-> Определяет правила построения Context Map диаграмм для визуализации связей между Bounded Contexts.
+Процедура этапа [5.4] из `.requirements/трек разработки.md`.
+
+> **Важно:** это **методика** (read-only) в `.requirements/**`.
+
+---
+
+**Входные данные:**
+- `docs/requirements/сценарии/<domain_slug>/ограниченные контексты.md` (этап [5.3])
+
+**Выходные данные:**
+- `docs/requirements/сценарии/<domain_slug>/diagrams/context-map.plantuml` (H8)
+
+---
+
+## Примеры заполнения (ОБЯЗАТЕЛЬНО изучить перед созданием)
+
+> **Важно:** Примеры ниже носят иллюстративный характер. Конкретные BC и связи
+> должны определяться на основе документа `ограниченные контексты.md` проекта.
+
+### Считать верным: Достаточная детализация Context Map
+
+```plantuml
+@startuml ContextMap_Orders
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
+
+title Context Map: Order Management
+
+skinparam component {
+    BackgroundColor<<Core>> #FFF59D
+    BackgroundColor<<Supporting>> #B3E5FC
+    BackgroundColor<<External>> #F8BBD9
+    BackgroundColor<<ACL>> #FFCC80
+}
+
+component "BC: Order Processing\nOrder lifecycle" as Orders <<Core>>
+component "BC: Inventory\nStock management" as Inventory <<Supporting>>
+component "BC: Notifications\nMessaging" as Notify <<Supporting>>
+component "EXT: Payment Gateway" as Payment <<External>>
+component "ACL" as ACL_Payment <<ACL>>
+
+Orders -[#1976D2,thickness=2]-> Inventory : <color:#1976D2>U/D</color>
+Orders .[#2196F3,dashed].> Notify : <color:#2196F3>OrderCreated</color>
+Payment -[#FF9800]-> ACL_Payment
+ACL_Payment -[#FF9800]-> Orders : <color:#FF9800>ACL</color>
+
+legend right
+|= Тип BC |= Цвет |
+| Core | Желтый |
+| Supporting | Голубой |
+| External | Розовый |
+| ACL | Оранжевый |
+endlegend
+
+@enduml
+```
+
+**Почему верно:**
+- BC классифицированы (Core/Supporting/External)
+- Типы связей указаны (U/D, ACL, Event Flow)
+- Цвета соответствуют типам BC
+- Легенда присутствует
+- Направление зависимостей указано
+
+### Считать неверным: Недостаточная детализация
+
+```plantuml
+@startuml ContextMap
+Orders --> Inventory
+Orders --> Payments
+Orders --> Notifications
+@enduml
+```
+
+**Почему неверно:**
+- BC не классифицированы (нет Core/Supporting/Generic)
+- Типы связей не указаны (U/D? CF? ACL?)
+- Нет цветовой схемы
+- Нет легенды
+- Нет описания ответственности BC
+- Невозможно понять архитектуру интеграций
+
+---
+
+## Минимальные критерии детализации Context Map
+
+| Элемент | Минимум | Как проверить |
+|---------|---------|---------------|
+| **BC на диаграмме** | Все BC из `ограниченные контексты.md` | Сравнить с разделом 2 |
+| **Классификация BC** | Указан тип (Core/Supporting/Generic) | Цвет + <<type>> |
+| **Внешние системы** | Все EXT из интеграций | Отдельный цвет (розовый) |
+| **ACL** | Показаны где есть legacy интеграции | Оранжевый цвет |
+| **Типы связей** | U/D, CF, ACL, OHS для каждой связи | Метка на стрелке |
+| **Событийные потоки** | Из Integration Matrix | Пунктирные стрелки с именем события |
+| **Легенда** | Присутствует | Внизу или справа диаграммы |
+| **Рендеринг** | Без ошибок | Проверить через PlantUML/Kroki |
+
+---
+
+## Правила извлечения данных для Context Map
+
+| Откуда | Что извлекать | Куда |
+|--------|---------------|------|
+| Ограниченные контексты, раздел 2 | Список BC с ответственностями | `component` элементы |
+| Ограниченные контексты, раздел 2 | Тип BC (Core/Supporting/Generic) | `<<type>>` стереотип |
+| Ограниченные контексты, раздел 3 | Context Map связи | Стрелки с типами (U/D, CF, ACL) |
+| Ограниченные контексты, раздел 3.1 | ACL | `component` с `<<ACL>>` |
+| Ограниченные контексты, раздел 4 | Integration Matrix | Пунктирные стрелки (Event Flow) |
+| Карточка домена, `interfaces` | Внешние системы | `component` с `<<External>>` |
 
 ---
 
@@ -348,31 +456,9 @@ Context Map визуализирует данные из раздела 4 "Integ
 
 ---
 
-## 8. Чеклист
+## 8. Примеры
 
-### Структура
-- [ ] Все BC из раздела 2 `ограниченные контексты.md` присутствуют
-- [ ] BC классифицированы (Core/Supporting/Generic)
-- [ ] Внешние системы выделены отдельно
-- [ ] ACL показаны где есть интеграция с legacy
-
-### Связи
-- [ ] Типы связей соответствуют разделу 3 `Context Map`
-- [ ] События из Integration Matrix визуализированы
-- [ ] Направление U/D (Upstream/Downstream) указано
-- [ ] Цвета связей соответствуют типам
-
-### Оформление
-- [ ] Легенда присутствует
-- [ ] Цвета BC соответствуют типам
-- [ ] Диаграмма рендерится без ошибок
-- [ ] Не перегружена (max 10-12 BC на диаграмму)
-
----
-
-## 9. Примеры
-
-### 9.1 Smart Home Context Map
+### 8.1 Smart Home Context Map
 
 ```plantuml
 @startuml ContextMap_SmartHome
@@ -438,8 +524,36 @@ endlegend
 
 ---
 
-## 10. Ссылки
+## 9. Ссылки
 
 - Ограниченные контексты: `.requirements/сценарии/ограниченные контексты.md`
 - Определение доменов: `.requirements/домены/определение доменов.md`
 - Формат диаграмм: `docs/requirements/обоснование выбора.md`
+
+---
+
+## Критерии готовности этапа [5.4] (Context Map)
+
+### Минимальные (блокируют завершение этапа [5])
+
+- [ ] **BC на диаграмме:** все BC из `ограниченные контексты.md` присутствуют
+- [ ] **Классификация:** BC типизированы (Core/Supporting/Generic)
+- [ ] **Внешние системы:** все EXT из интеграций показаны
+- [ ] **Типы связей:** указаны (U/D, CF, ACL, OHS) для каждой связи
+- [ ] **Событийные потоки:** события из Integration Matrix визуализированы
+- [ ] **Легенда:** присутствует с расшифровкой цветов и связей
+- [ ] **Рендеринг:** диаграмма рендерится без ошибок
+- [ ] **H8 создан:** `docs/requirements/сценарии/<domain_slug>/diagrams/context-map.plantuml`
+
+### Рекомендуемые
+
+- [ ] **ACL:** показаны для интеграций с legacy/внешними системами
+- [ ] **Направление U/D:** указано Upstream/Downstream
+- [ ] **Цветовая схема:** соответствует стандарту (Core=желтый, Supporting=голубой, etc.)
+- [ ] **Размер:** не перегружена (max 10-12 BC на диаграмму)
+
+### Проверка соответствия
+
+- [ ] Сравнить с разделом 2 `ограниченные контексты.md` — все BC присутствуют
+- [ ] Сравнить с разделом 3 `Context Map` — все связи показаны
+- [ ] Сравнить с разделом 4 `Integration Matrix` — события визуализированы
