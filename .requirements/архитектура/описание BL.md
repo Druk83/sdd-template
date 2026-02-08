@@ -1,7 +1,8 @@
-# Business Layer (BL) — ArchiMate 3.2
+# Business Layer (BL) — ArchiMate 3.2 (H6)
 
 > **Важно:** этот файл в `.requirements/**` — **шаблон** (read-only).
 > Заполненная версия хранится в: `docs/requirements/архитектура/описание BL.md`.
+> **Подход:** `.approach/archimate.md` (концептуальная методология ArchiMate).
 
 ---
 
@@ -726,6 +727,28 @@ Rel_Realization(bp1, bs1)
 @enduml
 ```
 ```
+
+---
+
+---
+
+## Примеры (H7)
+
+**Считать верным:**
+- Процессы описаны без AL/TL терминов и ссылаются на `docs/**`.
+- Каждый Business Object связан с Object ID из структуры данных.
+
+**Считать неверным:**
+- Используются технические термины (API, DB, сервисы) или нет ссылок на источники.
+
+---
+
+## Критерии готовности
+
+- [ ] Все домены покрыты Business Processes.
+- [ ] Business Events связаны с процессами.
+- [ ] Business Objects связаны с Object ID.
+- [ ] Отсутствуют AL/TL термины.
 
 ---
 

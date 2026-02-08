@@ -5,3 +5,27 @@ docs/
 # Editor/OS files
 *.swp
 .DS_Store
+.source/последовательность событий.plantuml
+.source/3.plantuml
+.source/2.plantuml
+.source/1.plantuml
+.diagrams/3.plantuml
+.diagrams/3.png
+.diagrams/1.plantuml
+.diagrams/2.plantuml
+.diagrams/SDD-Sequence-01.plantuml
+.diagrams/SDD-Sequence-02.plantuml
+.diagrams/SDD-Sequence-03.plantuml
+.diagrams/SDD-Sequence-04.plantuml
+.diagrams/SDD-Sequence-05.plantuml
+.diagrams/SDD-Sequence-06.plantuml
+.diagrams/SDD-Sequence-07.plantuml
+.diagrams/SDD-Sequence-08.plantuml
+.diagrams/SDD-Sequence-09.plantuml
+.diagrams/SDD-Sequence-10.plantuml
+.diagrams/SDD-Sequence-11.plantuml
+.diagrams/SDD-Sequence-12.plantuml
+.diagrams/SDD-Sequence-13.plantuml
+.diagrams/SDD-Sequence-14.plantuml
+.diagrams/SDD-Sequence-15.plantuml
+.diagrams/SDD-Sequence-16.plantuml

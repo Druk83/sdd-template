@@ -14,8 +14,8 @@
 ## hierarchy.H4.1 Определение уровней документов
 | Уровень | Назначение | Примеры |
 |---------|------------|---------|
-| H0 | Конституция | `.claude/CLAUDE.md` |
-| H1 | Взгляды (внутри H0) | H1.1-H1.14 в CLAUDE.md |
+| H0 | Конституция | `.claude/CLAUDE.md`, `.github\agents\copilot-instructions.md`, `AGENTS.md` |
+| H1 | Взгляды (внутри H0) | H1.1-H1.14 в `.claude\CLAUDE.md` или `.github\agents\copilot-instructions.md` или `AGENTS.md` |
 | H2 | Манифесты | `.manifest/*.md` |
 | H3 | Политики (внутри H2) | Секции манифестов |
 | H4 | Стандарты (внутри H2) | Детали манифестов |
@@ -25,7 +25,7 @@
 | H8 | Результаты | `docs/`, `/README.md` |
 
 **Определение по расположению:**
-- `.claude/CLAUDE.md` → H0
+- `.claude/CLAUDE.md`, `.github\agents\copilot-instructions.md`, `AGENTS.md` → H0
 - `.manifest/*.md` → H2
 - `.requirements/*.md` → H5
 - `docs/requirements/*` → H8

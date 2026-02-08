@@ -1,4 +1,4 @@
-# Rules and Constraints for Claude Code (H0)
+# Rules and Constraints for Codex (H0)
 
 ## ВАЖНЕЙШИЕ ВЗГЛЯДЫ (H1)
 
@@ -140,7 +140,7 @@
 **Приоритет при конфликте:**
 1. Локальный манифест в директории компонента (`./<component>/manifest.md`)
 2. Глобальный манифест (`.manifest/<название>manifest.md`)
-3. Инструкции из этого файла (CLAUDE.md)
+3. Инструкции из этого файла (AGENTS.md)
 
 ## H1.11 Применяй правильно иерархию в документах
 Прочитай `.manifest\hierarchymanifest.md`в нем опредены политики иерархии документации в проекте

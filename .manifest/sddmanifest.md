@@ -14,7 +14,7 @@
 ## sdd.H4.1 Процедура принятия системных правил
 **Разработчик инициирует:**
 ```
-Прими системные правила из .claude/CLAUDE.md
+Прими системные правила из .claude/CLAUDE.md или .github\agents\copilot-instructions.md или AGENTS.md
 Мы выполняем задачу по разработке технической документации.
 ```
 **Агент подтверждает:**
@@ -22,7 +22,7 @@
 Системные правила приняты. Готов к работе по SDD.
 ```
 **Файлы для чтения:**
-- `.claude/CLAUDE.md` (для Claude) или `.github/copilot-instructions.md` (для Copilot)
+- `.claude/CLAUDE.md` (для Claude) или `.github/copilot-instructions.md` (для Copilot) или `AGENTS.md`
 - `.manifest/sddmanifest.md` (этот файл)
 
 ---

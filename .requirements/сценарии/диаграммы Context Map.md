@@ -3,6 +3,7 @@
 Процедура этапа [5.4] из `.requirements/трек разработки.md`.
 
 > **Важно:** это **методика** (read-only) в `.requirements/**`.
+> **Подход:** `.approach/context-map.md` (концептуальная методология Context Map).
 
 ---
 

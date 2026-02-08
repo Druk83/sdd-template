@@ -1,0 +1,666 @@
+@startuml SDD-Sequence-Ideal
+    title Последовательность событий SDD\n(4 фазы в каждом этапе/подэтапе)
+
+    actor "Разработчик" as Dev
+    participant "Агент" as Agent
+    database ".source/" as Source
+    database "docs/requirements/" as Docs
+    collections ".manifest/" as Manifest
+    collections ".requirements/" as Templates
+    collections ".approach/" as Approach
+    participant ".tools/" as Tools
+
+    legend right
+    |= 4 фазы в каждом этапе |
+    | 1. Инициализация (скелет) |
+    | 2. Базовый контекст |
+    | 3. Уточнение |
+    | 4. Финализация |
+    |= Инструменты SDD |
+    | Gap Tracking - на всех этапах |
+    | Чеклисты готовности - на всех этапах |
+    | Точки подтверждения - [2],[6],[7] |
+    | Плейсхолдеры - по необходимости |
+    |= Подходы (.approach/) |
+    | **Выбор на этапе [2]** |
+    | Методологии: DDD, Event Storming, |
+    | Context Map, CQRS, Event Sourcing |
+    | Паттерны: из arch-patterns (GitHub) |
+    |= Нотация |
+    | ArchiMate - всегда для [7] |
+    |= Инструменты диаграмм |
+    | PlantUML - [5.4],[7.1] |
+    | Конвенции - diagrams.H4.2 |
+    | Рендеринг - .tools/plantuml-render/ |
+    endlegend
+
+    /'========================================='/
+    /'  ПОДГОТОВКА                             '/
+    /'========================================='/
+
+    == ПОДГОТОВКА ==
+
+    Dev -> Agent: "Изучи материалы в .source/,\nработаем по SDD"
+    activate Agent
+
+    Agent -> Source: Читает ВСЕ файлы
+    Agent -> Manifest: Читает H0, H1, H2 манифесты
+    note right of Agent
+    sddmanifest.md
+    gapmanifest.md
+    diagramsmanifest.md
+    versionmanifest.md
+    end note
+    Agent -> Templates: Читает трек разработки.md (H5)
+    Agent -> Approach: Читает registry.json
+    note right of Agent
+    Реестр подходов:
+    event-storming
+    context-map
+    ddd-patterns
+    cqrs
+    event-sourcing
+    pub-sub
+    archimate
+    end note
+    Agent -> Agent: Анализирует .source/
+    Agent --> Dev: "Готов. Начинаю этап [1]"
+
+    /'========================================='/
+    /'  ЭТАП [1]: ПРЕДМЕТНАЯ ОБЛАСТЬ           '/
+    /'========================================='/
+
+    == ЭТАП [1]: ПРЕДМЕТНАЯ ОБЛАСТЬ ==
+
+    Agent -> Templates: Читает H6 шаблон
+    Agent -> Docs: Ф1: Создает скелет
+    Agent -> Docs: Ф2: Заполняет базовый контекст
+    note right of Agent: Базовый контекст:\nглоссарий, акторы, UC
+    alt Есть неясности
+        Agent --> Dev: Ф3: Вопросы по неясностям
+        Dev -> Agent: Ответы
+    else Все ясно
+        Agent -> Agent: Ф3: Пропуск (нет вопросов)
+    end
+    Agent -> Agent: Чеклист H6 + GAP tracking
+    opt GAP найдены
+        Agent -> Docs: Записывает в gap-tracking.md
+        note right of Agent: Плейсхолдеры\nдля открытых GAP
+    end
+    Agent --> Dev: Ф4: "Этап [1] готов. Принять?"
+    alt Принято
+        Dev -> Agent: "Принято"
+    else Требуется доработка
+        Dev -> Agent: "Доработать: <замечания>"
+        Agent -> Docs: Вносит правки
+        Agent --> Dev: Ф4: "Исправлено. Принять?"
+        Dev -> Agent: "Принято"
+    end
+
+    /'========================================='/
+    /'  ЭТАП [1] ЗАВЕРШЕНИЕ: README            '/
+    /'========================================='/
+
+    == ЭТАП [1] ЗАВЕРШЕНИЕ: README L0 ==
+
+    Agent -> Manifest: Читает readmemanifest.md
+    Agent -> Docs: Создает /README.md (L0)
+    Agent --> Dev: "README L0 создан. Принять?"
+    Dev -> Agent: "Принято"
+
+    /'========================================='/
+    /'  ЭТАП [2]: ОБОСНОВАНИЕ ВЫБОРА           '/
+    /'========================================='/
+
+    == ЭТАП [2]: ОБОСНОВАНИЕ ВЫБОРА ==
+
+    note over Agent
+    Выбор методологии и паттерна
+    определяет подходы для [4]-[7]
+    end note
+
+    Agent -> Templates: Читает H6 шаблон
+    Agent -> Approach: Читает registry.json
+    note right of Agent: Доступные подходы:\nМетодологии: DDD, Event Storming,\nContext Map\nПаттерны данных: CQRS,\nEvent Sourcing, Pub/Sub\nАрхитектура: arch-patterns
+    Agent -> Docs: Ф1: Создает скелет
+    Agent -> Docs: Ф2: Заполняет базовый контекст
+    note right of Agent
+    Точки подтверждения:
+    - стандарт
+    - методология -> подход
+    - паттерн -> подход
+    - стек
+    end note
+    loop Ф3: По каждому решению (sdd.H4.10)
+        Agent --> Dev: "Решение N: варианты, рекомендация"
+        note right of Agent
+        Методология: DDD/Event Storming/...
+        Паттерн: Layered/Hexagonal/Clean
+        end note
+        alt Выбор из вариантов
+            Dev -> Agent: Выбор варианта
+        else Свой вариант
+            Dev -> Agent: "Другое: <описание>"
+        end
+    end
+    Agent -> Docs: Фиксирует "Итог выбора" (3.5.6)
+    note right of Agent
+    Выбранные подходы для [4]-[7]:
+    - методология.md
+    - паттерн.md
+    end note
+    Agent -> Agent: Чеклист H6 + GAP tracking
+    Agent --> Dev: Ф4: "Этап [2] готов. Принять?"
+    alt Принято
+        Dev -> Agent: "Принято"
+    else Требуется доработка
+        Dev -> Agent: "Доработать: <замечания>"
+        Agent -> Docs: Вносит правки
+        Agent --> Dev: Ф4: "Исправлено. Принять?"
+        Dev -> Agent: "Принято"
+    end
+
+    /'========================================='/
+    /'  ЭТАП [3]: ТРЕБОВАНИЯ                   '/
+    /'========================================='/
+
+    == ЭТАП [3]: ТРЕБОВАНИЯ ==
+
+    Agent -> Templates: Читает H6 шаблон
+    Agent -> Docs: Ф1: Создает скелет
+    Agent -> Docs: Ф2: Заполняет FR/NFR
+    note right of Agent: Базовый контекст:\nFR-*, NFR-*
+    alt Есть неясности
+        Agent --> Dev: Ф3: Вопросы
+        Dev -> Agent: Ответы
+    else Все ясно
+        Agent -> Agent: Ф3: Пропуск
+    end
+    Agent -> Agent: Чеклист H6 + GAP tracking
+    Agent --> Dev: Ф4: "Этап [3] готов. Принять?"
+    alt Принято
+        Dev -> Agent: "Принято"
+    else Требуется доработка
+        Dev -> Agent: "Доработать: <замечания>"
+        Agent -> Docs: Вносит правки
+        Agent --> Dev: Ф4: "Исправлено. Принять?"
+        Dev -> Agent: "Принято"
+    end
+
+    /'========================================='/
+    /'  ЭТАП [4]: ДОМЕНЫ                       '/
+    /'========================================='/
+
+    == ЭТАП [4]: ДОМЕНЫ ==
+
+    Agent -> Templates: Читает H6 шаблон
+    alt DDD выбран на [2]
+        Agent -> Approach: Читает ddd-patterns.md
+    else Data-Centric выбран
+        Agent -> Agent: Без DDD подхода
+    end
+    Agent -> Docs: Ф1: Создает скелет
+    Agent -> Docs: Ф2: Заполняет домены
+    note right of Agent: Базовый контекст:\nдомены, границы\n(согласно выбору [2])
+    alt Есть неясности
+        Agent --> Dev: Ф3: Вопросы
+        Dev -> Agent: Ответы
+    else Все ясно
+        Agent -> Agent: Ф3: Пропуск
+    end
+    Agent -> Agent: Чеклист H6 + GAP tracking
+    Agent --> Dev: Ф4: "Этап [4] готов. Принять?"
+    alt Принято
+        Dev -> Agent: "Принято"
+    else Требуется доработка
+        Dev -> Agent: "Доработать: <замечания>"
+        Agent -> Docs: Вносит правки
+        Agent --> Dev: Ф4: "Исправлено. Принять?"
+        Dev -> Agent: "Принято"
+    end
+
+    /'========================================='/
+    /'  ЭТАП [5]: СЦЕНАРИИ                     '/
+    /'========================================='/
+
+    == ЭТАП [5]: СЦЕНАРИИ ==
+
+    note over Agent
+    Подходы согласно выбору на [2]:
+    - выбранная методология моделирования
+    - выбранный архитектурный паттерн
+    Подэтапы: [5.1], [5.2], [5.3], [5.4]
+    Каждый подэтап = 4 фазы
+    end note
+
+    /'--- Подэтап [5.1]: Карта процесса ---'/
+
+    group [5.1] Карта процесса
+        Agent -> Templates: Читает H6 шаблон
+        opt Event Storming выбран на [2]
+            Agent -> Approach: Читает event-storming.md
+        end
+        Agent -> Docs: Ф1: Создает скелет
+        Agent -> Docs: Ф2: Заполняет карту процесса
+        note right of Agent: согласно выбору [2]
+        alt Есть неясности
+            Agent --> Dev: Ф3: Вопросы
+            Dev -> Agent: Ответы
+        else Все ясно
+            Agent -> Agent: Ф3: Пропуск
+        end
+        Agent -> Agent: Чеклист H6 + GAP tracking
+        Agent --> Dev: Ф4: "[5.1] готов. Принять?"
+        alt Принято
+            Dev -> Agent: "Принято"
+        else Требуется доработка
+            Dev -> Agent: "Доработать: <замечания>"
+            Agent -> Docs: Вносит правки
+            Agent --> Dev: Ф4: "Исправлено. Принять?"
+            Dev -> Agent: "Принято"
+        end
+    end
+
+    /'--- Подэтап [5.2]: Каталог мероприятий ---'/
+
+    group [5.2] Каталог мероприятий
+        Agent -> Templates: Читает H6 шаблон
+        opt Event Storming выбран на [2]
+            Agent -> Approach: Читает event-storming.md
+        end
+        opt Pub/Sub выбран на [2]
+            Agent -> Approach: Читает pub-sub.md
+        end
+        Agent -> Docs: Ф1: Создает скелет
+        Agent -> Docs: Ф2: Заполняет EVT, CMD
+        note right of Agent: согласно выбору [2]
+        alt Есть неясности
+            Agent --> Dev: Ф3: Вопросы
+            Dev -> Agent: Ответы
+        else Все ясно
+            Agent -> Agent: Ф3: Пропуск
+        end
+        Agent -> Agent: Чеклист H6 + GAP tracking
+        Agent --> Dev: Ф4: "[5.2] готов. Принять?"
+        alt Принято
+            Dev -> Agent: "Принято"
+        else Требуется доработка
+            Dev -> Agent: "Доработать: <замечания>"
+            Agent -> Docs: Вносит правки
+            Agent --> Dev: Ф4: "Исправлено. Принять?"
+            Dev -> Agent: "Принято"
+        end
+    end
+
+    /'--- Подэтап [5.3]: Ограниченные контексты ---'/
+
+    group [5.3] Ограниченные контексты
+        Agent -> Templates: Читает H6 шаблон
+        opt Context Mapping выбран на [2]
+            Agent -> Approach: Читает context-map.md
+        end
+        opt DDD выбран на [2]
+            Agent -> Approach: Читает ddd-patterns.md
+        end
+        Agent -> Docs: Ф1: Создает скелет
+        Agent -> Docs: Ф2: Заполняет BC
+        note right of Agent: согласно выбору [2]
+        alt Есть неясности
+            Agent --> Dev: Ф3: Вопросы
+            Dev -> Agent: Ответы
+        else Все ясно
+            Agent -> Agent: Ф3: Пропуск
+        end
+        Agent -> Agent: Чеклист H6 + GAP tracking
+        Agent --> Dev: Ф4: "[5.3] готов. Принять?"
+        alt Принято
+            Dev -> Agent: "Принято"
+        else Требуется доработка
+            Dev -> Agent: "Доработать: <замечания>"
+            Agent -> Docs: Вносит правки
+            Agent --> Dev: Ф4: "Исправлено. Принять?"
+            Dev -> Agent: "Принято"
+        end
+    end
+
+    /'--- Подэтап [5.4]: Диаграммы сценариев ---'/
+
+    group [5.4] Диаграммы сценариев + Context Map
+        note over Agent
+        PlantUML + выбранный подход
+        Конвенции: diagrams.H4.2
+        end note
+        Agent -> Templates: Читает H6 шаблон
+        opt Context Mapping выбран на [2]
+            Agent -> Approach: Читает context-map.md
+        end
+        Agent -> Manifest: Читает diagramsmanifest.md
+        note right of Agent: Конвенции именования\nсогласно выбору [2]
+        Agent -> Docs: Ф1: Создает скелет .plantuml
+        Agent -> Docs: Ф2: Заполняет диаграммы
+        alt Есть неясности
+            Agent --> Dev: Ф3: Вопросы по визуализации
+            Dev -> Agent: Ответы
+        else Все ясно
+            Agent -> Agent: Ф3: Пропуск
+        end
+        Agent -> Agent: Чеклист H6 + GAP tracking
+        Agent --> Dev: Ф4: "[5.4] готов. Принять?"
+        alt Принято
+            Dev -> Agent: "Принято"
+        else Требуется доработка
+            Dev -> Agent: "Доработать: <замечания>"
+            Agent -> Docs: Вносит правки
+            Agent --> Dev: Ф4: "Исправлено. Принять?"
+            Dev -> Agent: "Принято"
+        end
+
+        /'--- Рендеринг диаграмм [5.4] ---'/
+        Agent -> Tools: Рендеринг .plantuml -> PNG
+        note right of Tools: .tools/plantuml-render/\nKroki API
+        alt Рендеринг успешен
+            Tools --> Agent: PNG созданы
+            Agent -> Docs: Сохраняет PNG в diagrams/
+        else Ошибка рендеринга
+            Tools --> Agent: Ошибка
+            Agent --> Dev: "Ошибка рендеринга: <описание>"
+            Dev -> Agent: "Исправить/Пропустить"
+        end
+    end
+
+    /'========================================='/
+    /'  ЭТАП [6]: СТРУКТУРА ДАННЫХ             '/
+    /'========================================='/
+
+    == ЭТАП [6]: СТРУКТУРА ДАННЫХ ==
+
+    Agent -> Templates: Читает H6 шаблон
+    opt CQRS выбран на [2]
+        Agent -> Approach: Читает cqrs.md
+    end
+    opt Event Sourcing выбран на [2]
+        Agent -> Approach: Читает event-sourcing.md
+    end
+    Agent -> Docs: Ф1: Создает скелет
+    Agent -> Docs: Ф2: Заполняет модель данных
+    note right of Agent
+    Точки подтверждения:
+    - модель хранения
+    - перечень объектов
+    end note
+    loop Ф3: По каждому решению (sdd.H4.10)
+        Agent --> Dev: "Решение: варианты, рекомендация"
+        alt Выбор из вариантов
+            Dev -> Agent: Выбор варианта
+        else Свой вариант
+            Dev -> Agent: "Другое: <описание>"
+        end
+    end
+    Agent -> Agent: Чеклист H6 + GAP tracking
+    Agent --> Dev: Ф4: "Этап [6] готов. Принять?"
+    alt Принято
+        Dev -> Agent: "Принято"
+    else Требуется доработка
+        Dev -> Agent: "Доработать: <замечания>"
+        Agent -> Docs: Вносит правки
+        Agent --> Dev: Ф4: "Исправлено. Принять?"
+        Dev -> Agent: "Принято"
+    end
+
+    /'========================================='/
+    /'  ЭТАП [7]: АРХИТЕКТУРА                  '/
+    /'========================================='/
+
+    == ЭТАП [7]: АРХИТЕКТУРА ==
+
+    note over Agent
+    Нотация: ArchiMate (всегда)
+    Паттерн: согласно выбору на [2]
+    (Layered/Hexagonal/Clean/...)
+    Подэтапы: [7 BL], [7 AL], [7 TL], [7.1]
+    Каждый подэтап = 4 фазы
+    end note
+
+    /'--- Подэтап [7 BL]: Business Layer ---'/
+
+    group [7 BL] Business Layer
+        Agent -> Templates: Читает H6 шаблон
+        Agent -> Approach: Читает archimate.md (нотация)
+        note right of Agent: ArchiMate для BL/AL/TL\nвсегда используется
+        opt Архитектурный паттерн выбран на [2]
+            Agent -> Approach: Читает <паттерн>.md
+            note right of Agent: Layered/Hexagonal/Clean/...\nсогласно выбору [2]
+        end
+        Agent -> Docs: Ф1: Создает скелет
+        Agent -> Docs: Ф2: Заполняет сущности BL
+        note right of Agent
+        Точки подтверждения:
+        BL кандидаты (sdd.H4.10)
+        Структура по паттерну [2]
+        end note
+        Agent --> Dev: Ф3: "BL кандидаты: <список>"
+        alt Подтверждено
+            Dev -> Agent: "Подтверждаю"
+        else Корректировка
+            Dev -> Agent: "Изменить: <правки>"
+            Agent -> Docs: Вносит правки
+        end
+        Agent -> Agent: Чеклист H6 + GAP tracking
+        Agent --> Dev: Ф4: "[7 BL] готов. Принять?"
+        alt Принято
+            Dev -> Agent: "Принято"
+        else Требуется доработка
+            Dev -> Agent: "Доработать: <замечания>"
+            Agent -> Docs: Вносит правки
+            Agent --> Dev: Ф4: "Исправлено. Принять?"
+            Dev -> Agent: "Принято"
+        end
+    end
+
+    /'--- Подэтап [7 AL]: Application Layer ---'/
+
+    group [7 AL] Application Layer
+        Agent -> Templates: Читает H6 шаблон
+        Agent -> Approach: Читает archimate.md (нотация)
+        opt Архитектурный паттерн выбран на [2]
+            Agent -> Approach: Читает <паттерн>.md
+        end
+        opt CQRS выбран на [2]
+            Agent -> Approach: Читает cqrs.md
+        end
+        opt Pub/Sub выбран на [2]
+            Agent -> Approach: Читает pub-sub.md
+        end
+        Agent -> Docs: Ф1: Создает скелет
+        Agent -> Docs: Ф2: Заполняет сущности AL
+        note right of Agent
+        Точки подтверждения:
+        AL кандидаты (sdd.H4.10)
+        Структура по паттерну [2]
+        end note
+        Agent --> Dev: Ф3: "AL кандидаты: <список>"
+        alt Подтверждено
+            Dev -> Agent: "Подтверждаю"
+        else Корректировка
+            Dev -> Agent: "Изменить: <правки>"
+            Agent -> Docs: Вносит правки
+        end
+        Agent -> Agent: Чеклист H6 + GAP tracking
+        Agent --> Dev: Ф4: "[7 AL] готов. Принять?"
+        alt Принято
+            Dev -> Agent: "Принято"
+        else Требуется доработка
+            Dev -> Agent: "Доработать: <замечания>"
+            Agent -> Docs: Вносит правки
+            Agent --> Dev: Ф4: "Исправлено. Принять?"
+            Dev -> Agent: "Принято"
+        end
+    end
+
+    /'--- Подэтап [7 TL]: Technology Layer ---'/
+
+    group [7 TL] Technology Layer
+        Agent -> Templates: Читает H6 шаблон
+        Agent -> Approach: Читает archimate.md (нотация)
+        opt Архитектурный паттерн выбран на [2]
+            Agent -> Approach: Читает <паттерн>.md
+        end
+        Agent -> Docs: Ф1: Создает скелет
+        Agent -> Docs: Ф2: Заполняет сущности TL
+        note right of Agent
+        Точки подтверждения:
+        TL кандидаты (sdd.H4.10)
+        Структура по паттерну [2]
+        end note
+        Agent --> Dev: Ф3: "TL кандидаты: <список>"
+        alt Подтверждено
+            Dev -> Agent: "Подтверждаю"
+        else Корректировка
+            Dev -> Agent: "Изменить: <правки>"
+            Agent -> Docs: Вносит правки
+        end
+        Agent -> Agent: Чеклист H6 + GAP tracking
+        Agent --> Dev: Ф4: "[7 TL] готов. Принять?"
+        alt Принято
+            Dev -> Agent: "Принято"
+        else Требуется доработка
+            Dev -> Agent: "Доработать: <замечания>"
+            Agent -> Docs: Вносит правки
+            Agent --> Dev: Ф4: "Исправлено. Принять?"
+            Dev -> Agent: "Принято"
+        end
+    end
+
+    /'--- Подэтап [7.1]: Диаграммы ArchiMate ---'/
+
+    group [7.1] Диаграммы ArchiMate
+        note over Agent
+        ArchiMate + PlantUML
+        + структура по паттерну [2]
+        Конвенции: diagrams.H4.2
+        end note
+        Agent -> Templates: Читает H6 шаблон
+        Agent -> Approach: Читает archimate.md (нотация)
+        opt Архитектурный паттерн выбран на [2]
+            Agent -> Approach: Читает <паттерн>.md
+            note right of Agent: Структура диаграмм\nпо выбранному паттерну
+        end
+        Agent -> Manifest: Читает diagramsmanifest.md
+        note right of Agent: Конвенции именования\nBL.plantuml\nAL.plantuml\nTL.plantuml
+        Agent -> Docs: Ф1: Создает скелет .plantuml
+        Agent -> Docs: Ф2: Заполняет BL/AL/TL диаграммы
+        alt Есть неясности
+            Agent --> Dev: Ф3: Вопросы по визуализации
+            Dev -> Agent: Ответы
+        else Все ясно
+            Agent -> Agent: Ф3: Пропуск
+        end
+        Agent -> Agent: Чеклист H6 + GAP tracking
+        Agent --> Dev: Ф4: "[7.1] готов. Принять?"
+        alt Принято
+            Dev -> Agent: "Принято"
+        else Требуется доработка
+            Dev -> Agent: "Доработать: <замечания>"
+            Agent -> Docs: Вносит правки
+            Agent --> Dev: Ф4: "Исправлено. Принять?"
+            Dev -> Agent: "Принято"
+        end
+
+        /'--- Рендеринг диаграмм [7.1] ---'/
+        Agent -> Tools: Рендеринг .plantuml -> PNG
+        note right of Tools: .tools/plantuml-render/\nKroki API
+        alt Рендеринг успешен
+            Tools --> Agent: PNG созданы
+            Agent -> Docs: Сохраняет PNG в diagrams/
+        else Ошибка рендеринга
+            Tools --> Agent: Ошибка
+            Agent --> Dev: "Ошибка рендеринга: <описание>"
+            Dev -> Agent: "Исправить/Пропустить"
+        end
+    end
+
+    /'========================================='/
+    /'  ЭТАП [8]: СТРУКТУРА ПО                 '/
+    /'========================================='/
+
+    == ЭТАП [8]: СТРУКТУРА ПО ==
+
+    Agent -> Templates: Читает H6 шаблон
+    opt Архитектурный паттерн выбран на [2]
+        Agent -> Approach: Читает <паттерн>.md
+        note right of Agent: Файловая структура\nсогласно паттерну [2]
+    end
+    Agent -> Docs: Ф1: Создает скелет
+    Agent -> Docs: Ф2: Заполняет стек, структуру
+    note right of Agent: стек, файловая структура,\nзависимости по паттерну [2]
+    alt Есть неясности
+        Agent --> Dev: Ф3: Вопросы
+        Dev -> Agent: Ответы
+    else Все ясно
+        Agent -> Agent: Ф3: Пропуск
+    end
+    Agent -> Agent: Чеклист H6 + GAP tracking
+    Agent --> Dev: Ф4: "Этап [8] готов. Принять?"
+    alt Принято
+        Dev -> Agent: "Принято"
+    else Требуется доработка
+        Dev -> Agent: "Доработать: <замечания>"
+        Agent -> Docs: Вносит правки
+        Agent --> Dev: Ф4: "Исправлено. Принять?"
+        Dev -> Agent: "Принято"
+    end
+
+    /'========================================='/
+    /'  ЭТАП [9]: ТЕСТИРОВАНИЕ                 '/
+    /'========================================='/
+
+    == ЭТАП [9]: ТЕСТИРОВАНИЕ ==
+
+    Agent -> Templates: Читает H6 шаблон
+    Agent -> Docs: Ф1: Создает скелет
+    Agent -> Docs: Ф2: Заполняет стратегию, план
+    note right of Agent: стратегия, план\nиспытаний, матрица
+    alt Есть неясности
+        Agent --> Dev: Ф3: Вопросы
+        Dev -> Agent: Ответы
+    else Все ясно
+        Agent -> Agent: Ф3: Пропуск
+    end
+    Agent -> Agent: Чеклист H6 + GAP tracking
+    Agent --> Dev: Ф4: "Этап [9] готов. Принять?"
+    alt Принято
+        Dev -> Agent: "Принято"
+    else Требуется доработка
+        Dev -> Agent: "Доработать: <замечания>"
+        Agent -> Docs: Вносит правки
+        Agent --> Dev: Ф4: "Исправлено. Принять?"
+        Dev -> Agent: "Принято"
+    end
+
+    /'========================================='/
+    /'  ФИНАЛ                                  '/
+    /'========================================='/
+
+    == ФИНАЛ ==
+
+    Agent -> Docs: Проверяет gap-tracking.md
+    Agent -> Manifest: Проверяет versionmanifest.md
+    note right of Agent: Версионирование:\nобновление версии\nв README.md
+
+    alt Есть открытые GAP
+        Agent --> Dev: "Документация завершена.\nОткрытые GAP: <список>\nТребуется закрытие GAP."
+        loop По каждому GAP
+            Dev -> Agent: "Закрыть GAP N: <решение>"
+            Agent -> Docs: Закрывает GAP
+        end
+        Agent --> Dev: "Все GAP закрыты."
+    else Все GAP закрыты
+        Agent --> Dev: "Документация полностью завершена."
+    end
+
+    Agent -> Docs: Обновляет версию в README.md
+    Agent --> Dev: "SDD завершен. Версия: X.Y.Z"
+
+    deactivate Agent
+
+@enduml

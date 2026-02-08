@@ -1,0 +1,69 @@
+[
+  {
+    "_comment": "Архитектурные паттерны (Layered, Hexagonal, Clean, etc.) - см. https://github.com/Druk83/arch-patterns",
+    "_arch_patterns_source": "https://github.com/Druk83/arch-patterns.git"
+  },
+  {
+    "id": "event-storming",
+    "name": "Event Storming",
+    "desc": "Моделирование бизнес-процессов через события, команды и агрегаты",
+    "stages": ["5", "5.1", "5.2"],
+    "artifacts": ["карта процесса", "EVT-*", "CMD-*", "агрегаты"],
+    "file": ".approach/event-storming.md",
+    "tags": ["ddd", "modeling", "events", "scenarios"]
+  },
+  {
+    "id": "context-map",
+    "name": "Context Map",
+    "desc": "Визуализация связей и интеграций между ограниченными контекстами",
+    "stages": ["5.3", "5.4"],
+    "artifacts": ["context-map.plantuml", "BC границы", "интеграции"],
+    "file": ".approach/context-map.md",
+    "tags": ["ddd", "integration", "bounded-context", "diagrams"]
+  },
+  {
+    "id": "archimate",
+    "name": "ArchiMate",
+    "desc": "Описание архитектуры предприятия в слоях Business/Application/Technology",
+    "stages": ["7", "7.1"],
+    "artifacts": ["BL.plantuml", "AL.plantuml", "TL.plantuml", "сущности слоев"],
+    "file": ".approach/archimate.md",
+    "tags": ["architecture", "ea", "layers", "diagrams"]
+  },
+  {
+    "id": "ddd-patterns",
+    "name": "DDD Patterns",
+    "desc": "Паттерны Domain-Driven Design: Entity, Value Object, Aggregate, Repository",
+    "stages": ["4", "5.3"],
+    "artifacts": ["домены", "агрегаты", "сущности", "value objects"],
+    "file": ".approach/ddd-patterns.md",
+    "tags": ["ddd", "patterns", "domain", "modeling"]
+  },
+  {
+    "id": "cqrs",
+    "name": "CQRS",
+    "desc": "Разделение read/write при высокой нагрузке или явном разделении операций чтения и записи",
+    "stages": ["6", "7"],
+    "artifacts": ["read model таблицы", "разделение read/write"],
+    "file": ".approach/cqrs.md",
+    "tags": ["patterns", "architecture"]
+  },
+  {
+    "id": "event-sourcing",
+    "name": "Event Sourcing",
+    "desc": "Аудит всех изменений и восстановление состояния",
+    "stages": ["6"],
+    "artifacts": ["event store", "audit log", "события"],
+    "file": ".approach/event-sourcing.md",
+    "tags": ["patterns", "events"]
+  },
+  {
+    "id": "pub-sub",
+    "name": "Pub/Sub",
+    "desc": "Слабая связность между модулями",
+    "stages": ["5.2", "7"],
+    "artifacts": ["события", "каталог мероприятий"],
+    "file": ".approach/pub-sub.md",
+    "tags": ["patterns", "events", "integration"]
+  }
+]

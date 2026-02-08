@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "pdd-scan"
+      "pdd-scan",
+      "Bash(dir:*)",
+      "Bash(python:*)",
+      "Bash(ls:*)"
     ]
   }
 }
