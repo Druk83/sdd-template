@@ -76,6 +76,28 @@
     Agent -> Docs: Ф1: Создает скелет
     Agent -> Docs: Ф2: Заполняет базовый контекст
     note right of Agent: Базовый контекст:\nглоссарий, акторы, UC
+
+    opt Автоматизация существующих процессов
+        Agent -> Source: Проверяет наличие as-is данных
+        alt Есть as-is описания
+            Agent -> Docs: Заполняет раздел 2.4 (as-is + gap analysis)
+            note right of Agent
+            Текущие процессы:
+            - шаги, проблемы, затраты
+            Gap analysis: боль → UC
+            end note
+        else Нет as-is описаний
+            Agent -> Agent: Пропускает раздел 2.4
+            note right of Agent: Greenfield проект:\nсразу к to-be UC
+        end
+        note right of Agent
+        Критерии раздела 2.4:
+        - Есть описания текущих процессов в .source/
+        - Проект модернизации/автоматизации
+        - Brownfield сценарий
+        end note
+    end
+
     alt Есть неясности
         Agent --> Dev: Ф3: Вопросы по неясностям
         Dev -> Agent: Ответы
@@ -645,7 +667,6 @@
 
     Agent -> Docs: Проверяет gap-tracking.md
     Agent -> Manifest: Проверяет versionmanifest.md
-    note right of Agent: Версионирование:\nобновление версии\nв README.md
 
     alt Есть открытые GAP
         Agent --> Dev: "Документация завершена.\nОткрытые GAP: <список>\nТребуется закрытие GAP."
@@ -658,7 +679,26 @@
         Agent --> Dev: "Документация полностью завершена."
     end
 
-    Agent -> Docs: Обновляет версию в README.md
+    Agent -> Manifest: Читает readmemanifest.md
+    Agent -> Docs: Обновляет README.md (L0)
+    note right of Agent
+    Обновление README:
+    - Собрать информацию из этапов [1-9]
+    - Обновить описание проекта
+    - Добавить ключевые возможности
+    - Обновить ссылки на docs/
+    - Обновить версию
+    end note
+    Agent --> Dev: "README.md обновлен. Принять?"
+    alt Принято
+        Dev -> Agent: "Принято"
+    else Требуется доработка
+        Dev -> Agent: "Доработать: <замечания>"
+        Agent -> Docs: Вносит правки в README
+        Agent --> Dev: "Исправлено. Принять?"
+        Dev -> Agent: "Принято"
+    end
+
     Agent --> Dev: "SDD завершен. Версия: X.Y.Z"
 
     deactivate Agent

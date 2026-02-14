@@ -4,7 +4,8 @@
       "pdd-scan",
       "Bash(dir:*)",
       "Bash(python:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(grep:*)"
     ]
   }
 }
