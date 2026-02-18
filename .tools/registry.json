@@ -2,9 +2,9 @@
   {
     "name": "pdd-scan",
     "path": ".tools/pdd/pdd_scan.py",
-    "entry": "python .tools/pdd/pdd_scan.py --format md",
-    "entry_win": ".tools/pdd/pdd-scan.bat --format md",
-    "entry_unix": ".tools/pdd/pdd-scan --format md",
+    "entry": "python .tools/pdd/pdd_scan.py --format md --write",
+    "entry_win": ".tools/pdd/pdd-scan.bat --format md --write",
+    "entry_unix": ".tools/pdd/pdd-scan --format md --write",
     "desc": "Scan @todo and update .tasks/pdd/@todoregistry.md",
     "tags": ["pdd","scan"],
     "exec": true,

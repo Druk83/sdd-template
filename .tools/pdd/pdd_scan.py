@@ -51,7 +51,8 @@ def parse_file(path: str):
     try:
         with open(path, "r", encoding="utf-8") as f:
             lines = f.readlines()
-    except Exception:
+    except Exception as exc:
+        print(f"warning: cannot read {path}: {exc}", file=sys.stderr)
         return res
     for i, raw in enumerate(lines, start=1):
         m = TODO_RE.search(raw)
@@ -111,13 +112,19 @@ def parse_file(path: str):
         # dedupe refs
         data["refs"] = list(dict.fromkeys(data["refs"]))
         # check existence
-        refs_exist = []
-        for r in data["refs"]:
-            norm = r
-            if norm.startswith("."):
-                norm = os.path.normpath(os.path.join(os.getcwd(), norm))
-            refs_exist.append(os.path.exists(norm))
-        data["refs_exist"] = all(refs_exist) if data["refs"] else False
+        # None  — поле refs: не указано (нарушение pdd.H4.2)
+        # True  — все указанные файлы существуют
+        # False — указаны, но файл(ы) не найдены
+        if not data["refs"]:
+            data["refs_exist"] = None
+        else:
+            refs_exist = []
+            for r in data["refs"]:
+                norm = r
+                if norm.startswith("."):
+                    norm = os.path.normpath(os.path.join(os.getcwd(), norm))
+                refs_exist.append(os.path.exists(norm))
+            data["refs_exist"] = all(refs_exist)
         # git blame
         ts = git_blame_author_time(path, i)
         if ts is not None:
@@ -179,9 +186,20 @@ def main():
     ap.add_argument('--format', choices=['table','json','md'], default='md', help='Output format (default: md)')
     ap.add_argument('--json', action='store_const', dest='format', const='json',
                     help='(deprecated) shortcut for --format json (kept for compatibility)')
-    ap.add_argument('--output', '-o', help='Write output to file (MD or JSON when --format json)')
+    ap.add_argument('--output', '-o', help='Path for output file (requires --write)')
+    ap.add_argument('--write', '-w', action='store_true',
+                    help='Write output to file instead of stdout (md: .tasks/pdd/@todoregistry.md by default)')
     args = ap.parse_args()
-    items = scan(args.root)
+
+    if args.output and not args.write:
+        print("error: --output requires --write", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        items = scan(args.root)
+    except Exception as exc:
+        print(f"error: scan failed: {exc}", file=sys.stderr)
+        sys.exit(1)
 
     def render_md(items):
         lines = []
@@ -196,7 +214,13 @@ def main():
         lines.append("|" + " --- |" * len(headers))
         for it in items:
             refs = ",".join(it.get('refs') or [])
-            refs_exist = "yes" if it.get('refs_exist') else "no"
+            refs_exist_val = it.get('refs_exist')
+            if refs_exist_val is None:
+                refs_exist = "n/a"  # поле refs: не указано
+            elif refs_exist_val:
+                refs_exist = "yes"
+            else:
+                refs_exist = "no"  # файл(ы) из refs не найдены
             summary = it.get('summary') or ""
             # escape pipes
             refs = refs.replace("|","\\|")
@@ -216,27 +240,34 @@ def main():
             lines.append("| " + " | ".join(row) + " |")
         return "\n".join(lines)
 
-    if args.format == 'json':
-        s = json.dumps(items, ensure_ascii=False, indent=2)
-        if args.output:
-            with open(args.output, 'w', encoding='utf-8') as f:
-                f.write(s)
-            print(f'Wrote {len(items)} items to {args.output}')
+    try:
+        if args.format == 'json':
+            s = json.dumps(items, ensure_ascii=False, indent=2)
+            if args.write:
+                outpath = args.output or 'todos.json'
+                with open(outpath, 'w', encoding='utf-8') as f:
+                    f.write(s)
+                print(f'Wrote {len(items)} items to {outpath}', file=sys.stderr)
+            else:
+                print(s)
+        elif args.format == 'md':
+            md = render_md(items)
+            if args.write:
+                # записываем в файл только при явном --write
+                outpath = args.output or os.path.join('.tasks', 'pdd', '@todoregistry.md')
+                odir = os.path.dirname(outpath)
+                if odir and not os.path.exists(odir):
+                    os.makedirs(odir, exist_ok=True)
+                with open(outpath, 'w', encoding='utf-8') as f:
+                    f.write(md)
+                print(f'Wrote {len(items)} items to {outpath}', file=sys.stderr)
+            else:
+                print(md)
         else:
-            print(s)
-    elif args.format == 'md':
-        # default output path
-        outpath = args.output or os.path.join('.tasks','pdd','@todoregistry.md')
-        # ensure dir exists
-        odir = os.path.dirname(outpath)
-        if odir and not os.path.exists(odir):
-            os.makedirs(odir, exist_ok=True)
-        md = render_md(items)
-        with open(outpath, 'w', encoding='utf-8') as f:
-            f.write(md)
-        print(f'Wrote {len(items)} items to {outpath}')
-    else:
-        print_table(items)
+            print_table(items)
+    except OSError as exc:
+        print(f"error: cannot write output: {exc}", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()

@@ -61,6 +61,12 @@
       "path": ".github",
       "description": "CI workflows, ISSUE_TEMPLATE, PULL_REQUEST_TEMPLATE, community files.",
       "required": false
+    },
+    {
+      "name": ".chatlog",
+      "path": ".chatlog",
+      "description": "Chat session logs saved on developer request. Default file: session.md. See .manifest/chatlogmanifest.md.",
+      "required": false
     }
   ],
   "tools": {

@@ -5,24 +5,28 @@
 ## Быстрый старт
 
 ```bash
-# Запустить сканер из корня репозитория и записать реестр в .tasks/pdd/@todoregistry.md
+# Запустить сканер и записать реестр в .tasks/pdd/@todoregistry.md
+.tools/pdd/pdd-scan --format md --write
+
+# Вывести MD в stdout (без записи файла)
 .tools/pdd/pdd-scan --format md
 
 # Записать в JSON-файл
-.tools/pdd/pdd-scan --format json --output .tasks/pdd/todos.json
+.tools/pdd/pdd-scan --format json --write --output .tasks/pdd/todos.json
 ```
 
 ## Опции
 
 * `--root`, `-r` — корень для сканирования (default: `.`)
 * `--format` — формат вывода: `table`, `json`, `md` (default: `md`)
-* `--output`, `-o` — путь для записи (по умолчанию: `.tasks/pdd/@todoregistry.md` при `md` формате)
+* `--write`, `-w` — записать вывод в файл; без флага результат идёт в stdout
+* `--output`, `-o` — путь для записи (default при `--write --format md`: `.tasks/pdd/@todoregistry.md`; требует `--write`)
 
 (Опции подтверждены исходным кодом: `.tools/pdd/pdd_scan.py`)
 
 ## Конфигурация / ENV
 
-* `PYTHON` — (wrapper) путь к интерпретатору Python, по умолчанию `python3` (опционально, используется в `pdd-scan` wrapper).
+* `PYTHON` — путь к интерпретатору Python (опционально). Unix-wrapper (`pdd-scan`) использует `python3` по умолчанию; Windows-wrapper (`pdd-scan.bat`) использует `python` по умолчанию.
 
 ## Входы / Выходы
 
@@ -32,17 +36,30 @@
 ## Примеры
 
 ```bash
-# Сканировать конкретную папку
-.tools/pdd/pdd-scan --root src/ --format md
+# Сканировать конкретную папку и записать реестр
+.tools/pdd/pdd-scan --root src/ --format md --write
 
 # Вывести JSON в stdout
 .tools/pdd/pdd-scan --format json
+
+# Записать JSON в файл
+.tools/pdd/pdd-scan --format json --write --output .tasks/pdd/todos.json
 ```
+
+## Колонка refs_exist
+
+Поле `refs_exist` в выходной таблице принимает три значения:
+
+| Значение | Смысл |
+|----------|-------|
+| `yes` | поле `refs:` указано и все файлы найдены |
+| `no` | поле `refs:` указано, но файл(ы) не найдены |
+| `n/a` | поле `refs:` не указано (нарушение `pdd.H4.2`) |
 
 ## Troubleshooting
 
 * Для вычисления возраста задач используется `git blame`; если репозиторий не в git или git отсутствует, поля `created_at` / `age_days` будут `null`.
-* Если задач не найдено, утилита выводит `No @todo found.`
+* Сообщение `No @todo found.` выводится только при `--format table`. При форматах `md` и `json` создаётся пустой файл/вывод без сообщения.
 
 ## Ссылки
 
