@@ -1,0 +1,66 @@
+@startuml SDD-Sequence-04-Stage2
+    title Последовательность событий SDD\nЭтап [2]: Обоснование выбора
+
+    actor "Разработчик" as Dev
+    participant "Агент" as Agent
+    database ".source/" as Source
+    database "docs/requirements/" as Docs
+    collections ".manifest/" as Manifest
+    collections ".requirements/" as Templates
+    collections ".approach/" as Approach
+    participant ".tools/" as Tools
+
+    == ЭТАП [2]: ОБОСНОВАНИЕ ВЫБОРА ==
+
+    note over Agent
+    Выбор методологии и паттерна
+    определяет подходы для [4]-[7]
+    end note
+
+    Agent -> Templates: Читает H6 шаблон
+    Agent -> Approach: Читает registry.json
+    note right of Agent: Доступные подходы:\nDDD, Event Storming,\nContext Map, CQRS,\nLayered, Hexagonal, Clean
+    Agent -> Docs: Ф1: Создает скелет
+    Agent -> Docs: Ф2: Заполняет базовый контекст
+    note right of Agent
+    Точки подтверждения:
+    - стандарт
+    - методология -> подход
+    - паттерн -> подход
+    - стек
+    end note
+    loop Ф3: По каждому решению (sdd.H4.10)
+        Agent --> Dev: "Решение N: варианты, рекомендация"
+        note right of Agent
+        Методология: DDD/Event Storming/...
+        Паттерн: Layered/Hexagonal/Clean
+        end note
+        alt Выбор из вариантов
+            Dev -> Agent: Выбор варианта
+        else Свой вариант
+            Dev -> Agent: "Другое: <описание>"
+        end
+    end
+    Agent -> Docs: Фиксирует "Итог выбора" (3.5.6)
+    note right of Agent
+    Выбранные подходы для [4]-[7]:
+    - методология.md
+    - паттерн.md
+    end note
+    Agent -> Agent: Чеклист H6 + GAP tracking
+    Agent --> Dev: Ф4: "Этап [2] готов. Принять?"
+    alt Принято
+        Dev -> Agent: "Принято"
+    else Требуется доработка
+        Dev -> Agent: "Доработать: <замечания>"
+        Agent -> Docs: Вносит правки
+        Agent --> Dev: Ф4: "Исправлено. Принять?"
+        Dev -> Agent: "Принято"
+    end
+
+    /'========================================='/
+    /'  ЭТАП [3]: ТРЕБОВАНИЯ                   '/
+    /'========================================='/
+
+
+@enduml

@@ -1,0 +1,42 @@
+@startuml SDD-Sequence-08-Stage5-2
+    title Последовательность событий SDD\nЭтап [5.2]: Каталог мероприятий
+
+    actor "Разработчик" as Dev
+    participant "Агент" as Agent
+    database ".source/" as Source
+    database "docs/requirements/" as Docs
+    collections ".manifest/" as Manifest
+    collections ".requirements/" as Templates
+    collections ".approach/" as Approach
+    participant ".tools/" as Tools
+
+    /'--- Подэтап [5.2]: Каталог мероприятий ---'/
+
+    group [5.2] Каталог мероприятий
+        Agent -> Templates: Читает H6 шаблон
+        opt Event Storming выбран на [2]
+            Agent -> Approach: Читает event-storming.md
+        end
+        Agent -> Docs: Ф1: Создает скелет
+        Agent -> Docs: Ф2: Заполняет EVT, CMD
+        note right of Agent: согласно выбору [2]
+        alt Есть неясности
+            Agent --> Dev: Ф3: Вопросы
+            Dev -> Agent: Ответы
+        else Все ясно
+            Agent -> Agent: Ф3: Пропуск
+        end
+        Agent -> Agent: Чеклист H6 + GAP tracking
+        Agent --> Dev: Ф4: "[5.2] готов. Принять?"
+        alt Принято
+            Dev -> Agent: "Принято"
+        else Требуется доработка
+            Dev -> Agent: "Доработать: <замечания>"
+            Agent -> Docs: Вносит правки
+            Agent --> Dev: Ф4: "Исправлено. Принять?"
+            Dev -> Agent: "Принято"
+        end
+    end
+
+
+@enduml

@@ -1,6 +1,6 @@
-# Шаблоны для разработки требований
+# Фреймворк для разработки технической документации в репозитории
 
-> **Версия:** 1.6.0
+> **Версия:** 1.6.1
 
 Набор шаблонов для создания технической документации программных проектов с помощью AI-агентов.
 
@@ -97,6 +97,9 @@ git commit -m "Initial commit from sdd-template"
 - **Остановка после этапа** — агент ждёт команды разработчика
 - **Уточняющие вопросы** — агент спрашивает, если данных недостаточно
 - **Gap tracking** — пробелы фиксируются в `docs/requirements/gap-tracking.md`
+- **Gap classification** — перед записью в gap-tracking определяется тип GAP (CRITICAL/CLARIFICATION/OPTIONAL/IMPLEMENTATION); тип IMPLEMENTATION не фиксируется
+- **Automatic stage detection** — агент определяет текущий этап из gap-tracking.md без уточнений
+- **Chat logging** — все взаимодействия логируются в `.chatlog/session.md` по запросу разработчика
 
 ### Команды для агента
 
@@ -109,6 +112,8 @@ git commit -m "Initial commit from sdd-template"
 ## Структура проекта
 
 ```
+.source/                # Входные данные проекта (от разработчика)
+
 .requirements/          # Шаблоны документации (read-only)
   трек разработки.md    # Точка входа, последовательность этапов
   предметная область.md # [1] Глоссарий, акторы, use cases
@@ -125,9 +130,11 @@ docs/requirements/      # Заполненная документация про
 .manifest/              # Манифесты процессов (H2: политики H3 + стандарты H4)
   hierarchymanifest.md  # Иерархия документов H0-H8
   sddmanifest.md        # Правила SDD-процесса
+  chatlogmanifest.md    # Правила логирования сессий чата
   dependenciesmanifest.md, dockermanifest.md, pddmanifest.md,
   readmemanifest.md, taskmanifest.md, tddmanifest.md,
   toolsmanifest.md, versionmanifest.md, issuesmanifest.md
+.chatlog/               # Логи сессий работы с агентами (по запросу)
 .tasks/                 # Задачи проекта
 .issues/                # Проблемы и баги
 .tools/                 # Инструменты автоматизации
@@ -205,6 +212,7 @@ docs/requirements/      # Заполненная документация про
 
 ### 13. Этап [7.1]: Диаграммы ArchiMate
 ![Этап 7.1](.diagrams/SDD-Sequence-13.png)
+
 
 ### 14. Этап [8]: Структура ПО
 ![Этап 8](.diagrams/SDD-Sequence-14.png)

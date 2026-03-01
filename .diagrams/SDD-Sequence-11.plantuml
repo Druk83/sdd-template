@@ -1,0 +1,47 @@
+@startuml SDD-Sequence-11-Stage6
+    title Последовательность событий SDD\nЭтап [6]: Структура данных
+
+    actor "Разработчик" as Dev
+    participant "Агент" as Agent
+    database ".source/" as Source
+    database "docs/requirements/" as Docs
+    collections ".manifest/" as Manifest
+    collections ".requirements/" as Templates
+    collections ".approach/" as Approach
+    participant ".tools/" as Tools
+
+    == ЭТАП [6]: СТРУКТУРА ДАННЫХ ==
+
+    Agent -> Templates: Читает H6 шаблон
+    Agent -> Docs: Ф1: Создает скелет
+    Agent -> Docs: Ф2: Заполняет модель данных
+    note right of Agent
+    Точки подтверждения:
+    - модель хранения
+    - перечень объектов
+    end note
+    loop Ф3: По каждому решению (sdd.H4.10)
+        Agent --> Dev: "Решение: варианты, рекомендация"
+        alt Выбор из вариантов
+            Dev -> Agent: Выбор варианта
+        else Свой вариант
+            Dev -> Agent: "Другое: <описание>"
+        end
+    end
+    Agent -> Agent: Чеклист H6 + GAP tracking
+    Agent --> Dev: Ф4: "Этап [6] готов. Принять?"
+    alt Принято
+        Dev -> Agent: "Принято"
+    else Требуется доработка
+        Dev -> Agent: "Доработать: <замечания>"
+        Agent -> Docs: Вносит правки
+        Agent --> Dev: Ф4: "Исправлено. Принять?"
+        Dev -> Agent: "Принято"
+    end
+
+    /'========================================='/
+    /'  ЭТАП [7]: АРХИТЕКТУРА                  '/
+    /'========================================='/
+
+
+@enduml

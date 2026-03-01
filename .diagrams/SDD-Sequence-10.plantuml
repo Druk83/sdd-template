@@ -1,0 +1,63 @@
+@startuml SDD-Sequence-10-Stage5-4
+    title Последовательность событий SDD\nЭтап [5.4]: Диаграммы сценариев + Context Map
+
+    actor "Разработчик" as Dev
+    participant "Агент" as Agent
+    database ".source/" as Source
+    database "docs/requirements/" as Docs
+    collections ".manifest/" as Manifest
+    collections ".requirements/" as Templates
+    collections ".approach/" as Approach
+    participant ".tools/" as Tools
+
+    /'--- Подэтап [5.4]: Диаграммы сценариев ---'/
+
+    group [5.4] Диаграммы сценариев + Context Map
+        note over Agent
+        PlantUML + выбранный подход
+        Конвенции: diagrams.H4.2
+        end note
+        Agent -> Templates: Читает H6 шаблон
+        opt Context Mapping выбран на [2]
+            Agent -> Approach: Читает context-map.md
+        end
+        Agent -> Manifest: Читает diagramsmanifest.md
+        note right of Agent: Конвенции именования\nсогласно выбору [2]
+        Agent -> Docs: Ф1: Создает скелет .plantuml
+        Agent -> Docs: Ф2: Заполняет диаграммы
+        alt Есть неясности
+            Agent --> Dev: Ф3: Вопросы по визуализации
+            Dev -> Agent: Ответы
+        else Все ясно
+            Agent -> Agent: Ф3: Пропуск
+        end
+        Agent -> Agent: Чеклист H6 + GAP tracking
+        Agent --> Dev: Ф4: "[5.4] готов. Принять?"
+        alt Принято
+            Dev -> Agent: "Принято"
+        else Требуется доработка
+            Dev -> Agent: "Доработать: <замечания>"
+            Agent -> Docs: Вносит правки
+            Agent --> Dev: Ф4: "Исправлено. Принять?"
+            Dev -> Agent: "Принято"
+        end
+
+        /'--- Рендеринг диаграмм [5.4] ---'/
+        Agent -> Tools: Рендеринг .plantuml -> PNG
+        note right of Tools: .tools/plantuml-render/\nKroki API
+        alt Рендеринг успешен
+            Tools --> Agent: PNG созданы
+            Agent -> Docs: Сохраняет PNG в diagrams/
+        else Ошибка рендеринга
+            Tools --> Agent: Ошибка
+            Agent --> Dev: "Ошибка рендеринга: <описание>"
+            Dev -> Agent: "Исправить/Пропустить"
+        end
+    end
+
+    /'========================================='/
+    /'  ЭТАП [6]: СТРУКТУРА ДАННЫХ             '/
+    /'========================================='/
+
+
+@enduml

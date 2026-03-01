@@ -1,0 +1,66 @@
+@startuml SDD-Sequence-13-Stage7-1
+    title Последовательность событий SDD\nЭтап [7.1]: Диаграммы ArchiMate
+
+    actor "Разработчик" as Dev
+    participant "Агент" as Agent
+    database ".source/" as Source
+    database "docs/requirements/" as Docs
+    collections ".manifest/" as Manifest
+    collections ".requirements/" as Templates
+    collections ".approach/" as Approach
+    participant ".tools/" as Tools
+
+    /'--- Подэтап [7.1]: Диаграммы ArchiMate ---'/
+
+    group [7.1] Диаграммы ArchiMate
+        note over Agent
+        ArchiMate + PlantUML
+        + структура по паттерну [2]
+        Конвенции: diagrams.H4.2
+        end note
+        Agent -> Templates: Читает H6 шаблон
+        Agent -> Approach: Читает archimate.md (нотация)
+        opt Архитектурный паттерн выбран на [2]
+            Agent -> Approach: Читает <паттерн>.md
+            note right of Agent: Структура диаграмм\nпо выбранному паттерну
+        end
+        Agent -> Manifest: Читает diagramsmanifest.md
+        note right of Agent: Конвенции именования\nBL.plantuml\nAL.plantuml\nTL.plantuml
+        Agent -> Docs: Ф1: Создает скелет .plantuml
+        Agent -> Docs: Ф2: Заполняет BL/AL/TL диаграммы
+        alt Есть неясности
+            Agent --> Dev: Ф3: Вопросы по визуализации
+            Dev -> Agent: Ответы
+        else Все ясно
+            Agent -> Agent: Ф3: Пропуск
+        end
+        Agent -> Agent: Чеклист H6 + GAP tracking
+        Agent --> Dev: Ф4: "[7.1] готов. Принять?"
+        alt Принято
+            Dev -> Agent: "Принято"
+        else Требуется доработка
+            Dev -> Agent: "Доработать: <замечания>"
+            Agent -> Docs: Вносит правки
+            Agent --> Dev: Ф4: "Исправлено. Принять?"
+            Dev -> Agent: "Принято"
+        end
+
+        /'--- Рендеринг диаграмм [7.1] ---'/
+        Agent -> Tools: Рендеринг .plantuml -> PNG
+        note right of Tools: .tools/plantuml-render/\nKroki API
+        alt Рендеринг успешен
+            Tools --> Agent: PNG созданы
+            Agent -> Docs: Сохраняет PNG в diagrams/
+        else Ошибка рендеринга
+            Tools --> Agent: Ошибка
+            Agent --> Dev: "Ошибка рендеринга: <описание>"
+            Dev -> Agent: "Исправить/Пропустить"
+        end
+    end
+
+    /'========================================='/
+    /'  ЭТАП [8]: СТРУКТУРА ПО                 '/
+    /'========================================='/
+
+
+@enduml

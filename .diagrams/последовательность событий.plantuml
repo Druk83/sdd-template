@@ -193,6 +193,7 @@
     Agent -> Docs: Ф2: Заполняет FR/NFR
     note right of Agent: Базовый контекст:\nFR-*, NFR-*
     alt Есть неясности
+        Agent -> Agent: Ф3: Классифицирует тип GAP
         Agent --> Dev: Ф3: Вопросы
         Dev -> Agent: Ответы
     else Все ясно

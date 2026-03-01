@@ -1,0 +1,128 @@
+@startuml SDD-Sequence-12-Stage7
+    title Последовательность событий SDD\nЭтап [7]: Архитектура
+
+    actor "Разработчик" as Dev
+    participant "Агент" as Agent
+    database ".source/" as Source
+    database "docs/requirements/" as Docs
+    collections ".manifest/" as Manifest
+    collections ".requirements/" as Templates
+    collections ".approach/" as Approach
+    participant ".tools/" as Tools
+
+    == ЭТАП [7]: АРХИТЕКТУРА ==
+
+    note over Agent
+    Нотация: ArchiMate (всегда)
+    Паттерн: согласно выбору на [2]
+    (Layered/Hexagonal/Clean/...)
+    Подэтапы: [7 BL], [7 AL], [7 TL], [7.1]
+    Каждый подэтап = 4 фазы
+    end note
+
+    /'--- Подэтап [7 BL]: Business Layer ---'/
+
+    group [7 BL] Business Layer
+        Agent -> Templates: Читает H6 шаблон
+        Agent -> Approach: Читает archimate.md (нотация)
+        note right of Agent: ArchiMate для BL/AL/TL\nвсегда используется
+        opt Архитектурный паттерн выбран на [2]
+            Agent -> Approach: Читает <паттерн>.md
+            note right of Agent: Layered/Hexagonal/Clean/...\nсогласно выбору [2]
+        end
+        Agent -> Docs: Ф1: Создает скелет
+        Agent -> Docs: Ф2: Заполняет сущности BL
+        note right of Agent
+        Точки подтверждения:
+        BL кандидаты (sdd.H4.10)
+        Структура по паттерну [2]
+        end note
+        Agent --> Dev: Ф3: "BL кандидаты: <список>"
+        alt Подтверждено
+            Dev -> Agent: "Подтверждаю"
+        else Корректировка
+            Dev -> Agent: "Изменить: <правки>"
+            Agent -> Docs: Вносит правки
+        end
+        Agent -> Agent: Чеклист H6 + GAP tracking
+        Agent --> Dev: Ф4: "[7 BL] готов. Принять?"
+        alt Принято
+            Dev -> Agent: "Принято"
+        else Требуется доработка
+            Dev -> Agent: "Доработать: <замечания>"
+            Agent -> Docs: Вносит правки
+            Agent --> Dev: Ф4: "Исправлено. Принять?"
+            Dev -> Agent: "Принято"
+        end
+    end
+
+    /'--- Подэтап [7 AL]: Application Layer ---'/
+
+    group [7 AL] Application Layer
+        Agent -> Templates: Читает H6 шаблон
+        Agent -> Approach: Читает archimate.md (нотация)
+        opt Архитектурный паттерн выбран на [2]
+            Agent -> Approach: Читает <паттерн>.md
+        end
+        Agent -> Docs: Ф1: Создает скелет
+        Agent -> Docs: Ф2: Заполняет сущности AL
+        note right of Agent
+        Точки подтверждения:
+        AL кандидаты (sdd.H4.10)
+        Структура по паттерну [2]
+        end note
+        Agent --> Dev: Ф3: "AL кандидаты: <список>"
+        alt Подтверждено
+            Dev -> Agent: "Подтверждаю"
+        else Корректировка
+            Dev -> Agent: "Изменить: <правки>"
+            Agent -> Docs: Вносит правки
+        end
+        Agent -> Agent: Чеклист H6 + GAP tracking
+        Agent --> Dev: Ф4: "[7 AL] готов. Принять?"
+        alt Принято
+            Dev -> Agent: "Принято"
+        else Требуется доработка
+            Dev -> Agent: "Доработать: <замечания>"
+            Agent -> Docs: Вносит правки
+            Agent --> Dev: Ф4: "Исправлено. Принять?"
+            Dev -> Agent: "Принято"
+        end
+    end
+
+    /'--- Подэтап [7 TL]: Technology Layer ---'/
+
+    group [7 TL] Technology Layer
+        Agent -> Templates: Читает H6 шаблон
+        Agent -> Approach: Читает archimate.md (нотация)
+        opt Архитектурный паттерн выбран на [2]
+            Agent -> Approach: Читает <паттерн>.md
+        end
+        Agent -> Docs: Ф1: Создает скелет
+        Agent -> Docs: Ф2: Заполняет сущности TL
+        note right of Agent
+        Точки подтверждения:
+        TL кандидаты (sdd.H4.10)
+        Структура по паттерну [2]
+        end note
+        Agent --> Dev: Ф3: "TL кандидаты: <список>"
+        alt Подтверждено
+            Dev -> Agent: "Подтверждаю"
+        else Корректировка
+            Dev -> Agent: "Изменить: <правки>"
+            Agent -> Docs: Вносит правки
+        end
+        Agent -> Agent: Чеклист H6 + GAP tracking
+        Agent --> Dev: Ф4: "[7 TL] готов. Принять?"
+        alt Принято
+            Dev -> Agent: "Принято"
+        else Требуется доработка
+            Dev -> Agent: "Доработать: <замечания>"
+            Agent -> Docs: Вносит правки
+            Agent --> Dev: Ф4: "Исправлено. Принять?"
+            Dev -> Agent: "Принято"
+        end
+    end
+
+
+@enduml

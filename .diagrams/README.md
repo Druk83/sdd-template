@@ -7,10 +7,6 @@
 
 .diagrams/
   README.md
-  1.plantuml
-  2.plantuml
-  3.plantuml
-  3.png
   последовательность событий.plantuml
   SDD-Sequence-01.plantuml
   SDD-Sequence-01.png

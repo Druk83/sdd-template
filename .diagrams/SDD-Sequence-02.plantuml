@@ -1,0 +1,67 @@
+@startuml SDD-Sequence-02-Stage1-Subject
+    title Последовательность событий SDD\nЭтап [1]: Предметная область
+
+    actor "Разработчик" as Dev
+    participant "Агент" as Agent
+    database ".source/" as Source
+    database "docs/requirements/" as Docs
+    collections ".manifest/" as Manifest
+    collections ".requirements/" as Templates
+    collections ".approach/" as Approach
+    participant ".tools/" as Tools
+
+    == ЭТАП [1]: ПРЕДМЕТНАЯ ОБЛАСТЬ ==
+
+    Agent -> Templates: Читает H6 шаблон
+    Agent -> Docs: Ф1: Создает скелет
+    Agent -> Docs: Ф2: Заполняет базовый контекст
+    note right of Agent: Базовый контекст:\nглоссарий, акторы, UC
+
+    opt Автоматизация существующих процессов
+        Agent -> Source: Проверяет наличие as-is данных
+        alt Есть as-is описания
+            Agent -> Docs: Заполняет раздел 2.4 (as-is + gap analysis)
+            note right of Agent
+            Текущие процессы:
+            - шаги, проблемы, затраты
+            Gap analysis: боль → UC
+            end note
+        else Нет as-is описаний
+            Agent -> Agent: Пропускает раздел 2.4
+            note right of Agent: Greenfield проект:\nсразу к to-be UC
+        end
+        note right of Agent
+        Критерии раздела 2.4:
+        - Есть описания текущих процессов в .source/
+        - Проект модернизации/автоматизации
+        - Brownfield сценарий
+        end note
+    end
+
+    alt Есть неясности
+        Agent --> Dev: Ф3: Вопросы по неясностям
+        Dev -> Agent: Ответы
+    else Все ясно
+        Agent -> Agent: Ф3: Пропуск (нет вопросов)
+    end
+    Agent -> Agent: Чеклист H6 + GAP tracking
+    opt GAP найдены
+        Agent -> Docs: Записывает в gap-tracking.md
+        note right of Agent: Плейсхолдеры\nдля открытых GAP
+    end
+    Agent --> Dev: Ф4: "Этап [1] готов. Принять?"
+    alt Принято
+        Dev -> Agent: "Принято"
+    else Требуется доработка
+        Dev -> Agent: "Доработать: <замечания>"
+        Agent -> Docs: Вносит правки
+        Agent --> Dev: Ф4: "Исправлено. Принять?"
+        Dev -> Agent: "Принято"
+    end
+
+    /'========================================='/
+    /'  ЭТАП [1] ЗАВЕРШЕНИЕ: README            '/
+    /'========================================='/
+
+
+@enduml

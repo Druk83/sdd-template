@@ -1,0 +1,46 @@
+@startuml SDD-Sequence-06-Stage4
+    title Последовательность событий SDD\nЭтап [4]: Домены
+
+    actor "Разработчик" as Dev
+    participant "Агент" as Agent
+    database ".source/" as Source
+    database "docs/requirements/" as Docs
+    collections ".manifest/" as Manifest
+    collections ".requirements/" as Templates
+    collections ".approach/" as Approach
+    participant ".tools/" as Tools
+
+    == ЭТАП [4]: ДОМЕНЫ ==
+
+    Agent -> Templates: Читает H6 шаблон
+    alt DDD выбран на [2]
+        Agent -> Approach: Читает ddd-patterns.md
+    else Data-Centric выбран
+        Agent -> Agent: Без DDD подхода
+    end
+    Agent -> Docs: Ф1: Создает скелет
+    Agent -> Docs: Ф2: Заполняет домены
+    note right of Agent: Базовый контекст:\nдомены, границы\n(согласно выбору [2])
+    alt Есть неясности
+        Agent --> Dev: Ф3: Вопросы
+        Dev -> Agent: Ответы
+    else Все ясно
+        Agent -> Agent: Ф3: Пропуск
+    end
+    Agent -> Agent: Чеклист H6 + GAP tracking
+    Agent --> Dev: Ф4: "Этап [4] готов. Принять?"
+    alt Принято
+        Dev -> Agent: "Принято"
+    else Требуется доработка
+        Dev -> Agent: "Доработать: <замечания>"
+        Agent -> Docs: Вносит правки
+        Agent --> Dev: Ф4: "Исправлено. Принять?"
+        Dev -> Agent: "Принято"
+    end
+
+    /'========================================='/
+    /'  ЭТАП [5]: СЦЕНАРИИ                     '/
+    /'========================================='/
+
+
+@enduml

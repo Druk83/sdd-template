@@ -1,0 +1,25 @@
+@startuml SDD-Sequence-03-Stage1-Readme
+    title Последовательность событий SDD\nЭтап [1] завершение: README L0
+
+    actor "Разработчик" as Dev
+    participant "Агент" as Agent
+    database ".source/" as Source
+    database "docs/requirements/" as Docs
+    collections ".manifest/" as Manifest
+    collections ".requirements/" as Templates
+    collections ".approach/" as Approach
+    participant ".tools/" as Tools
+
+    == ЭТАП [1] ЗАВЕРШЕНИЕ: README L0 ==
+
+    Agent -> Manifest: Читает readmemanifest.md
+    Agent -> Docs: Создает /README.md (L0)
+    Agent --> Dev: "README L0 создан. Принять?"
+    Dev -> Agent: "Принято"
+
+    /'========================================='/
+    /'  ЭТАП [2]: ОБОСНОВАНИЕ ВЫБОРА           '/
+    /'========================================='/
+
+
+@enduml

@@ -1,0 +1,43 @@
+@startuml SDD-Sequence-01-Preparation
+    title Последовательность событий SDD\nПодготовка (ПОДГОТОВКА)
+
+    actor "Разработчик" as Dev
+    participant "Агент" as Agent
+    database ".source/" as Source
+    database "docs/requirements/" as Docs
+    collections ".manifest/" as Manifest
+    collections ".requirements/" as Templates
+    collections ".approach/" as Approach
+    participant ".tools/" as Tools
+
+    == ПОДГОТОВКА ==
+
+    Dev -> Agent: "Изучи материалы в .source/,\nработаем по SDD"
+    activate Agent
+
+    Agent -> Source: Читает ВСЕ файлы
+    Agent -> Manifest: Читает H0, H1, H2 манифесты
+    note right of Agent
+    sddmanifest.md
+    gapmanifest.md
+    diagramsmanifest.md
+    versionmanifest.md
+    end note
+    Agent -> Templates: Читает трек разработки.md (H5)
+    Agent -> Approach: Читает registry.json
+    note right of Agent
+    Реестр подходов:
+    event-storming
+    context-map
+    ddd-patterns
+    archimate
+    end note
+    Agent -> Agent: Анализирует .source/
+    Agent --> Dev: "Готов. Начинаю этап [1]"
+
+    /'========================================='/
+    /'  ЭТАП [1]: ПРЕДМЕТНАЯ ОБЛАСТЬ           '/
+    /'========================================='/
+
+
+@enduml

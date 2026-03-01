@@ -1,0 +1,41 @@
+@startuml SDD-Sequence-15-Stage9
+    title Последовательность событий SDD\nЭтап [9]: Тестирование
+
+    actor "Разработчик" as Dev
+    participant "Агент" as Agent
+    database ".source/" as Source
+    database "docs/requirements/" as Docs
+    collections ".manifest/" as Manifest
+    collections ".requirements/" as Templates
+    collections ".approach/" as Approach
+    participant ".tools/" as Tools
+
+    == ЭТАП [9]: ТЕСТИРОВАНИЕ ==
+
+    Agent -> Templates: Читает H6 шаблон
+    Agent -> Docs: Ф1: Создает скелет
+    Agent -> Docs: Ф2: Заполняет стратегию, план
+    note right of Agent: стратегия, план\nиспытаний, матрица
+    alt Есть неясности
+        Agent --> Dev: Ф3: Вопросы
+        Dev -> Agent: Ответы
+    else Все ясно
+        Agent -> Agent: Ф3: Пропуск
+    end
+    Agent -> Agent: Чеклист H6 + GAP tracking
+    Agent --> Dev: Ф4: "Этап [9] готов. Принять?"
+    alt Принято
+        Dev -> Agent: "Принято"
+    else Требуется доработка
+        Dev -> Agent: "Доработать: <замечания>"
+        Agent -> Docs: Вносит правки
+        Agent --> Dev: Ф4: "Исправлено. Принять?"
+        Dev -> Agent: "Принято"
+    end
+
+    /'========================================='/
+    /'  ФИНАЛ                                  '/
+    /'========================================='/
+
+
+@enduml
