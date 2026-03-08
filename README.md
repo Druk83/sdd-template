@@ -1,6 +1,6 @@
 # Фреймворк для разработки технической документации в репозитории
 
-> **Версия:** 1.6.1
+> **Версия:** 1.7.0
 
 Набор шаблонов для создания технической документации программных проектов с помощью AI-агентов.
 
@@ -70,6 +70,21 @@ git commit -m "Initial commit from sdd-template"
 1. Задавать вопросы о проекте
 2. Заполнять шаблоны на основе ответов
 3. Сохранять результаты в `docs/requirements/`
+
+### Рендеринг диаграмм
+
+Для рендеринга `*.plantuml` используется инструмент `.tools/plantuml-render/`.
+Поддерживаются два режима: внешний endpoint `https://kroki.io` (по умолчанию) и локальный Kroki через Docker.
+
+```bash
+# Локальный Kroki
+docker compose -f .tools/plantuml-render/docker-compose.base.yml -f .tools/plantuml-render/docker-compose.dev.yml up -d
+
+# Рендер диаграмм через локальный endpoint
+KROKI_BASE_URL=http://localhost:8000 .tools/plantuml-render/plantuml-render --path docs/requirements/
+```
+
+Подробная инструкция и переменные окружения: `.tools/plantuml-render/README.md`.
 
 ## Workflow: разработчик + агент
 
@@ -212,7 +227,6 @@ docs/requirements/      # Заполненная документация про
 
 ### 13. Этап [7.1]: Диаграммы ArchiMate
 ![Этап 7.1](.diagrams/SDD-Sequence-13.png)
-
 
 ### 14. Этап [8]: Структура ПО
 ![Этап 8](.diagrams/SDD-Sequence-14.png)

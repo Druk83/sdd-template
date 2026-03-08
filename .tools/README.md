@@ -22,7 +22,7 @@
 ## Инструменты
 
 * **pdd** — сканирует `@todo` в исходниках и генерирует реестр задач → см. `.tools/pdd/README.md` (stable)
-* **plantuml-render** — рендерит `.plantuml` файлы в PNG/SVG через Kroki.io API → см. `.tools/plantuml-render/README.md` (stable)
+* **plantuml-render** — рендерит `.plantuml` файлы в PNG/SVG через Kroki-compatible API (облачный или локальный endpoint) → см. `.tools/plantuml-render/README.md` (stable)
 
 ## Кроссплатформенный запуск
 

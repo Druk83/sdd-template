@@ -9,6 +9,9 @@
 .diagrams/3.png
 .diagrams/1.plantuml
 .diagrams/2.plantuml
+.env
+.tools/plantuml-render/.env
+
 .issues/agent-traceability-matrix.md
 .issues/context-enrichment-rule.md
 .issues/doc-cleanup-validation.md

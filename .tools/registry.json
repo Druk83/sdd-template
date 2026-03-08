@@ -16,7 +16,7 @@
     "entry": "python .tools/plantuml-render/plantuml_render.py --format png",
     "entry_win": ".tools/plantuml-render/plantuml-render.bat --format png",
     "entry_unix": ".tools/plantuml-render/plantuml-render --format png",
-    "desc": "Render .plantuml files to PNG/SVG using Kroki.io API",
+    "desc": "Render .plantuml files to PNG/SVG via configurable Kroki endpoint",
     "tags": ["plantuml", "diagram", "render", "visualization"],
     "exec": true,
     "runtime": "python"
