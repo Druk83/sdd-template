@@ -22,3 +22,12 @@
 .issues/h6-question-strategy.md
 .issues/manifest-validation-gate.md
 .issues/done/gap-classification.md
+.issues/done/local-kroki-docker.md
+.issues/tag-selector-full-height-rule.md
+.issues/system-design-manifest-scope.md
+.issues/system-design-infra-taxonomy.md
+.issues/system-design-architecture-template.md
+.issues/check-encoding-scan-profiles.md
+.issues/check-encoding-repo-quality-gate.md
+.issues/adaptive-design-manifest-scope.md
+.issues/adaptive-breakpoints-cascade.md

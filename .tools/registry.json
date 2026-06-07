@@ -1,5 +1,16 @@
 [
   {
+    "name": "check-encoding",
+    "path": ".tools/check-encoding/check_encoding.py",
+    "entry": "python .tools/check-encoding/check_encoding.py --paths docs README.md apps services scripts .manifest .requirements .tasks .issues",
+    "entry_win": ".tools/check-encoding/check-encoding.bat --paths docs README.md apps services scripts .manifest .requirements .tasks .issues",
+    "entry_unix": ".tools/check-encoding/check-encoding --paths docs README.md apps services scripts .manifest .requirements .tasks .issues",
+    "desc": "Scan repository for mojibake and UTF-8 issues with expanded default scope",
+    "tags": ["encoding", "docs", "readme", "quality", "strict"],
+    "exec": true,
+    "runtime": "python"
+  },
+  {
     "name": "pdd-scan",
     "path": ".tools/pdd/pdd_scan.py",
     "entry": "python .tools/pdd/pdd_scan.py --format md --write",

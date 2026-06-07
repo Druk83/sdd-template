@@ -1,6 +1,6 @@
 # Фреймворк для разработки технической документации в репозитории
 
-> **Версия:** 1.7.0
+> **Версия:** 1.7.1
 
 Набор шаблонов для создания технической документации программных проектов с помощью AI-агентов.
 
@@ -63,7 +63,7 @@ git commit -m "Initial commit from sdd-template"
 Дать AI-агенту команду:
 
 ```
-Ознакомься с .source/, .requirements/трек разработки.md и используй правила из .claude/CLAUDE.md или .github/agents/copilot-instructions.md или AGENTS.md.
+Ознакомься с .source/, .requirements/трек разработки.md и используй правила из .claude/CLAUDE.md или .github/agents/copilot-instructions.md или AGENTS.md и давай приступим к составлению технической документации для этого проекта
 ```
 
 Агент будет:

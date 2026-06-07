@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+python "$(dirname "$0")/check_encoding.py" "$@"
