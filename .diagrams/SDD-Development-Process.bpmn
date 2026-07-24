@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_SDD" targetNamespace="https://github.com/Druk83/sdd-template/bpmn">
+  <bpmn:collaboration id="Collaboration_SDD">
+    <bpmn:participant id="Participant_SDD" name="SDD workflow" processRef="Process_SDD" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_SDD" name="Создание технической документации" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_SDD">
+      <bpmn:lane id="Lane_Agent" name="AI Agent">
+        <bpmn:flowNodeRef>Task_ReadContext</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DetermineStage</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Context</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_UpdateContext</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ValidateArtifact</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Acceptance</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReviseArtifact</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CloseStage</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_MoreStages</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AdvanceStage</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_Completed</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>StartEvent_Session</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CreateGap</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RequestClarification</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PrepareArtifact</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Developer" name="Developer">
+        <bpmn:flowNodeRef>Task_ProvideClarification</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ConfirmArtifact</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:task id="Task_ReadContext" name="Прочитать источники проекта">
+      <bpmn:incoming>Flow_Start_Read</bpmn:incoming>
+      <bpmn:outgoing>Flow_Read_Determine</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_DetermineStage" name="Определить активный этап">
+      <bpmn:incoming>Flow_Read_Determine</bpmn:incoming>
+      <bpmn:incoming>Flow_Advance_Determine</bpmn:incoming>
+      <bpmn:outgoing>Flow_Determine_Context</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Context" name="Контекста достаточно?" default="Flow_Context_No">
+      <bpmn:incoming>Flow_Determine_Context</bpmn:incoming>
+      <bpmn:incoming>Flow_Update_Context</bpmn:incoming>
+      <bpmn:outgoing>Flow_Context_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Context_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_ProvideClarification" name="Уточнить контекст и решение">
+      <bpmn:incoming>Flow_Request_Provide</bpmn:incoming>
+      <bpmn:outgoing>Flow_Provide_Update</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_UpdateContext" name="Закрыть GAP и обновить контекст">
+      <bpmn:incoming>Flow_Provide_Update</bpmn:incoming>
+      <bpmn:outgoing>Flow_Update_Context</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ConfirmArtifact" name="Подтвердить решения и артефакт">
+      <bpmn:incoming>Flow_Prepare_Confirm</bpmn:incoming>
+      <bpmn:outgoing>Flow_Confirm_Validate</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ValidateArtifact" name="Проверить критерии готовности">
+      <bpmn:incoming>Flow_Confirm_Validate</bpmn:incoming>
+      <bpmn:incoming>Flow_Revise_Validate</bpmn:incoming>
+      <bpmn:outgoing>Flow_Validate_Acceptance</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Acceptance" name="Этап принят?" default="Flow_Accept_No">
+      <bpmn:incoming>Flow_Validate_Acceptance</bpmn:incoming>
+      <bpmn:outgoing>Flow_Accept_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Accept_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_ReviseArtifact" name="Исправить артефакт">
+      <bpmn:incoming>Flow_Accept_No</bpmn:incoming>
+      <bpmn:outgoing>Flow_Revise_Validate</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_CloseStage" name="Закрыть этап">
+      <bpmn:incoming>Flow_Accept_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_Close_More</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_MoreStages" name="Остались этапы?" default="Flow_More_No">
+      <bpmn:incoming>Flow_Close_More</bpmn:incoming>
+      <bpmn:outgoing>Flow_More_Yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_More_No</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_AdvanceStage" name="Перейти к следующему этапу">
+      <bpmn:incoming>Flow_More_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_Advance_Determine</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="EndEvent_Completed" name="Документация завершена">
+      <bpmn:incoming>Flow_More_No</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_Read" sourceRef="StartEvent_Session" targetRef="Task_ReadContext" />
+    <bpmn:sequenceFlow id="Flow_Read_Determine" sourceRef="Task_ReadContext" targetRef="Task_DetermineStage" />
+    <bpmn:sequenceFlow id="Flow_Determine_Context" sourceRef="Task_DetermineStage" targetRef="Gateway_Context" />
+    <bpmn:sequenceFlow id="Flow_Context_Yes" name="Да" sourceRef="Gateway_Context" targetRef="Task_PrepareArtifact" />
+    <bpmn:sequenceFlow id="Flow_Context_No" name="Нет" sourceRef="Gateway_Context" targetRef="Task_CreateGap" />
+    <bpmn:sequenceFlow id="Flow_Gap_Request" sourceRef="Task_CreateGap" targetRef="Task_RequestClarification" />
+    <bpmn:sequenceFlow id="Flow_Request_Provide" sourceRef="Task_RequestClarification" targetRef="Task_ProvideClarification" />
+    <bpmn:sequenceFlow id="Flow_Provide_Update" sourceRef="Task_ProvideClarification" targetRef="Task_UpdateContext" />
+    <bpmn:sequenceFlow id="Flow_Update_Context" sourceRef="Task_UpdateContext" targetRef="Gateway_Context" />
+    <bpmn:sequenceFlow id="Flow_Prepare_Confirm" sourceRef="Task_PrepareArtifact" targetRef="Task_ConfirmArtifact" />
+    <bpmn:sequenceFlow id="Flow_Confirm_Validate" sourceRef="Task_ConfirmArtifact" targetRef="Task_ValidateArtifact" />
+    <bpmn:sequenceFlow id="Flow_Validate_Acceptance" sourceRef="Task_ValidateArtifact" targetRef="Gateway_Acceptance" />
+    <bpmn:sequenceFlow id="Flow_Accept_Yes" name="Да" sourceRef="Gateway_Acceptance" targetRef="Task_CloseStage" />
+    <bpmn:sequenceFlow id="Flow_Accept_No" name="Нет" sourceRef="Gateway_Acceptance" targetRef="Task_ReviseArtifact" />
+    <bpmn:sequenceFlow id="Flow_Revise_Validate" sourceRef="Task_ReviseArtifact" targetRef="Task_ValidateArtifact" />
+    <bpmn:sequenceFlow id="Flow_Close_More" sourceRef="Task_CloseStage" targetRef="Gateway_MoreStages" />
+    <bpmn:sequenceFlow id="Flow_More_Yes" name="Да" sourceRef="Gateway_MoreStages" targetRef="Task_AdvanceStage" />
+    <bpmn:sequenceFlow id="Flow_More_No" name="Нет" sourceRef="Gateway_MoreStages" targetRef="EndEvent_Completed" />
+    <bpmn:sequenceFlow id="Flow_Advance_Determine" sourceRef="Task_AdvanceStage" targetRef="Task_DetermineStage" />
+    <bpmn:startEvent id="StartEvent_Session" name="Начало сессии">
+      <bpmn:outgoing>Flow_Start_Read</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_CreateGap" name="Создать GAP со статусом OPEN">
+      <bpmn:incoming>Flow_Context_No</bpmn:incoming>
+      <bpmn:outgoing>Flow_Gap_Request</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_RequestClarification" name="Задать вопрос разработчику">
+      <bpmn:incoming>Flow_Gap_Request</bpmn:incoming>
+      <bpmn:outgoing>Flow_Request_Provide</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_PrepareArtifact" name="Подготовить артефакт этапа">
+      <bpmn:incoming>Flow_Context_Yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_Prepare_Confirm</bpmn:outgoing>
+    </bpmn:task>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_SDD">
+    <bpmndi:BPMNPlane id="BPMNPlane_SDD" bpmnElement="Collaboration_SDD">
+      <bpmndi:BPMNShape id="Participant_SDD_di" bpmnElement="Participant_SDD" isHorizontal="true">
+        <dc:Bounds x="40" y="40" width="2280" height="760" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Developer_di" bpmnElement="Lane_Developer" isHorizontal="true">
+        <dc:Bounds x="70" y="420" width="2250" height="380" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Agent_di" bpmnElement="Lane_Agent" isHorizontal="true">
+        <dc:Bounds x="70" y="40" width="2250" height="380" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReadContext_di" bpmnElement="Task_ReadContext">
+        <dc:Bounds x="200" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DetermineStage_di" bpmnElement="Task_DetermineStage">
+        <dc:Bounds x="400" y="180" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Context_di" bpmnElement="Gateway_Context" isMarkerVisible="true">
+        <dc:Bounds x="600" y="195" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="548" y="146" width="63" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ProvideClarification_di" bpmnElement="Task_ProvideClarification">
+        <dc:Bounds x="900" y="500" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_UpdateContext_di" bpmnElement="Task_UpdateContext">
+        <dc:Bounds x="1100" y="300" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ConfirmArtifact_di" bpmnElement="Task_ConfirmArtifact">
+        <dc:Bounds x="1100" y="500" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ValidateArtifact_di" bpmnElement="Task_ValidateArtifact">
+        <dc:Bounds x="1280" y="180" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Acceptance_di" bpmnElement="Gateway_Acceptance" isMarkerVisible="true">
+        <dc:Bounds x="1500" y="195" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1490" y="173" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReviseArtifact_di" bpmnElement="Task_ReviseArtifact">
+        <dc:Bounds x="1600" y="300" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CloseStage_di" bpmnElement="Task_CloseStage">
+        <dc:Bounds x="1620" y="180" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_MoreStages_di" bpmnElement="Gateway_MoreStages" isMarkerVisible="true">
+        <dc:Bounds x="1820" y="195" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1801" y="173" width="89" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AdvanceStage_di" bpmnElement="Task_AdvanceStage">
+        <dc:Bounds x="1940" y="180" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_Completed_di" bpmnElement="EndEvent_Completed">
+        <dc:Bounds x="2200" y="205" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2182" y="167.5" width="72" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_Session_di" bpmnElement="StartEvent_Session">
+        <dc:Bounds x="112" y="196" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="91" y="173" width="77" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CreateGap_di" bpmnElement="Task_CreateGap">
+        <dc:Bounds x="710" y="180" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RequestClarification_di" bpmnElement="Task_RequestClarification">
+        <dc:Bounds x="900" y="180" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PrepareArtifact_di" bpmnElement="Task_PrepareArtifact">
+        <dc:Bounds x="710" y="320" width="160" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start_Read_di" bpmnElement="Flow_Start_Read">
+        <di:waypoint x="148" y="215" />
+        <di:waypoint x="200" y="215" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Read_Determine_di" bpmnElement="Flow_Read_Determine">
+        <di:waypoint x="350" y="220" />
+        <di:waypoint x="400" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Determine_Context_di" bpmnElement="Flow_Determine_Context">
+        <di:waypoint x="550" y="220" />
+        <di:waypoint x="600" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Context_Yes_di" bpmnElement="Flow_Context_Yes">
+        <di:waypoint x="625" y="245" />
+        <di:waypoint x="625" y="360" />
+        <di:waypoint x="710" y="360" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="643" y="253" width="13" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Context_No_di" bpmnElement="Flow_Context_No">
+        <di:waypoint x="650" y="220" />
+        <di:waypoint x="710" y="220" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="656" y="188" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Gap_Request_di" bpmnElement="Flow_Gap_Request">
+        <di:waypoint x="870" y="220" />
+        <di:waypoint x="900" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Request_Provide_di" bpmnElement="Flow_Request_Provide">
+        <di:waypoint x="980" y="260" />
+        <di:waypoint x="980" y="500" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Provide_Update_di" bpmnElement="Flow_Provide_Update">
+        <di:waypoint x="1010" y="500" />
+        <di:waypoint x="1010" y="460" />
+        <di:waypoint x="1180" y="460" />
+        <di:waypoint x="1180" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Update_Context_di" bpmnElement="Flow_Update_Context">
+        <di:waypoint x="1180" y="300" />
+        <di:waypoint x="1180" y="120" />
+        <di:waypoint x="625" y="120" />
+        <di:waypoint x="625" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Prepare_Confirm_di" bpmnElement="Flow_Prepare_Confirm">
+        <di:waypoint x="790" y="400" />
+        <di:waypoint x="790" y="630" />
+        <di:waypoint x="1180" y="630" />
+        <di:waypoint x="1180" y="580" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Confirm_Validate_di" bpmnElement="Flow_Confirm_Validate">
+        <di:waypoint x="1260" y="540" />
+        <di:waypoint x="1360" y="540" />
+        <di:waypoint x="1360" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Validate_Acceptance_di" bpmnElement="Flow_Validate_Acceptance">
+        <di:waypoint x="1440" y="220" />
+        <di:waypoint x="1500" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Accept_Yes_di" bpmnElement="Flow_Accept_Yes">
+        <di:waypoint x="1550" y="220" />
+        <di:waypoint x="1620" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Accept_No_di" bpmnElement="Flow_Accept_No">
+        <di:waypoint x="1525" y="245" />
+        <di:waypoint x="1525" y="340" />
+        <di:waypoint x="1600" y="340" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Revise_Validate_di" bpmnElement="Flow_Revise_Validate">
+        <di:waypoint x="1600" y="360" />
+        <di:waypoint x="1420" y="360" />
+        <di:waypoint x="1420" y="260" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Close_More_di" bpmnElement="Flow_Close_More">
+        <di:waypoint x="1760" y="220" />
+        <di:waypoint x="1820" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_More_Yes_di" bpmnElement="Flow_More_Yes">
+        <di:waypoint x="1870" y="220" />
+        <di:waypoint x="1940" y="220" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_More_No_di" bpmnElement="Flow_More_No">
+        <di:waypoint x="1845" y="250" />
+        <di:waypoint x="1845" y="280" />
+        <di:waypoint x="2218" y="280" />
+        <di:waypoint x="2218" y="241" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1870" y="263" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Advance_Determine_di" bpmnElement="Flow_Advance_Determine">
+        <di:waypoint x="2020" y="180" />
+        <di:waypoint x="2020" y="100" />
+        <di:waypoint x="475" y="100" />
+        <di:waypoint x="475" y="180" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
