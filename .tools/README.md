@@ -1,49 +1,58 @@
 # Раздел .tools
 
-В каталоге `.tools/` хранятся утилиты и скрипты, поддерживающие разработку и автоматизацию проекта (маленькие инструменты, которые не являются частью core-сервиса).
+В каталоге `.tools/` хранятся утилиты и скрипты, поддерживающие разработку и автоматизацию проекта.
 
 ## Структура
+
 ```text
 .tools/
   README.md
   registry.json
+  check-encoding/
   pdd/
     README.md
     pdd_scan.py
-    pdd-scan         # bash wrapper
-    pdd-scan.bat     # Windows wrapper
+    pdd-scan
+    pdd-scan.bat
   plantuml-render/
     README.md
     plantuml_render.py
-    plantuml-render      # bash wrapper
-    plantuml-render.bat  # Windows wrapper
+    plantuml-render
+    plantuml-render.bat
 ```
 
 ## Инструменты
 
-* **pdd** — сканирует `@todo` в исходниках и генерирует реестр задач → см. `.tools/pdd/README.md` (stable)
-* **plantuml-render** — рендерит `.plantuml` файлы в PNG/SVG через Kroki-compatible API (облачный или локальный endpoint) → см. `.tools/plantuml-render/README.md` (stable)
+* **check-encoding** — проверяет текстовые файлы на нарушения UTF-8 и mojibake.
+* **pdd-scan** — сканирует `@todo` и обновляет реестр задач.
+* **plantuml-render** — рендерит `.plantuml`, `.bpmn` и `.dot` в PNG/SVG через Kroki-compatible API; локальный Docker-стек включает BPMN companion-сервис и SVG-to-PNG rasterizer.
 
 ## Кроссплатформенный запуск
 
-Каждый инструмент имеет три точки входа:
-- `entry` — универсальная команда через python (работает везде)
-- `entry_unix` — bash wrapper для Linux/macOS
-- `entry_win` — .bat wrapper для Windows
+Каждый исполняемый инструмент зарегистрирован в `.tools/registry.json` и имеет универсальную Python-точку входа, а также wrapper-скрипты для Windows и Unix-подобных систем.
 
-**Рекомендуемый способ:** использовать `entry` из `registry.json`:
 ```bash
-# Универсально (Windows/Linux/macOS)
-python .tools/pdd/pdd_scan.py --format md
-python .tools/plantuml-render/plantuml_render.py --format png
+python .tools/plantuml-render/plantuml_render.py --format png --path <file-or-directory>
 ```
 
-## Примечания об операционных файлах
+Для BPMN с локальным Kroki:
 
-* `registry.json` — машинно-удобный реестр утилит в `.tools/` (имя, путь, точка входа, теги). Поля `entry_win`/`entry_unix` — платформо-специфичные варианты запуска.
+```bash
+python .tools/plantuml-render/plantuml_render.py \
+  --kroki-url http://localhost:8000 \
+  --path <diagram.bpmn>
+```
+
+Для графа нормативного порядка в DOT:
+
+```bash
+python .tools/plantuml-render/plantuml_render.py \
+  --diagram-type graphviz \
+  --path <normative-order.dot>
+```
 
 ## Ссылки
 
 * В корень проекта: `/README.md`
-* Документация: `docs/` (если есть)
-* Правила оформления README: `.manifest/readmemanifest.md`
+* Реестр инструментов: `.tools/registry.json`
+* Правила инструментов: `.manifest/toolsmanifest.md`

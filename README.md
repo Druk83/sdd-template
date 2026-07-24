@@ -1,6 +1,6 @@
 # Фреймворк для разработки технической документации в репозитории
 
-> **Версия:** 1.7.1
+> **Версия:** 1.7.2
 
 Набор шаблонов для создания технической документации программных проектов с помощью AI-агентов.
 
@@ -11,12 +11,21 @@
 - Последовательность этапов с зависимостями
 - Трассируемость от бизнес-требований до тестов
 - Поддержка ГОСТ 19 и ГОСТ 34
+- Поддержка PlantUML, BPMN и DOT/Graphviz-диаграмм с выводом в PNG/SVG
+- Правила проверки нормативного порядка событий и исключающих ветвей
 
 ## Для кого
 
 - **AI-агенты** — используют шаблоны из `.requirements/` для генерации документации
 - **Разработчики** — получают структурированную документацию в `docs/requirements/`
 - **Аналитики** — имеют единый формат для фиксации требований
+
+## Когда использовать
+
+- Когда требуется пройти единый процесс от исходных данных в `.source/` до требований, архитектуры и стратегии тестирования.
+- Когда нужно описать бизнес-процесс в BPMN или архитектуру в PlantUML и сохранить визуальные результаты рядом с исходными диаграммами.
+- Когда рендеринг должен выполняться через локальный Docker/Kroki-контур: например, для повторяемого результата, BPMN в PNG или ограниченного доступа к внешним сервисам.
+- Когда необходимо проверить текстовые артефакты репозитория на проблемы UTF-8 либо по запросу описать нормативный порядок событий и его исключения.
 
 ## Быстрый старт
 
@@ -73,15 +82,25 @@ git commit -m "Initial commit from sdd-template"
 
 ### Рендеринг диаграмм
 
-Для рендеринга `*.plantuml` используется инструмент `.tools/plantuml-render/`.
-Поддерживаются два режима: внешний endpoint `https://kroki.io` (по умолчанию) и локальный Kroki через Docker.
+Для рендеринга `*.plantuml`, `*.bpmn` и `*.dot` используется инструмент `.tools/plantuml-render/`.
+Он формирует PNG или SVG через публичный Kroki либо локальный Docker-контур.
+Endpoint задаётся через `.env` или параметр `--kroki-url`: можно использовать публичный `https://kroki.io` либо локальный Kroki через Docker.
+
+Перед первым запуском инструмента создайте рабочую конфигурацию из шаблона `.tools/plantuml-render/.env.example` в `.tools/plantuml-render/.env`.
 
 ```bash
+# Создать локальную конфигурацию
+cp .tools/plantuml-render/.env.example .tools/plantuml-render/.env
+
 # Локальный Kroki
-docker compose -f .tools/plantuml-render/docker-compose.base.yml -f .tools/plantuml-render/docker-compose.dev.yml up -d
+docker compose --env-file .tools/plantuml-render/.env \
+  -f .tools/plantuml-render/docker-compose.base.yml \
+  -f .tools/plantuml-render/docker-compose.dev.yml up -d
 
 # Рендер диаграмм через локальный endpoint
-KROKI_BASE_URL=http://localhost:8000 .tools/plantuml-render/plantuml-render --path docs/requirements/
+.tools/plantuml-render/plantuml-render \
+  --kroki-url http://localhost:8000 \
+  --path docs/requirements/
 ```
 
 Подробная инструкция и переменные окружения: `.tools/plantuml-render/README.md`.
@@ -148,7 +167,8 @@ docs/requirements/      # Заполненная документация про
   chatlogmanifest.md    # Правила логирования сессий чата
   dependenciesmanifest.md, dockermanifest.md, pddmanifest.md,
   readmemanifest.md, taskmanifest.md, tddmanifest.md,
-  toolsmanifest.md, versionmanifest.md, issuesmanifest.md
+  toolsmanifest.md, versionmanifest.md, normativeordermanifest.md,
+  issuesmanifest.md
 .chatlog/               # Логи сессий работы с агентами (по запросу)
 .tasks/                 # Задачи проекта
 .issues/                # Проблемы и баги
