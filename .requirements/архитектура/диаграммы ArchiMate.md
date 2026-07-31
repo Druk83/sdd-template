@@ -4,6 +4,16 @@
 > Определяет правила построения ArchiMate диаграмм в PlantUML.
 > **Подход:** `.approach/archimate.md` (концептуальная методология ArchiMate).
 
+Перед созданием диаграмм обязательно изучи эталонные исходники:
+
+- `.diagrams/example BL.plantuml` — стиль Business Layer;
+- `.diagrams/example AL.plantuml` — стиль Application Layer;
+- `.diagrams/example TL.plantuml` — стиль Technology Layer.
+
+Эти файлы задают визуальную и структурную форму диаграмм. Их сущности,
+названия, идентификаторы и связи являются только обезличенным примером и не
+переносятся в диаграмму конкретного проекта.
+
 ---
 
 ## 1. Когда строить диаграммы
@@ -18,20 +28,25 @@
 - `docs/requirements/архитектура/diagrams/AL.plantuml`
 - `docs/requirements/архитектура/diagrams/TL.plantuml`
 
+Перед построением каждой диаграммы проверь, что ее сущности подтверждены
+описанием соответствующего слоя и имеют стабильные идентификаторы.
+
 ---
 
 ## 2. Структура файла диаграммы
 
 ```plantuml
 @startuml <Project>_<Layer>_ArchiMate
+    title <Project> — <Layer> Layer (ArchiMate 3.2)
     !theme plain
     skinparam backgroundColor #FFFFFF
     skinparam defaultFontSize 10
     skinparam shadowing false
     skinparam linetype ortho
+    skinparam ArrowFontSize 9
 
     ' ========== 1. ЦВЕТОВАЯ СХЕМА ==========
-    [skinparam для каждого типа сущностей]
+    [полные skinparam-блоки для типов текущего и соседних слоев]
 
     ' ========== 2. СУЩНОСТИ ТЕКУЩЕГО СЛОЯ ==========
     [сущности декомпозируемого слоя]
@@ -44,7 +59,17 @@
 
     ' ========== 5. ЛЕГЕНДА ==========
     legend right
-    ...
+    |= Тип связи |= Цвет |= Стиль |
+    | Assignment | Черный | Сплошная |
+    | Serving | Зеленый | Сплошная |
+    | Access | Синий | Сплошная |
+    | Realization | Оранжевый | Пунктирная |
+    | Triggering | Красный | Пунктирная |
+    |  |  |  |
+|= Слой |= Цвет |  |
+| Business Layer (BL) | Желтый (#FFFACD) |  |
+| Application Layer (AL) | Голубой (#B5E7F0) |  |
+| Technology Layer (TL) | Зеленый (#C9E7B7) |  |
     endlegend
 
 @enduml
@@ -54,43 +79,27 @@
 
 ## 3. Цветовая схема (стандарт ArchiMate 3.2)
 
-| Слой | Цвет | HEX | Назначение |
+| Слой или тип | Фон | Граница | Назначение |
 |------|------|-----|------------|
-| Business Layer | Желтый | `#FFFACD` | Бизнес-процессы, акторы, сервисы, объекты |
-| Application Layer | Голубой | `#B5E7F0` | Компоненты, интерфейсы, данные |
-| Technology Layer | Зеленый | `#C9E7B7` | Узлы, устройства, артефакты |
+| Business Layer | `#FFFACD` | `#B8860B` | Бизнес-процессы, акторы, сервисы, объекты |
+| Business Event | `#FFFDE7` | `#B8860B` | События бизнес-слоя |
+| Application Layer | `#B5E7F0` | `#1565C0` | Компоненты, интерфейсы, данные |
+| Application Event | `#D6F5FF` | `#1565C0` | События прикладного слоя |
+| Technology Layer | `#C9E7B7` | `#2E7D32` | Узлы, ПО, сервисы, интерфейсы, артефакты |
+| Communication Network | `#E8F5E9` | `#2E7D32` | Сети технологического слоя |
+
+Для всех типов используй `FontColor #000000`. Не вводи собственные цвета без
+явно зафиксированного решения о стиле проекта.
 
 ### 3.1 Skinparam для слоев
 
-```plantuml
-' Business Layer — желтый
-skinparam rectangle<<BusinessActor>> {
-    BackgroundColor #FFFACD
-    BorderColor #000000
-    FontColor #000000
-}
-skinparam rectangle<<BusinessRole>> { BackgroundColor #FFFACD ... }
-skinparam rectangle<<BusinessProcess>> { BackgroundColor #FFFACD ... }
-skinparam rectangle<<BusinessService>> { BackgroundColor #FFFACD ... }
-skinparam rectangle<<BusinessObject>> { BackgroundColor #FFFACD ... }
-skinparam rectangle<<BusinessEvent>> { BackgroundColor #FFFACD ... }
-skinparam rectangle<<BusinessInterface>> { BackgroundColor #FFFACD ... }
+Для каждого использованного стереотипа укажи полный `skinparam`-блок без
+сокращений и многоточий. Цвет типа должен соответствовать его слою. Если на
+диаграмме показаны внешние сущности, добавь для них цветовые блоки соседнего
+слоя, как в эталонных примерах.
 
-' Application Layer — голубой
-skinparam rectangle<<ApplicationComponent>> { BackgroundColor #B5E7F0 ... }
-skinparam rectangle<<ApplicationService>> { BackgroundColor #B5E7F0 ... }
-skinparam rectangle<<ApplicationInterface>> { BackgroundColor #B5E7F0 ... }
-skinparam rectangle<<ApplicationFunction>> { BackgroundColor #B5E7F0 ... }
-skinparam rectangle<<DataObject>> { BackgroundColor #B5E7F0 ... }
-
-' Technology Layer — зеленый
-skinparam rectangle<<TechnologyNode>> { BackgroundColor #C9E7B7 ... }
-skinparam rectangle<<TechnologyService>> { BackgroundColor #C9E7B7 ... }
-skinparam rectangle<<TechnologyInterface>> { BackgroundColor #C9E7B7 ... }
-skinparam rectangle<<SystemSoftware>> { BackgroundColor #C9E7B7 ... }
-skinparam rectangle<<TechnologyArtifact>> { BackgroundColor #C9E7B7 ... }
-skinparam rectangle<<Device>> { BackgroundColor #C9E7B7 ... }
-```
+Общие параметры должны совпадать с эталонным стилем: белый фон, `!theme plain`,
+отключенная тень, ортогональная маршрутизация и единый размер подписей стрелок.
 
 ---
 
@@ -100,17 +109,17 @@ skinparam rectangle<<Device>> { BackgroundColor #C9E7B7 ... }
 rectangle "Название\n(ID)" as ID_Name <<ТипСущности>>
 ```
 
-**Примеры:**
+**Формат:**
 ```plantuml
-rectangle "Auth & IAM\n(Rust)\nAC4" as AC4_Auth <<ApplicationComponent>>
-rectangle "Жилец\n(Ж)" as Actor_Resident <<BusinessActor>>
-rectangle "PostgreSQL\n(TN2)" as TN2_PostgreSQL <<TechnologyNode>>
+rectangle "<entity name>\n(<stable ID>)" as <element_id> <<ApplicationComponent>>
 ```
 
 **Правила именования:**
-- `as` — английский идентификатор: `AC4_Auth`, `TN2_PostgreSQL`
-- Название в кавычках — русский текст
+- `as` — стабильный идентификатор в техническом формате, уникальный в пределах диаграммы
+- Название в кавычках — термин из подтвержденного источника проекта
 - ID в скобках для трассируемости
+- Не добавляй в имя технологии, версии, адреса и порты, если они не подтверждены источником.
+- Не используй идентификаторы и названия из `.diagrams/example AL/BL/TL.plantuml` как факты проекта.
 
 ---
 
@@ -128,22 +137,22 @@ rectangle "PostgreSQL\n(TN2)" as TN2_PostgreSQL <<TechnologyNode>>
 
 ```plantuml
 ' Сплошная линия
-Source -[#4CAF50,thickness=2]-> Target : <color:#4CAF50>serving</color>
+SOURCE_ID -[#4CAF50,thickness=2]-> TARGET_ID : <color:#4CAF50>serving</color>
 
 ' Пунктирная линия
-Source -[#FFA500,thickness=2,dashed]-> Target : <color:#FFA500>realization</color>
+SOURCE_ID -[#FFA500,thickness=2,dashed]-> TARGET_ID : <color:#FFA500>realization</color>
 ```
 
 ### 5.2 Группировка связей
 
 ```plantuml
 ' ========== СВЯЗИ: РОЛИ И ПРОЦЕССЫ (Serving) ==========
-Role_Resident -[#4CAF50,thickness=2]-> P1_Register : <color:#4CAF50>serving</color>
-Role_Admin -[#4CAF50,thickness=2]-> P10_Maintenance : <color:#4CAF50>serving</color>
+BR001 -[#4CAF50,thickness=2]-> BP001 : <color:#4CAF50>serving</color>
+BR002 -[#4CAF50,thickness=2]-> BP002 : <color:#4CAF50>serving</color>
 
 ' ========== МЕЖСЛОЙНЫЕ: TL → AL (Serving) ==========
-TS1_MQTT -[#4CAF50,thickness=2]-> AC1_Gateway : <color:#4CAF50>serving</color>
-TS2_Storage -[#4CAF50,thickness=2]-> AC7_Analytics : <color:#4CAF50>serving</color>
+TS001 -[#4CAF50,thickness=2]-> AC001 : <color:#4CAF50>serving</color>
+TS002 -[#4CAF50,thickness=2]-> AC002 : <color:#4CAF50>serving</color>
 ```
 
 ---
@@ -156,7 +165,7 @@ TS2_Storage -[#4CAF50,thickness=2]-> AC7_Analytics : <color:#4CAF50>serving</col
 | TL -> AL | `serving` | Technology Service -> Application Component |
 | Device -> Node | `assignment` | Physical Device -> Technology Node |
 | Node -> SystemSoftware | `assignment` | Node -> OS/Container |
-| SystemSoftware -> TechnologyService | `realization` | PostgreSQL -> Database Service |
+| SystemSoftware -> TechnologyService | `realization` | `<system software>` -> `<technology service>` |
 
 ---
 
@@ -173,15 +182,15 @@ skinparam rectangle<<Hub>> {
     MinimumHeight 18
 }
 
-rectangle "Hub\nProfile" as J_Profile <<Hub>>
+rectangle "Shared Object\n(HUB-001)" as HUB001 <<Hub>>
 
-' Много процессов обращаются к профилю
-P1_Register -[#2196F3]-> J_Profile
-P2_CoOwner -[#2196F3]-> J_Profile
-P3_Profile -[#2196F3]-> J_Profile
+' Несколько элементов обращаются к одному объекту
+SOURCE001 -[#2196F3]-> HUB001
+SOURCE002 -[#2196F3]-> HUB001
+SOURCE003 -[#2196F3]-> HUB001
 
-' Один Hub -> объект
-J_Profile -[#2196F3]-> O3_Profile : <color:#2196F3>access</color>
+' Hub связан с целевым объектом
+HUB001 -[#2196F3]-> TARGET001 : <color:#2196F3>access</color>
 ```
 
 ---
@@ -212,34 +221,34 @@ endlegend
 
 | Тип | Описание | Пример |
 |-----|----------|--------|
-| `BusinessActor` | Внешний участник | Жилец, Администратор |
-| `BusinessRole` | Внутренняя роль | Роль жильца |
-| `BusinessProcess` | Процесс | Регистрация, Вход в систему |
-| `BusinessService` | Сервис | Сервис аутентификации |
-| `BusinessObject` | Объект данных | Профиль пользователя |
-| `BusinessEvent` | Событие | Пользователь зарегистрирован |
-| `BusinessInterface` | Интерфейс | Портал жилца |
+| `BusinessActor` | Внешний участник | `<business actor>` |
+| `BusinessRole` | Внутренняя роль | `<business role>` |
+| `BusinessProcess` | Процесс | `<business process>` |
+| `BusinessService` | Сервис | `<business service>` |
+| `BusinessObject` | Объект данных | `<business object>` |
+| `BusinessEvent` | Событие | `<business event>` |
+| `BusinessInterface` | Интерфейс | `<business interface>` |
 
 ### 9.2 Application Layer
 
 | Тип | Описание | Пример |
 |-----|----------|--------|
-| `ApplicationComponent` | Компонент | API Gateway, Rule Engine |
-| `ApplicationService` | Сервис | Auth Service |
-| `ApplicationInterface` | Интерфейс | REST API, WebSocket |
-| `ApplicationFunction` | Функция | Валидация токена |
-| `DataObject` | Объект данных | Profile.json, Telemetry.json |
+| `ApplicationComponent` | Компонент | `<application component>` |
+| `ApplicationService` | Сервис | `<application service>` |
+| `ApplicationInterface` | Интерфейс | `<application interface>` |
+| `ApplicationFunction` | Функция | `<application function>` |
+| `DataObject` | Объект данных | `<data object>` |
 
 ### 9.3 Technology Layer
 
 | Тип | Описание | Пример |
 |-----|----------|--------|
-| `TechnologyNode` | Узел | Raspberry Pi, PostgreSQL Cluster |
-| `Device` | Устройство | Raspberry Pi 4, UPS |
-| `SystemSoftware` | Системное ПО | Ubuntu Server, Docker |
-| `TechnologyService` | Сервис | MQTT Service, Database Service |
-| `TechnologyInterface` | Интерфейс | MQTT 1883, PostgreSQL 5432 |
-| `TechnologyArtifact` | Артефакт | docker-compose.yml, nginx.conf |
+| `TechnologyNode` | Узел | `<technology node>` |
+| `Device` | Устройство | `<device>` |
+| `SystemSoftware` | Системное ПО | `<system software>` |
+| `TechnologyService` | Сервис | `<technology service>` |
+| `TechnologyInterface` | Интерфейс | `<technology interface>` |
+| `TechnologyArtifact` | Артефакт | `<technology artifact>` |
 
 ---
 
@@ -253,14 +262,16 @@ endlegend
    - События
    - Интерфейсы
    - Связи: assignment, serving, access, triggering
+   - При необходимости покажи внешние application-сервисы и объекты как якоря межслойных связей.
 
 2. **AL.plantuml** — Application Layer
    - Компоненты (из AL описания)
    - Сервисы
-   - Интерфейсы (REST, WS, MQTT)
+   - Интерфейсы, подтвержденные архитектурными источниками проекта
    - DataObjects
    - Внешние: BL сервисы (желтые), TL сервисы (зеленые)
    - Связи: serving, access, realization (AL -> BL)
+   - Не добавляй сущность соседнего слоя без конкретной связи с текущим слоем.
 
 3. **TL.plantuml** — Technology Layer
    - Devices
@@ -271,6 +282,15 @@ endlegend
    - Artifacts (конфиги)
    - Внешние: AL компоненты (голубые)
    - Связи: assignment, serving, realization, access
+   - Покажи размещение и предоставление технологии приложению только если это подтверждено проектными источниками.
+
+Во всех трех диаграммах:
+
+- сначала опиши сущности текущего слоя, затем внешние якоря соседних слоев;
+- группируй связи по смыслу и подписывай их типом связи на английском языке;
+- используй только те связи, которые следуют из подтвержденных описаний слоев;
+- сохраняй структуру и визуальную плотность эталонного примера, но не копируй его состав;
+- не подменяй архитектурную диаграмму схемой классов, таблиц или последовательностью вызовов.
 
 ---
 
@@ -279,15 +299,22 @@ endlegend
 **Считать верным:**
 - Диаграмма использует ID сущностей и цветовую схему слоёв.
 - Связи соответствуют типам (serving/realization/assignment).
+- Структура файла и визуальный стиль соответствуют эталону своего слоя.
+- Каждый внешний элемент нужен для явно показанной межслойной связи.
 
 **Считать неверным:**
 - Сущности без ID или диаграмма без легенды и цветовой схемы.
+- Скопированные из эталона названия, технологии, роли, процессы или связи.
+- Использование проектных фактов, которых нет в утвержденных описаниях BL/AL/TL.
+- Смешение всех трех слоев без выделения текущего слоя и внешних элементов.
+- Использование произвольных цветов, стрелок или подписей, нарушающих таблицу типов связей.
 
 ---
 
 ## 12. Чеклист диаграммы
 
 - [ ] Используется `!theme plain`
+- [ ] Указан единый для проекта `title` с названием слоя и версией ArchiMate
 - [ ] `skinparam` для всех типов сущностей
 - [ ] Цвета соответствуют слоям
 - [ ] Сущности имеют ID для трассируемости
@@ -297,6 +324,9 @@ endlegend
 - [ ] Внешние сущности имеют цвет своего слоя
 - [ ] Hub-паттерн для сложных связей (опционально)
 - [ ] Диаграмма рендерится без ошибок
+- [ ] Перед созданием изучен эталонный файл соответствующего слоя
+- [ ] В диаграмму не перенесены сущности из эталонного файла
+- [ ] Каждая сущность и связь подтверждена источником архитектуры
 
 ---
 
@@ -305,3 +335,4 @@ endlegend
 - [ ] Чеклист диаграммы выполнен полностью
 - [ ] Диаграммы сохранены в `docs/requirements/архитектура/`
 - [ ] В диаграммах используются ID сущностей из реестра архитектуры
+- [ ] Для всех трех диаграмм сохранены исходники и PNG рядом с ними

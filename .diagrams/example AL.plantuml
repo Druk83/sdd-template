@@ -1,0 +1,178 @@
+@startuml Universal_Application_Layer_Example
+title Universal Application Layer Example (ArchiMate 3.2)
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontSize 10
+skinparam shadowing false
+skinparam linetype ortho
+skinparam ArrowFontSize 9
+
+' ========== ЦВЕТОВАЯ СХЕМА: AL ==========
+skinparam rectangle<<ApplicationComponent>> {
+    BackgroundColor #B5E7F0
+    BorderColor #1565C0
+    FontColor #000000
+}
+skinparam rectangle<<ApplicationService>> {
+    BackgroundColor #B5E7F0
+    BorderColor #1565C0
+    FontColor #000000
+    RoundCorner 8
+}
+skinparam rectangle<<ApplicationInterface>> {
+    BackgroundColor #B5E7F0
+    BorderColor #1565C0
+    FontColor #000000
+}
+skinparam rectangle<<DataObject>> {
+    BackgroundColor #B5E7F0
+    BorderColor #1565C0
+    FontColor #000000
+}
+skinparam rectangle<<ApplicationEvent>> {
+    BackgroundColor #D6F5FF
+    BorderColor #1565C0
+    FontColor #000000
+}
+
+' ========== ЦВЕТА СОСЕДНИХ СЛОЁВ ==========
+skinparam rectangle<<BusinessService>> {
+    BackgroundColor #FFFACD
+    BorderColor #B8860B
+    FontColor #000000
+}
+skinparam rectangle<<BusinessProcess>> {
+    BackgroundColor #FFFACD
+    BorderColor #B8860B
+    FontColor #000000
+    RoundCorner 8
+}
+skinparam rectangle<<BusinessRole>> {
+    BackgroundColor #FFFACD
+    BorderColor #B8860B
+    FontColor #000000
+}
+skinparam rectangle<<TechnologyService>> {
+    BackgroundColor #C9E7B7
+    BorderColor #2E7D32
+    FontColor #000000
+}
+
+' ========== APPLICATION COMPONENTS ==========
+rectangle "Web Client\n(AC-001)" as AC001 <<ApplicationComponent>>
+rectangle "Application API\n(AC-002)" as AC002 <<ApplicationComponent>>
+rectangle "Identity Module\n(AC-003)" as AC003 <<ApplicationComponent>>
+rectangle "Workflow Service\n(AC-004)" as AC004 <<ApplicationComponent>>
+rectangle "Reference Data Service\n(AC-005)" as AC005 <<ApplicationComponent>>
+rectangle "Reporting Service\n(AC-006)" as AC006 <<ApplicationComponent>>
+rectangle "Account Service\n(AC-007)" as AC007 <<ApplicationComponent>>
+
+' ========== APPLICATION INTERFACES ==========
+rectangle "Application API\nHTTP/JSON\n(AI-001)" as AI001 <<ApplicationInterface>>
+rectangle "Web Interface\nClient\n(AI-002)" as AI002 <<ApplicationInterface>>
+
+' ========== APPLICATION SERVICES ==========
+rectangle "Manage Workflow\n(AS-001)" as AS001 <<ApplicationService>>
+rectangle "Record Activity\n(AS-002)" as AS002 <<ApplicationService>>
+rectangle "Generate Report\n(AS-003)" as AS003 <<ApplicationService>>
+rectangle "Authenticate Identity\n(AS-004)" as AS004 <<ApplicationService>>
+rectangle "Manage Reference Data\n(AS-005)" as AS005 <<ApplicationService>>
+rectangle "Manage User Accounts\n(AS-006)" as AS006 <<ApplicationService>>
+
+' ========== DATA OBJECTS ==========
+rectangle "Workflow Record\n(DO-001)" as DO001 <<DataObject>>
+rectangle "Activity Record\n(DO-003)" as DO003 <<DataObject>>
+rectangle "User Account Record\n(DO-004)" as DO004 <<DataObject>>
+
+' ========== APPLICATION EVENTS ==========
+rectangle "Workflow Started\n(AE-001)" as AE001 <<ApplicationEvent>>
+rectangle "Activity Recorded\n(AE-002)" as AE002 <<ApplicationEvent>>
+rectangle "Workflow Paused\n(AE-003)" as AE003 <<ApplicationEvent>>
+rectangle "Workflow Resumed\n(AE-004)" as AE004 <<ApplicationEvent>>
+rectangle "Workflow Completed\n(AE-005)" as AE005 <<ApplicationEvent>>
+rectangle "Reference Assigned\n(AE-006)" as AE006 <<ApplicationEvent>>
+rectangle "Comment Added\n(AE-007)" as AE007 <<ApplicationEvent>>
+rectangle "Report Generated\n(AE-008)" as AE008 <<ApplicationEvent>>
+
+' ========== ВНЕШНИЕ: BL ==========
+rectangle "Core Business\nService\n(BS-001)" as BS001_ext <<BusinessService>>
+rectangle "Reporting\nService\n(BS-002)" as BS002_ext <<BusinessService>>
+rectangle "Reference Data\nService\n(BS-003)" as BS003_ext <<BusinessService>>
+rectangle "Business User\n(BR-001)" as BR001_ext <<BusinessRole>>
+rectangle "System Administrator\n(BR-002)" as BR002_ext <<BusinessRole>>
+rectangle "Manage Reference Data\n(BP-004)" as BP004_ext <<BusinessProcess>>
+rectangle "Manage User Accounts\n(BP-005)" as BP005_ext <<BusinessProcess>>
+
+' ========== ВНЕШНИЕ: TL ==========
+rectangle "Data Storage\nService\n(TS-001)" as TS001_ext <<TechnologyService>>
+rectangle "Processing\nService\n(TS-003)" as TS003_ext <<TechnologyService>>
+
+' ========== СВЯЗИ: REALIZATION ==========
+AC001 -[#FFA500,thickness=2,dashed]-> AI002 : <color:#FFA500>realization</color>
+AC002 -[#FFA500,thickness=2,dashed]-> AI001 : <color:#FFA500>realization</color>
+
+' ========== СВЯЗИ: UI/API И МАРШРУТИЗАЦИЯ ==========
+AI002 -[#4CAF50,thickness=2]-> AI001 : <color:#4CAF50>uses</color>
+AC002 -[#4CAF50,thickness=2]-> AC003 : <color:#4CAF50>routes</color>
+AC002 -[#4CAF50,thickness=2]-> AC004 : <color:#4CAF50>routes</color>
+AC002 -[#4CAF50,thickness=2]-> AC005 : <color:#4CAF50>routes</color>
+AC002 -[#4CAF50,thickness=2]-> AC006 : <color:#4CAF50>routes</color>
+AC002 -[#4CAF50,thickness=2]-> AC007 : <color:#4CAF50>routes</color>
+
+' ========== СВЯЗИ: COMPONENT -> APPLICATION SERVICE ==========
+AC004 -[#1565C0,thickness=1]-> AS001 : <color:#1565C0>realization</color>
+AC004 -[#1565C0,thickness=1]-> AS002 : <color:#1565C0>realization</color>
+AC006 -[#1565C0,thickness=1]-> AS003 : <color:#1565C0>realization</color>
+AC003 -[#1565C0,thickness=1]-> AS004 : <color:#1565C0>realization</color>
+AC005 -[#1565C0,thickness=1]-> AS005 : <color:#1565C0>realization</color>
+AC007 -[#1565C0,thickness=1]-> AS006 : <color:#1565C0>realization</color>
+
+' ========== СВЯЗИ: REALIZATION (Service -> BL Service) ==========
+AS001 -[#FFA500,thickness=2,dashed]-> BS001_ext : <color:#FFA500>realization</color>
+AS003 -[#FFA500,thickness=2,dashed]-> BS002_ext : <color:#FFA500>realization</color>
+AS005 -[#FFA500,thickness=2,dashed]-> BS003_ext : <color:#FFA500>realization</color>
+AS005 -[#4CAF50,thickness=2]-> BP004_ext : <color:#4CAF50>serving</color>
+AS006 -[#4CAF50,thickness=2]-> BP005_ext : <color:#4CAF50>serving</color>
+
+' ========== СВЯЗИ: SERVING (AL -> BL) ==========
+AI001 -[#4CAF50,thickness=2]-> BR001_ext : <color:#4CAF50>serving</color>
+AI001 -[#4CAF50,thickness=2]-> BR002_ext : <color:#4CAF50>serving</color>
+
+' ========== СВЯЗИ: SERVING (TL -> AL) ==========
+TS001_ext -[#4CAF50,thickness=2]-> AC004 : <color:#4CAF50>serving</color>
+TS001_ext -[#4CAF50,thickness=2]-> AC005 : <color:#4CAF50>serving</color>
+TS001_ext -[#4CAF50,thickness=2]-> AC006 : <color:#4CAF50>serving</color>
+TS003_ext -[#4CAF50,thickness=2]-> AC006 : <color:#4CAF50>serving</color>
+
+' ========== СВЯЗИ: ACCESS ==========
+AC004 -[#2196F3,thickness=1]-> DO001 : <color:#2196F3>access</color>
+AC005 -[#2196F3,thickness=1]-> DO003 : <color:#2196F3>access</color>
+AC006 -[#2196F3,thickness=1]-> DO001 : <color:#2196F3>access</color>
+AC006 -[#2196F3,thickness=1]-> DO003 : <color:#2196F3>access</color>
+AC007 -[#2196F3,thickness=1]-> DO004 : <color:#2196F3>access</color>
+AC003 -[#2196F3,thickness=1]-> DO004 : <color:#2196F3>access</color>
+
+' ========== СВЯЗИ: TRIGGERING ==========
+AE001 -[#FF6B6B,thickness=2,dashed]-> AS001 : <color:#FF6B6B>triggering</color>
+AE002 -[#FF6B6B,thickness=2,dashed]-> AS002 : <color:#FF6B6B>triggering</color>
+AE003 -[#FF6B6B,thickness=2,dashed]-> AS001 : <color:#FF6B6B>triggering</color>
+AE004 -[#FF6B6B,thickness=2,dashed]-> AS001 : <color:#FF6B6B>triggering</color>
+AE005 -[#FF6B6B,thickness=2,dashed]-> AS001 : <color:#FF6B6B>triggering</color>
+AE006 -[#FF6B6B,thickness=2,dashed]-> AS002 : <color:#FF6B6B>triggering</color>
+AE007 -[#FF6B6B,thickness=2,dashed]-> AS002 : <color:#FF6B6B>triggering</color>
+AE008 -[#FF6B6B,thickness=2,dashed]-> AS003 : <color:#FF6B6B>triggering</color>
+
+legend right
+|= Тип связи |= Цвет |= Стиль |
+| Realization | Оранжевый | Пунктирная |
+| Serving | Зеленый | Сплошная |
+| Access | Синий | Сплошная |
+| Triggering | Красный | Пунктирная |
+|  |  |  |
+|= Слой |= Цвет |  |
+| Business Layer (BL) | Желтый (#FFFACD) |  |
+| Application Layer (AL) | Голубой (#B5E7F0) |  |
+| Technology Layer (TL) | Зеленый (#C9E7B7) |  |
+endlegend
+
+@enduml

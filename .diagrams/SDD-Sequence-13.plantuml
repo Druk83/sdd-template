@@ -8,6 +8,7 @@
     collections ".manifest/" as Manifest
     collections ".requirements/" as Templates
     collections ".approach/" as Approach
+    collections ".diagrams/" as Diagrams
     participant ".tools/" as Tools
 
     /'--- Подэтап [7.1]: Диаграммы ArchiMate ---'/
@@ -15,17 +16,22 @@
     group [7.1] Диаграммы ArchiMate
         note over Agent
         ArchiMate + PlantUML
-        + структура по паттерну [2]
+        Структура по эталону слоя
         Конвенции: diagrams.H4.2
+        Сущности только из принятых результатов [7]
         end note
         Agent -> Templates: Читает H6 шаблон
         Agent -> Approach: Читает archimate.md (нотация)
+        Agent -> Diagrams: Читает example BL.plantuml
+        Agent -> Diagrams: Читает example AL.plantuml
+        Agent -> Diagrams: Читает example TL.plantuml
         opt Архитектурный паттерн выбран на [2]
             Agent -> Approach: Читает <паттерн>.md
             note right of Agent: Структура диаграмм\nпо выбранному паттерну
         end
         Agent -> Manifest: Читает diagramsmanifest.md
-        note right of Agent: Конвенции именования\nBL.plantuml\nAL.plantuml\nTL.plantuml
+        note right of Agent: Конвенции именования\nBL.plantuml / AL.plantuml / TL.plantuml\nЭталон — стиль, не источник сущностей
+        Agent -> Docs: Читает результаты [7 BL/AL/TL] и [7 SD]
         Agent -> Docs: Ф1: Создает скелет .plantuml
         Agent -> Docs: Ф2: Заполняет BL/AL/TL диаграммы
         alt Есть неясности
@@ -47,7 +53,7 @@
 
         /'--- Рендеринг диаграмм [7.1] ---'/
         Agent -> Tools: Рендеринг .plantuml -> PNG
-        note right of Tools: .tools/plantuml-render/\nKroki API
+        note right of Tools: .tools/plantuml-render/\nлокальный Docker/Kroki или публичный endpoint
         alt Рендеринг успешен
             Tools --> Agent: PNG созданы
             Agent -> Docs: Сохраняет PNG в diagrams/

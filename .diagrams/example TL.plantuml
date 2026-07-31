@@ -1,0 +1,140 @@
+@startuml Universal_Technology_Layer_Example
+title Universal Technology Layer Example (ArchiMate 3.2)
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontSize 10
+skinparam shadowing false
+skinparam linetype ortho
+skinparam ArrowFontSize 9
+
+' ========== ЦВЕТОВАЯ СХЕМА: TL ==========
+skinparam rectangle<<TechnologyNode>> {
+    BackgroundColor #C9E7B7
+    BorderColor #2E7D32
+    FontColor #000000
+}
+skinparam rectangle<<SystemSoftware>> {
+    BackgroundColor #C9E7B7
+    BorderColor #2E7D32
+    FontColor #000000
+}
+skinparam rectangle<<TechnologyService>> {
+    BackgroundColor #C9E7B7
+    BorderColor #2E7D32
+    FontColor #000000
+    RoundCorner 8
+}
+skinparam rectangle<<TechnologyArtifact>> {
+    BackgroundColor #C9E7B7
+    BorderColor #2E7D32
+    FontColor #000000
+}
+skinparam rectangle<<CommunicationNetwork>> {
+    BackgroundColor #E8F5E9
+    BorderColor #2E7D32
+    FontColor #000000
+}
+skinparam rectangle<<TechnologyInterface>> {
+    BackgroundColor #C9E7B7
+    BorderColor #2E7D32
+    FontColor #000000
+}
+
+' ========== ЦВЕТА СОСЕДНИХ СЛОЁВ ==========
+skinparam rectangle<<ApplicationComponent>> {
+    BackgroundColor #B5E7F0
+    BorderColor #1565C0
+    FontColor #000000
+}
+
+' ========== TECHNOLOGY NODES ==========
+rectangle "User Device\n(TN-001)" as TN001 <<TechnologyNode>>
+rectangle "Application Runtime\n(TN-002)" as TN002 <<TechnologyNode>>
+rectangle "Data Runtime\n(TN-003)" as TN003 <<TechnologyNode>>
+rectangle "Processing Runtime\n(TN-004)" as TN004 <<TechnologyNode>>
+
+' ========== SYSTEM SOFTWARE ==========
+rectangle "Application Runtime\n(SW-001)" as SW001 <<SystemSoftware>>
+rectangle "Data Storage Engine\n(SW-002)" as SW002 <<SystemSoftware>>
+rectangle "Container Runtime\n(SW-003)" as SW003 <<SystemSoftware>>
+rectangle "Processing Engine\n(SW-004)" as SW004 <<SystemSoftware>>
+
+' ========== TECHNOLOGY SERVICES ==========
+rectangle "Data Storage\nService\n(TS-001)" as TS001 <<TechnologyService>>
+rectangle "Application HTTP\nService\n(TS-002)" as TS002 <<TechnologyService>>
+rectangle "Processing\nService\n(TS-003)" as TS003 <<TechnologyService>>
+
+' ========== ARTIFACTS ==========
+rectangle "Web Client\nBundle\n(AR-001)" as AR001 <<TechnologyArtifact>>
+rectangle "Application Service\nPackage\n(AR-002)" as AR002 <<TechnologyArtifact>>
+rectangle "Deployment\nConfiguration\n(AR-003)" as AR003 <<TechnologyArtifact>>
+
+' ========== COMMUNICATION NETWORKS ==========
+rectangle "External Client\nNetwork\n(CN-001)" as CN001 <<CommunicationNetwork>>
+rectangle "Internal Service\nNetwork\n(CN-002)" as CN002 <<CommunicationNetwork>>
+
+' ========== TECHNOLOGY INTERFACES ==========
+rectangle "Application API\nInterface\n(TIF-001)" as TIF001 <<TechnologyInterface>>
+rectangle "Data Store\nInterface\n(TIF-002)" as TIF002 <<TechnologyInterface>>
+rectangle "Processing\nInterface\n(TIF-003)" as TIF003 <<TechnologyInterface>>
+
+' ========== ВНЕШНИЕ: AL ==========
+rectangle "Web Client\n(AC-001)" as AC001_ext <<ApplicationComponent>>
+rectangle "Application API\n(AC-002)" as AC002_ext <<ApplicationComponent>>
+rectangle "Workflow Service\n(AC-004)" as AC004_ext <<ApplicationComponent>>
+rectangle "Identity Module\n(AC-003)" as AC003_ext <<ApplicationComponent>>
+rectangle "Reference Data Service\n(AC-005)" as AC005_ext <<ApplicationComponent>>
+rectangle "Reporting Service\n(AC-006)" as AC006_ext <<ApplicationComponent>>
+rectangle "Account Service\n(AC-007)" as AC007_ext <<ApplicationComponent>>
+
+' ========== СВЯЗИ: ASSIGNMENT ==========
+TN002 -[#000000,thickness=2]-> SW001 : <color:#000000>assignment</color>
+TN003 -[#000000,thickness=2]-> SW002 : <color:#000000>assignment</color>
+TN004 -[#000000,thickness=2]-> SW004 : <color:#000000>assignment</color>
+SW003 -[#000000,thickness=2]-> TN002 : <color:#000000>assignment</color>
+SW003 -[#000000,thickness=2]-> TN003 : <color:#000000>assignment</color>
+SW003 -[#000000,thickness=2]-> TN004 : <color:#000000>assignment</color>
+SW002 -[#000000,thickness=1]-> AC004_ext : <color:#000000>assignment</color>
+TN002 -[#000000,thickness=2]-> AR002 : <color:#000000>assignment</color>
+TN001 -[#000000,thickness=2]-> AR001 : <color:#000000>assignment</color>
+SW001 -[#000000,thickness=1]-> AC002_ext : <color:#000000>assignment</color>
+SW003 -[#000000,thickness=2]-> AR003 : <color:#000000>assignment</color>
+
+' ========== СВЯЗИ: REALIZATION ==========
+SW002 -[#FFA500,thickness=2,dashed]-> TS001 : <color:#FFA500>realization</color>
+SW001 -[#FFA500,thickness=2,dashed]-> TS002 : <color:#FFA500>realization</color>
+SW004 -[#FFA500,thickness=2,dashed]-> TS003 : <color:#FFA500>realization</color>
+AR001 -[#FFA500,thickness=2,dashed]-> AC001_ext : <color:#FFA500>realization</color>
+AR002 -[#FFA500,thickness=2,dashed]-> AC002_ext : <color:#FFA500>realization</color>
+
+' ========== СВЯЗИ: SERVING (TL -> AL) ==========
+TS001 -[#4CAF50,thickness=2]-> AC004_ext : <color:#4CAF50>serving</color>
+TS001 -[#4CAF50,thickness=2]-> AC003_ext : <color:#4CAF50>serving</color>
+TS001 -[#4CAF50,thickness=2]-> AC005_ext : <color:#4CAF50>serving</color>
+TS002 -[#4CAF50,thickness=2]-> AC002_ext : <color:#4CAF50>serving</color>
+TS003 -[#4CAF50,thickness=2]-> AC006_ext : <color:#4CAF50>serving</color>
+TS001 -[#4CAF50,thickness=2]-> AC007_ext : <color:#4CAF50>serving</color>
+
+' ========== СВЯЗИ: ASSOCIATION ==========
+TN002 -[#888888]-> CN001
+TN001 -[#888888]-> CN001
+TN002 -[#888888]-> CN002
+TN003 -[#888888]-> CN002
+TIF001 -[#888888]-> CN001
+TIF002 -[#888888]-> CN002
+TIF003 -[#888888]-> CN002
+TN004 -[#888888]-> CN002
+
+legend right
+|= Тип связи |= Цвет |= Стиль |
+| Assignment | Черный | Сплошная |
+| Realization | Оранжевый | Пунктирная |
+| Serving | Зеленый | Сплошная |
+| Association | Серый | Сплошная |
+|  |  |  |
+|= Слой |= Цвет |  |
+| Application Layer (AL) | Голубой (#B5E7F0) |  |
+| Technology Layer (TL) | Зеленый (#C9E7B7) |  |
+endlegend
+
+@enduml

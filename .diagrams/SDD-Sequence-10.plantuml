@@ -44,7 +44,7 @@
 
         /'--- Рендеринг диаграмм [5.4] ---'/
         Agent -> Tools: Рендеринг .plantuml -> PNG
-        note right of Tools: .tools/plantuml-render/\nKroki API
+        note right of Tools: .tools/plantuml-render/\nлокальный Docker/Kroki или публичный endpoint
         alt Рендеринг успешен
             Tools --> Agent: PNG созданы
             Agent -> Docs: Сохраняет PNG в diagrams/

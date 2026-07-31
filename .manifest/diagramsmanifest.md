@@ -64,6 +64,17 @@ docs/requirements/
 | BPMN бизнес-процесс | `<process>.bpmn` | `<process>.bpmn` |
 | Граф нормативного порядка | `<process>-normative-order.dot` | `<process>-normative-order.dot` |
 
+Для построения ArchiMate-слоев используй эталонные исходники фреймворка:
+
+- `.diagrams/example BL.plantuml`;
+- `.diagrams/example AL.plantuml`;
+- `.diagrams/example TL.plantuml`.
+
+Эталонные файлы обязательны для изучения перед созданием BL, AL и TL. Они
+определяют стиль оформления, но не являются источником сущностей конкретного
+проекта. Их названия, идентификаторы и связи нельзя копировать без подтверждения
+в документации проекта.
+
 ---
 
 ## diagrams.H3.3 Строй BPMN для бизнес-процесса

@@ -1,0 +1,163 @@
+@startuml Universal_Business_Layer_Example
+title Universal Business Layer Example (ArchiMate 3.2)
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontSize 10
+skinparam shadowing false
+skinparam linetype ortho
+skinparam ArrowFontSize 9
+
+' ========== ЦВЕТОВАЯ СХЕМА: BL ==========
+skinparam rectangle<<BusinessActor>> {
+    BackgroundColor #FFFACD
+    BorderColor #B8860B
+    FontColor #000000
+}
+skinparam rectangle<<BusinessRole>> {
+    BackgroundColor #FFFACD
+    BorderColor #B8860B
+    FontColor #000000
+}
+skinparam rectangle<<BusinessProcess>> {
+    BackgroundColor #FFFACD
+    BorderColor #B8860B
+    FontColor #000000
+    RoundCorner 8
+}
+skinparam rectangle<<BusinessService>> {
+    BackgroundColor #FFFACD
+    BorderColor #B8860B
+    FontColor #000000
+}
+skinparam rectangle<<BusinessObject>> {
+    BackgroundColor #FFFACD
+    BorderColor #B8860B
+    FontColor #000000
+}
+skinparam rectangle<<BusinessEvent>> {
+    BackgroundColor #FFFDE7
+    BorderColor #B8860B
+    FontColor #000000
+}
+
+' ========== ЦВЕТОВАЯ СХЕМА: AL ==========
+skinparam rectangle<<ApplicationService>> {
+    BackgroundColor #B5E7F0
+    BorderColor #1565C0
+    FontColor #000000
+    RoundCorner 8
+}
+skinparam rectangle<<ApplicationInterface>> {
+    BackgroundColor #B5E7F0
+    BorderColor #1565C0
+    FontColor #000000
+}
+skinparam rectangle<<DataObject>> {
+    BackgroundColor #B5E7F0
+    BorderColor #1565C0
+    FontColor #000000
+}
+skinparam rectangle<<ApplicationEvent>> {
+    BackgroundColor #D6F5FF
+    BorderColor #1565C0
+    FontColor #000000
+}
+
+' ========== BUSINESS ACTORS ==========
+rectangle "External User\n(BA-001)" as BA001 <<BusinessActor>>
+rectangle "System Administrator\n(BA-002)" as BA002 <<BusinessActor>>
+
+' ========== BUSINESS ROLES ==========
+rectangle "Business User\n(BR-001)" as BR001 <<BusinessRole>>
+rectangle "System Administrator\n(BR-002)" as BR002 <<BusinessRole>>
+
+' ========== BUSINESS PROCESSES ==========
+rectangle "Execute Business\nOperation\n(BP-001)" as BP001 <<BusinessProcess>>
+rectangle "Classify Business\nObject\n(BP-002)" as BP002 <<BusinessProcess>>
+rectangle "Generate Business\nReport\n(BP-003)" as BP003 <<BusinessProcess>>
+rectangle "Manage Reference\nData\n(BP-004)" as BP004 <<BusinessProcess>>
+rectangle "Manage User\nAccounts\n(BP-005)" as BP005 <<BusinessProcess>>
+
+' ========== BUSINESS SERVICES ==========
+rectangle "Core Business\nService\n(BS-001)" as BS001 <<BusinessService>>
+rectangle "Reporting\nService\n(BS-002)" as BS002 <<BusinessService>>
+rectangle "Reference Data\nService\n(BS-003)" as BS003 <<BusinessService>>
+
+' ========== BUSINESS OBJECTS ==========
+rectangle "Business Session\n(BO-001)" as BO001 <<BusinessObject>>
+rectangle "Reference Entry\n(BO-002)" as BO002 <<BusinessObject>>
+rectangle "Business Report\n(BO-003)" as BO003 <<BusinessObject>>
+rectangle "User Account\n(BO-004)" as BO004 <<BusinessObject>>
+
+' ========== BUSINESS EVENTS ==========
+rectangle "Business Operation\nStarted\n(BE-001)" as BE001 <<BusinessEvent>>
+rectangle "Reference Assigned\n(BE-006)" as BE006 <<BusinessEvent>>
+rectangle "Report Requested\n(BE-008)" as BE008 <<BusinessEvent>>
+
+' ========== AL: ПЕРВЫЙ УРОВЕНЬ ==========
+rectangle "Manage Business\nSession\n(AS-001)" as AS001_al <<ApplicationService>>
+rectangle "Record Business\nActivity\n(AS-002)" as AS002_al <<ApplicationService>>
+rectangle "Generate Business\nReport\n(AS-003)" as AS003_al <<ApplicationService>>
+rectangle "Manage Reference\nData\n(AS-005)" as AS005_al <<ApplicationService>>
+rectangle "Manage User\nAccounts\n(AS-006)" as AS006_al <<ApplicationService>>
+rectangle "Application API\n(AI-001)" as AI001_al <<ApplicationInterface>>
+rectangle "Business Session\nRecord\n(DO-001)" as DO001_al <<DataObject>>
+rectangle "Reference Entry\nRecord\n(DO-003)" as DO003_al <<DataObject>>
+rectangle "User Account\nRecord\n(DO-004)" as DO004_al <<DataObject>>
+rectangle "Business Session\nStarted\n(AE-001)" as AE001_al <<ApplicationEvent>>
+rectangle "Reference Assigned\n(AE-006)" as AE006_al <<ApplicationEvent>>
+rectangle "Business Report\nGenerated\n(AE-008)" as AE008_al <<ApplicationEvent>>
+
+' ========== ВНУТРИСЛОЙНЫЕ СВЯЗИ BL ==========
+BA001 -[#000000,thickness=2]-> BR001 : <color:#000000>assignment</color>
+BA002 -[#000000,thickness=2]-> BR002 : <color:#000000>assignment</color>
+BR001 -[#000000,thickness=2]-> BP001 : <color:#000000>assignment</color>
+BR001 -[#000000,thickness=2]-> BP002 : <color:#000000>assignment</color>
+BR001 -[#000000,thickness=2]-> BP003 : <color:#000000>assignment</color>
+BR002 -[#000000,thickness=2]-> BP004 : <color:#000000>assignment</color>
+BR002 -[#000000,thickness=2]-> BP005 : <color:#000000>assignment</color>
+BS001 -[#4CAF50,thickness=2]-> BP001 : <color:#4CAF50>serving</color>
+BS002 -[#4CAF50,thickness=2]-> BP003 : <color:#4CAF50>serving</color>
+BS003 -[#4CAF50,thickness=2]-> BP004 : <color:#4CAF50>serving</color>
+BP001 -[#2196F3,thickness=1]-> BO001 : <color:#2196F3>access</color>
+BP002 -[#2196F3,thickness=1]-> BO002 : <color:#2196F3>access</color>
+BP003 -[#2196F3,thickness=1]-> BO001 : <color:#2196F3>access</color>
+BP003 -[#2196F3,thickness=1]-> BO003 : <color:#2196F3>access</color>
+BP004 -[#2196F3,thickness=1]-> BO002 : <color:#2196F3>access</color>
+BP005 -[#2196F3,thickness=1]-> BO004 : <color:#2196F3>access</color>
+BE001 -[#FF6B6B,thickness=2,dashed]-> BP001 : <color:#FF6B6B>triggering</color>
+BE006 -[#FF6B6B,thickness=2,dashed]-> BP002 : <color:#FF6B6B>triggering</color>
+BE008 -[#FF6B6B,thickness=2,dashed]-> BP003 : <color:#FF6B6B>triggering</color>
+
+' ========== МЕЖСЛОЙНЫЕ СВЯЗИ: AL -> BL ==========
+AS001_al -[#FFA500,thickness=2,dashed]-> BS001 : <color:#FFA500>realization</color>
+AS003_al -[#FFA500,thickness=2,dashed]-> BS002 : <color:#FFA500>realization</color>
+AS005_al -[#FFA500,thickness=2,dashed]-> BS003 : <color:#FFA500>realization</color>
+AS001_al -[#4CAF50,thickness=2]-> BP001 : <color:#4CAF50>serving</color>
+AS002_al -[#4CAF50,thickness=2]-> BP002 : <color:#4CAF50>serving</color>
+AS003_al -[#4CAF50,thickness=2]-> BP003 : <color:#4CAF50>serving</color>
+AS005_al -[#4CAF50,thickness=2]-> BP004 : <color:#4CAF50>serving</color>
+AS006_al -[#4CAF50,thickness=2]-> BP005 : <color:#4CAF50>serving</color>
+AI001_al -[#4CAF50,thickness=2]-> BR001 : <color:#4CAF50>serving</color>
+AI001_al -[#4CAF50,thickness=2]-> BR002 : <color:#4CAF50>serving</color>
+DO001_al -[#FFA500,thickness=1,dashed]-> BO001 : <color:#FFA500>realization</color>
+DO003_al -[#FFA500,thickness=1,dashed]-> BO002 : <color:#FFA500>realization</color>
+DO004_al -[#FFA500,thickness=1,dashed]-> BO004 : <color:#FFA500>realization</color>
+AE001_al -[#FF6B6B,thickness=2,dashed]-> BE001 : <color:#FF6B6B>triggering</color>
+AE006_al -[#FF6B6B,thickness=2,dashed]-> BE006 : <color:#FF6B6B>triggering</color>
+AE008_al -[#FF6B6B,thickness=2,dashed]-> BE008 : <color:#FF6B6B>triggering</color>
+
+legend right
+|= Тип связи |= Цвет |= Стиль |
+| Assignment | Черный | Сплошная |
+| Serving | Зеленый | Сплошная |
+| Access | Синий | Сплошная |
+| Triggering | Красный | Пунктирная |
+| Realization AL → BL | Оранжевый | Пунктирная |
+|  |  |  |
+|= Слой |= Цвет |  |
+| Business Layer (BL) | Желтый (#FFFACD) |  |
+| Application Layer (AL), первый уровень | Голубой (#B5E7F0) |  |
+endlegend
+
+@enduml
