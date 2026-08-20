@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ASIR external solver response",
+  "type": "object",
+  "required": ["request_id", "solver_id", "solver_version", "formal_model_checksum", "status"],
+  "properties": {
+    "request_id": {"type": "string", "minLength": 1},
+    "solver_id": {"type": "string", "minLength": 1},
+    "solver_version": {"type": "string", "minLength": 1},
+    "formal_model_checksum": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"},
+    "status": {"enum": ["PROVED", "REFUTED", "NOT_EVALUATED", "AMBIGUOUS", "TIMEOUT", "UNAVAILABLE", "INCOMPATIBLE", "ERROR"]},
+    "trace": {"type": "array", "items": {"type": "object", "required": ["id", "source_ref"], "properties": {"id": {"type": "string", "minLength": 1}, "source_ref": {"$ref": "semantic_model.schema.json#/$defs/sourceRef"}}, "additionalProperties": true}},
+    "diagnostics": {"type": "array", "items": {"type": "object"}}
+  },
+  "additionalProperties": false
+}

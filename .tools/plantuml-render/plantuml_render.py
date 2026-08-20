@@ -135,7 +135,7 @@ def render_file(
         if diagram_type == "plantuml":
             encoded = encode_plantuml(source)
             url = f"{kroki_url}/plantuml/{output_format}/{encoded}"
-            req = Request(url, headers={"User-Agent": "plantuml-render-tool/1.2"})
+            req = Request(url, headers={"User-Agent": "plantuml-render-tool"})
         elif diagram_type == "bpmn":
             url = f"{kroki_url}/bpmn/svg"
             req = Request(
@@ -143,7 +143,7 @@ def render_file(
                 data=source.encode("utf-8"),
                 headers={
                     "Content-Type": "text/plain; charset=utf-8",
-                    "User-Agent": "plantuml-render-tool/1.2",
+                    "User-Agent": "plantuml-render-tool",
                 },
                 method="POST",
             )
@@ -154,7 +154,7 @@ def render_file(
                 data=source.encode("utf-8"),
                 headers={
                     "Content-Type": "text/plain; charset=utf-8",
-                    "User-Agent": "plantuml-render-tool/1.4",
+                    "User-Agent": "plantuml-render-tool",
                 },
                 method="POST",
             )
@@ -173,7 +173,7 @@ def render_file(
                 data=image_data,
                 headers={
                     "Content-Type": "image/svg+xml; charset=utf-8",
-                    "User-Agent": "plantuml-render-tool/1.3",
+                    "User-Agent": "plantuml-render-tool",
                 },
                 method="POST",
             )

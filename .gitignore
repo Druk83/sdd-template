@@ -30,3 +30,6 @@
 .issues/system-design-infra-taxonomy.md
 .issues/system-design-manifest-scope.md
 .issues/tag-selector-full-height-rule.md
+.tools/agent-logic/.runtime/
+.chatlog/session.md
+.source/ui-specification-and-prototype.md

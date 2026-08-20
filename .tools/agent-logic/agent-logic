@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Unix wrapper for the exported agent-logic tool
+PYTHON=${PYTHON:-python3}
+exec "$PYTHON" "$(dirname "$0")/agent-logic.py" "$@"

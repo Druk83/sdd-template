@@ -1,7 +1,18 @@
 [
   {
-    "_comment": "Архитектурные паттерны (Layered, Hexagonal, Clean, etc.) - см. https://github.com/Druk83/arch-patterns",
-    "_arch_patterns_source": "https://github.com/Druk83/arch-patterns.git"
+    "id": "architecture-pattern-selection",
+    "name": "Architecture Pattern Selection",
+    "desc": "Выбор архитектурного паттерна по драйверам системы с фиксацией источника и подтверждения",
+    "stages": ["2", "7", "8"],
+    "artifacts": ["карточка выбора архитектурного паттерна", "раздел 3.5.4", "раздел 3.5.6"],
+    "file": ".approach/architecture-pattern-selection.md",
+    "kind": "architecture-pattern-selector",
+    "source": {
+      "type": "external-catalog",
+      "url": "https://github.com/Druk83/arch-patterns.git",
+      "revision_required": true
+    },
+    "tags": ["architecture", "selection", "decision", "external-catalog"]
   },
   {
     "id": "event-storming",
@@ -10,6 +21,7 @@
     "stages": ["5", "5.1", "5.2"],
     "artifacts": ["карта процесса", "EVT-*", "CMD-*", "агрегаты"],
     "file": ".approach/event-storming.md",
+    "kind": "methodology",
     "tags": ["ddd", "modeling", "events", "scenarios"]
   },
   {
@@ -19,6 +31,7 @@
     "stages": ["5.3", "5.4"],
     "artifacts": ["context-map.plantuml", "BC границы", "интеграции"],
     "file": ".approach/context-map.md",
+    "kind": "integration-methodology",
     "tags": ["ddd", "integration", "bounded-context", "diagrams"]
   },
   {
@@ -28,6 +41,7 @@
     "stages": ["7", "7.1"],
     "artifacts": ["BL.plantuml", "AL.plantuml", "TL.plantuml", "сущности слоев"],
     "file": ".approach/archimate.md",
+    "kind": "architecture-notation",
     "tags": ["architecture", "ea", "layers", "diagrams"]
   },
   {
@@ -37,6 +51,7 @@
     "stages": ["4", "5.3"],
     "artifacts": ["домены", "агрегаты", "сущности", "value objects"],
     "file": ".approach/ddd-patterns.md",
+    "kind": "domain-modeling",
     "tags": ["ddd", "patterns", "domain", "modeling"]
   },
   {
@@ -46,6 +61,7 @@
     "stages": ["6", "7"],
     "artifacts": ["read model таблицы", "разделение read/write"],
     "file": ".approach/cqrs.md",
+    "kind": "data-flow-pattern",
     "tags": ["patterns", "architecture"]
   },
   {
@@ -55,6 +71,7 @@
     "stages": ["6"],
     "artifacts": ["event store", "audit log", "события"],
     "file": ".approach/event-sourcing.md",
+    "kind": "data-storage-pattern",
     "tags": ["patterns", "events"]
   },
   {
@@ -64,6 +81,7 @@
     "stages": ["5.2", "7"],
     "artifacts": ["события", "каталог мероприятий"],
     "file": ".approach/pub-sub.md",
+    "kind": "integration-pattern",
     "tags": ["patterns", "events", "integration"]
   }
 ]

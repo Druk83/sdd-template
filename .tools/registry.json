@@ -1,6 +1,22 @@
 [
   {
+    "name": "agent-logic",
+    "version": "0.4.1",
+    "path": ".tools/agent-logic/agent-logic.py",
+    "entry": "python .tools/agent-logic/agent-logic.py compile",
+    "entry_win": ".tools/agent-logic/agent-logic.bat compile",
+    "entry_unix": ".tools/agent-logic/agent-logic compile",
+    "desc": "Compile local UTF-8 text into ASIR and consume agent_context",
+    "tags": ["semantic", "asir", "agent-context", "compiler"],
+    "exec": true,
+    "runtime": "python",
+    "instructions": ".tools/agent-logic/agent-logic.instructions.md",
+    "availability": "external-optional",
+    "install_manifest": ".tools/agent-logic/manifest.json"
+  },
+  {
     "name": "check-encoding",
+    "version": "0.1.0",
     "path": ".tools/check-encoding/check_encoding.py",
     "entry": "python .tools/check-encoding/check_encoding.py --paths docs README.md apps services scripts .manifest .requirements .tasks .issues",
     "entry_win": ".tools/check-encoding/check-encoding.bat --paths docs README.md apps services scripts .manifest .requirements .tasks .issues",
@@ -12,6 +28,7 @@
   },
   {
     "name": "pdd-scan",
+    "version": "0.1.0",
     "path": ".tools/pdd/pdd_scan.py",
     "entry": "python .tools/pdd/pdd_scan.py --format md --write",
     "entry_win": ".tools/pdd/pdd-scan.bat --format md --write",
@@ -23,6 +40,7 @@
   },
   {
     "name": "plantuml-render",
+    "version": "0.2.0",
     "path": ".tools/plantuml-render/plantuml_render.py",
     "entry": "python .tools/plantuml-render/plantuml_render.py --format png",
     "entry_win": ".tools/plantuml-render/plantuml-render.bat --format png",

@@ -2,6 +2,8 @@
 
 Утилита пакетно рендерит файлы `.plantuml`, `.bpmn` и `.dot` в PNG или SVG через Kroki-compatible API. Тип диаграммы определяется по расширению: PlantUML передаётся в endpoint `plantuml`, BPMN — в endpoint `bpmn`, DOT — в endpoint `graphviz`.
 
+> Версия инструмента: `0.2.0`.
+
 Endpoint задаётся через `KROKI_BASE_URL` в `.tools/plantuml-render/.env` или параметр `--kroki-url`. Можно использовать публичный `https://kroki.io`. Kroki рендерит BPMN только в SVG, поэтому для PNG локальный Docker-стек дополнительно запускает rasterizer-сервис на основе `kroki-bpmn` и встроенного Chromium.
 
 Локальный стек передает PlantUML ограничение `PLANTUML_LIMIT_SIZE=8192`. Это максимальный размер стороны изображения, а не фиксированный размер холста: PNG создается по фактическому содержимому без принудительных пустых полей. При необходимости значение можно изменить в `.tools/plantuml-render/.env`.

@@ -1,0 +1,18 @@
+{
+  "name": "agent-logic",
+  "version": "0.4.1",
+  "path": ".tools/agent-logic/agent-logic.py",
+  "entry": "python .tools/agent-logic/agent-logic.py compile",
+  "entry_win": ".tools/agent-logic/agent-logic.bat compile",
+  "entry_unix": ".tools/agent-logic/agent-logic compile",
+  "desc": "Compile local UTF-8 text into ASIR and consume agent_context",
+  "tags": [
+    "semantic",
+    "asir",
+    "agent-context",
+    "compiler"
+  ],
+  "exec": true,
+  "runtime": "python",
+  "instructions": ".tools/agent-logic/agent-logic.instructions.md"
+}

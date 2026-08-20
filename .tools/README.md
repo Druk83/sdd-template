@@ -8,6 +8,7 @@
 .tools/
   README.md
   registry.json
+  agent-logic/
   check-encoding/
   pdd/
     README.md
@@ -23,9 +24,30 @@
 
 ## Инструменты
 
+* **agent-logic** — компилирует UTF-8 text и Markdown в проверяемую модель ASIR и обрабатывает `agent_context`.
 * **check-encoding** — проверяет текстовые файлы на нарушения UTF-8 и mojibake.
 * **pdd-scan** — сканирует `@todo` и обновляет реестр задач.
 * **plantuml-render** — рендерит `.plantuml`, `.bpmn` и `.dot` в PNG/SVG через Kroki-compatible API; локальный Docker-стек включает BPMN companion-сервис и SVG-to-PNG rasterizer.
+
+`agent-logic` является внешним опциональным пакетом (`external-optional`). Его
+локальная копия может отсутствовать в чистом клоне, потому что `.gitignore`
+исключает установленный экспорт инструмента. Перед запуском проверь
+`.tools/agent-logic/manifest.json` и следуй `.tools/agent-logic/agent-logic.instructions.md`.
+Реестр описывает ожидаемый пакет, но не заменяет его установку.
+
+## Версионирование
+
+Версия каждого инструмента указывается в его README отдельной строкой:
+
+> Версия инструмента: `X.Y.Z`.
+
+Это канонический источник версии инструмента. Поле `version` в `.tools/registry.json`
+дублирует значение и служит быстрым справочником текущих версий зарегистрированных инструментов.
+Общие правила SemVer находятся в `.manifest/versionmanifest.md`, а правила increment
+для CLI-инструментов — в `.manifest/toolsmanifest.md`, разделе `tools.H4.11`.
+
+В исходном коде инструмента hardcoded-версия не указывается.
+При изменении версии сначала обновляется README, затем `registry.json`.
 
 ## Кроссплатформенный запуск
 
@@ -56,3 +78,4 @@ python .tools/plantuml-render/plantuml_render.py \
 * В корень проекта: `/README.md`
 * Реестр инструментов: `.tools/registry.json`
 * Правила инструментов: `.manifest/toolsmanifest.md`
+* Общие правила версионирования: `.manifest/versionmanifest.md`

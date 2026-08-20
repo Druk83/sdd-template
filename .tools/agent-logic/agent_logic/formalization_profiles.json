@@ -1,0 +1,60 @@
+{
+  "registry_version": "1.0",
+  "profiles": [
+    {
+      "id": "normative_markdown",
+      "version": "1.0",
+      "source_kinds": ["text"],
+      "artifact_kinds": ["governance", "normative_manifest"],
+      "supported_items": ["fact", "rule"],
+      "supported_claim_kinds": ["atom", "not", "comparison"],
+      "deductive_premises": true,
+      "provenance": "source_ref",
+      "forbidden_transformations": ["implicit_modality_to_permission", "automatic_synonym_resolution"]
+    },
+    {
+      "id": "business_rules",
+      "version": "1.0",
+      "source_kinds": ["text"],
+      "artifact_kinds": ["project_result", "unstructured_source"],
+      "supported_items": ["fact", "rule"],
+      "supported_claim_kinds": ["atom", "not", "comparison"],
+      "deductive_premises": true,
+      "provenance": "source_ref",
+      "forbidden_transformations": ["automatic_synonym_resolution", "invented_threshold"]
+    },
+    {
+      "id": "technical_requirements",
+      "version": "1.0",
+      "source_kinds": ["text"],
+      "artifact_kinds": ["specification", "task", "issue"],
+      "supported_items": ["fact", "rule"],
+      "supported_claim_kinds": ["atom", "not", "comparison"],
+      "deductive_premises": true,
+      "provenance": "source_ref",
+      "forbidden_transformations": ["external_system_assertion", "automatic_synonym_resolution"]
+    },
+    {
+      "id": "source_code",
+      "version": "1.0",
+      "source_kinds": ["code"],
+      "artifact_kinds": ["source_code"],
+      "supported_items": [],
+      "supported_claim_kinds": [],
+      "deductive_premises": false,
+      "provenance": "language_ast",
+      "forbidden_transformations": ["text_parser_for_code", "comment_to_rule", "code_to_executable_rule"]
+    },
+    {
+      "id": "empirical_evidence",
+      "version": "1.0",
+      "source_kinds": ["text"],
+      "artifact_kinds": ["project_result", "unstructured_source"],
+      "supported_items": [],
+      "supported_claim_kinds": [],
+      "deductive_premises": false,
+      "provenance": "schema_and_observation_record",
+      "forbidden_transformations": ["observation_to_deductive_axiom", "missing_schema_to_fact"]
+    }
+  ]
+}

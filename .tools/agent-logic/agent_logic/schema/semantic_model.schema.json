@@ -1,0 +1,274 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-logic.local/schema/semantic-model-1.0.json",
+  "title": "SemanticModel ASIR",
+  "type": "object",
+  "required": ["compilationId", "metadata", "sources", "recommended_model", "alternatives", "confidence", "status"],
+  "$defs": {
+    "sourceRef": {
+      "type": "object",
+      "required": ["relative_path", "line_range", "fragment"],
+      "properties": {
+        "relative_path": {"type": "string", "minLength": 1},
+        "line_range": {"type": "object", "required": ["start", "end"], "properties": {"start": {"type": "integer", "minimum": 1}, "end": {"type": "integer", "minimum": 1}}, "additionalProperties": false},
+        "fragment": {"type": "string"},
+        "section_path": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      },
+      "additionalProperties": false
+    },
+    "element": {
+      "type": "object",
+      "required": ["id", "type", "text", "status", "confidence", "source_ref", "evidence"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "type": {"type": "string", "minLength": 1},
+        "text": {"type": "string", "minLength": 1},
+        "status": {"enum": ["confirmed", "inferred", "assumed", "observed", "approved", "rejected", "deprecated", "gap", "REVIEW_REQUIRED", "BLOCKED"]},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "source_ref": {"$ref": "#/$defs/sourceRef"},
+        "evidence": {"type": "array", "items": {"$ref": "#/$defs/sourceRef"}},
+        "language": {"type": "string", "minLength": 1},
+        "code_kind": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": true
+    },
+    "sectionProfile": {
+      "type": "object",
+      "required": ["role", "level", "heading", "section_path", "source_ref"],
+      "properties": {
+        "role": {"type": "string", "minLength": 1},
+        "level": {"type": "integer", "minimum": 1, "maximum": 6},
+        "heading": {"type": "string", "minLength": 1},
+        "section_path": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "rule_id": {"type": "string", "minLength": 1},
+        "source_ref": {"$ref": "#/$defs/sourceRef"}
+      },
+      "additionalProperties": false
+    },
+    "artifactProfile": {
+      "type": "object",
+      "required": ["relative_path", "artifact_kind", "narrative_style", "confidence", "rationale", "source_ref", "section_profiles", "rule_ids", "rule_references"],
+      "properties": {
+        "relative_path": {"type": "string", "minLength": 1},
+        "artifact_kind": {"type": "string", "minLength": 1},
+        "narrative_style": {"type": "string", "minLength": 1},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "rationale": {"type": "string", "minLength": 1},
+        "source_ref": {"$ref": "#/$defs/sourceRef"},
+        "section_profiles": {"type": "array", "items": {"$ref": "#/$defs/sectionProfile"}},
+        "rule_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "rule_references": {"type": "array", "items": {"type": "object"}},
+        "formalization_profile": {"type": "object", "required": ["id", "version", "deductive_premises", "provenance", "reason"], "properties": {"id": {"type": "string", "minLength": 1}, "version": {"type": "string", "minLength": 1}, "deductive_premises": {"type": "boolean"}, "provenance": {"type": "string", "minLength": 1}, "reason": {"type": ["string", "null"]}}, "additionalProperties": false}
+      },
+      "additionalProperties": false
+    },
+    "referenceBlock": {
+      "type": "object",
+      "required": ["id", "type", "section_role", "source_ref", "evidence"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "type": {"type": "string", "minLength": 1},
+        "section_role": {"type": "string", "minLength": 1},
+        "source_ref": {"$ref": "#/$defs/sourceRef"},
+        "evidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/sourceRef"}}
+      },
+      "additionalProperties": false
+    },
+    "role": {
+      "type": "object",
+      "required": ["text", "source_ref", "evidence"],
+      "properties": {
+        "text": {"type": "string", "minLength": 1},
+        "source_ref": {"$ref": "#/$defs/sourceRef"},
+        "evidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/sourceRef"}}
+      },
+      "additionalProperties": false
+    },
+    "expressionRef": {
+      "type": "object",
+      "required": ["expression_id"],
+      "properties": {
+        "expression_id": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": false
+    },
+    "expressionOperand": {
+      "type": "object",
+      "required": ["kind", "source_ref", "evidence"],
+      "properties": {
+        "kind": {"enum": ["proposition", "expression", "atom"]},
+        "proposition_id": {"type": "string", "minLength": 1},
+        "expression_id": {"type": "string", "minLength": 1},
+        "text": {"type": "string", "minLength": 1},
+        "source_ref": {"$ref": "#/$defs/sourceRef"},
+        "evidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/sourceRef"}}
+      },
+      "additionalProperties": false
+    },
+    "proposition": {
+      "type": "object",
+      "required": ["id", "type", "subject", "predicate", "object", "constraint", "modality", "condition", "exceptions", "consequence", "violation", "sanction", "priority", "logical_expression", "source_ref", "evidence", "extraction_method", "confidence", "status"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "type": {"enum": ["norm", "fact", "causal", "argument", "definition", "question", "example", "narrative", "opinion_or_hypothesis", "forecast", "unclassified"]},
+        "subject": {"anyOf": [{"$ref": "#/$defs/role"}, {"type": "null"}]},
+        "predicate": {"anyOf": [{"$ref": "#/$defs/role"}, {"type": "null"}]},
+        "object": {"anyOf": [{"$ref": "#/$defs/role"}, {"type": "null"}]},
+        "constraint": {"anyOf": [{"$ref": "#/$defs/role"}, {"type": "null"}]},
+        "modality": {"enum": ["OBLIGATION", "PERMISSION", "PROHIBITION", null]},
+        "condition": {"anyOf": [{"$ref": "#/$defs/expressionRef"}, {"type": "null"}]},
+        "exceptions": {"type": "array", "items": {"$ref": "#/$defs/role"}},
+        "consequence": {"anyOf": [{"$ref": "#/$defs/role"}, {"type": "null"}]},
+        "violation": {"anyOf": [{"$ref": "#/$defs/role"}, {"type": "null"}]},
+        "sanction": {"anyOf": [{"$ref": "#/$defs/role"}, {"type": "null"}]},
+        "priority": {"anyOf": [{"$ref": "#/$defs/role"}, {"type": "null"}]},
+        "logical_expression": {"anyOf": [{"$ref": "#/$defs/expressionRef"}, {"type": "null"}]},
+        "source_ref": {"$ref": "#/$defs/sourceRef"},
+        "evidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/sourceRef"}},
+        "extraction_method": {"type": "string", "minLength": 1},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "status": {"enum": ["confirmed", "review_required", "gap"]}
+      },
+      "additionalProperties": false
+    },
+    "logicalExpression": {
+      "type": "object",
+      "required": ["id", "operator", "operands", "source_ref", "evidence", "confidence", "status"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "operator": {"enum": ["AND", "OR", "XOR", "NOT", "IMPLIES", "IFF", "ALL", "EXISTS"]},
+        "operands": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/expressionOperand"}},
+        "alternatives": {"type": "array", "minItems": 2, "items": {"enum": ["AND", "OR", "XOR", "NOT", "IMPLIES", "IFF", "ALL", "EXISTS"]}},
+        "source_ref": {"$ref": "#/$defs/sourceRef"},
+        "evidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/sourceRef"}},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "status": {"enum": ["confirmed", "review_required", "gap"]}
+      },
+      "additionalProperties": false
+    },    "formalModel": {
+      "type": "object",
+      "required": ["facts", "rules"],
+      "properties": {
+        "facts": {"type": "array", "items": {"type": "object"}},
+        "rules": {"type": "array", "items": {"type": "object"}}
+      },
+      "additionalProperties": false
+    },    "formalClaim": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": {"enum": ["atom", "not", "comparison"]},
+        "predicate": {"type": "string", "minLength": 1},
+        "terms": {"type": "array", "items": {"type": ["string", "number", "boolean"]}},
+        "claim": {"$ref": "#/$defs/formalClaim"},
+        "operator": {"enum": ["=", "!=", "<", "<=", ">", ">="]},
+        "left": {"type": ["string", "number"]},
+        "right": {"type": ["string", "number"]}
+      },
+      "additionalProperties": false
+    },
+    "evidenceRecord": {
+      "type": "object",
+      "required": ["id", "method", "recorded_at", "schema_version", "quality", "claim", "source_ref", "provenance", "data_schema"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "method": {"type": "string", "minLength": 1},
+        "recorded_at": {"type": "string", "minLength": 1},
+        "schema_version": {"type": "string", "minLength": 1},
+        "quality": {"type": "string", "minLength": 1},
+        "claim": {"$ref": "#/$defs/formalClaim"},
+        "source_ref": {"$ref": "#/$defs/sourceRef"},
+        "provenance": {"type": "object"},
+        "data_schema": {"type": "object"}
+      },
+      "additionalProperties": false
+    },
+    "formal_model": {"$ref": "#/$defs/formalModel"},
+    "hypothesis": {
+      "type": "object",
+      "required": ["id", "text", "formal_claim", "mode", "source_ref", "evidence", "confidence", "formalization_status"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "text": {"type": "string", "minLength": 1},
+        "formal_claim": {"$ref": "#/$defs/formalClaim"},
+        "mode": {"enum": ["deductive", "empirical"]},
+        "source_ref": {"$ref": "#/$defs/sourceRef"},
+        "evidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/sourceRef"}},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "formalization_status": {"enum": ["confirmed", "approved", "review_required", "ambiguous"]}
+      },
+      "additionalProperties": false
+    },
+    "proofResult": {
+      "type": "object",
+      "required": ["hypothesis_id", "formal_claim", "mode", "engine_version", "formal_model_checksum", "status", "proof_graph", "used_premises", "missing_premises", "blocking_reasons", "explanation_basis"],
+      "properties": {
+        "hypothesis_id": {"type": "string", "minLength": 1},
+        "formal_claim": {"$ref": "#/$defs/formalClaim"},
+        "mode": {"enum": ["deductive", "empirical"]},
+        "engine_version": {"type": "string", "minLength": 1},
+        "formal_model_checksum": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "status": {"enum": ["PROVED", "REFUTED", "NOT_DERIVABLE", "INCONSISTENT", "AMBIGUOUS", "MISSING_PREMISES", "EMPIRICAL_VALIDATION_REQUIRED", "NOT_EVALUATED"]},
+        "proof_graph": {"type": "array", "items": {"type": "object"}},
+        "used_premises": {"type": "array", "items": {"type": "object"}},
+        "missing_premises": {"type": "array", "items": {"type": "object"}},
+        "blocking_reasons": {"type": "array", "items": {"type": "object"}},
+        "explanation_basis": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },    "source": {
+      "type": "object",
+      "required": ["path", "relative_path", "encoding", "line_range", "fragment", "extraction_method", "confidence"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "relative_path": {"type": "string", "minLength": 1},
+        "encoding": {"const": "UTF-8"},
+        "title": {"type": ["string", "null"]},
+        "line_range": {"type": ["object", "null"]},
+        "fragment": {"type": "string"},
+        "section_path": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "extraction_method": {"type": "string", "minLength": 1},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "input_kind": {"enum": ["text", "code"]},
+        "language": {"type": ["string", "null"]}
+      },
+      "additionalProperties": true
+    }
+  },
+  "properties": {
+    "compilationId": {"type": "string", "minLength": 1},
+    "metadata": {"type": "object"},
+    "goals": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+    "entities": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+    "attributes": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+    "facts": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+    "states": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+    "events": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+    "actions": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+    "transitions": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+    "conditions": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+    "constraints": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+    "invariants": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+    "dependencies": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+    "decisions": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+    "exceptions": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+    "assumptions": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+    "gaps": {"type": "array", "items": {"$ref": "#/$defs/element"}},
+    "propositions": {"type": "array", "items": {"$ref": "#/$defs/proposition"}},
+    "logical_expressions": {"type": "array", "items": {"$ref": "#/$defs/logicalExpression"}},
+    "classification_proposals": {"type": "array", "items": {"type": "object"}},
+    "artifact_profiles": {"type": "array", "items": {"$ref": "#/$defs/artifactProfile"}},
+    "reference_blocks": {"type": "array", "items": {"$ref": "#/$defs/referenceBlock"}},
+    "hypothesis": {"$ref": "#/$defs/hypothesis"},
+    "proof_result": {"$ref": "#/$defs/proofResult"},
+    "evidence_records": {"type": "array", "items": {"$ref": "#/$defs/evidenceRecord"}},
+    "sources": {"type": "array", "items": {"$ref": "#/$defs/source"}},
+    "versions": {"type": "array", "items": {"type": "object"}},
+    "recommended_model": {"enum": ["state_machine", "decision_table", "dependency_graph", "constraint_model", "policy_model", "hybrid"]},
+    "alternatives": {"type": "array", "items": {"enum": ["state_machine", "decision_table", "dependency_graph", "constraint_model", "policy_model", "hybrid"]}},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "evidence": {"type": "array", "items": {"$ref": "#/$defs/sourceRef"}},
+    "status": {"enum": ["confirmed", "inferred", "assumed", "observed", "approved", "rejected", "deprecated", "gap", "REVIEW_REQUIRED", "BLOCKED"]}
+  },
+  "additionalProperties": true
+}

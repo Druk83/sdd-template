@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ASIR external solver request",
+  "type": "object",
+  "required": ["request_id", "solver_id", "solver_version", "formal_model_checksum", "goal", "parameters", "capabilities"],
+  "properties": {
+    "request_id": {"type": "string", "minLength": 1},
+    "solver_id": {"type": "string", "minLength": 1},
+    "solver_version": {"type": "string", "minLength": 1},
+    "formal_model_checksum": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"},
+    "goal": {"$ref": "semantic_model.schema.json#/$defs/formalClaim"},
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "timeout_ms": {"type": "integer", "minimum": 1},
+        "memory_mib": {"type": "integer", "minimum": 1},
+        "max_trace_nodes": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "capabilities": {
+      "type": "object",
+      "required": ["verifiable_trace"],
+      "properties": {"verifiable_trace": {"const": true}},
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
