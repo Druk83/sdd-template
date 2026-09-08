@@ -1,0 +1,55 @@
+{
+  "version": "1.0",
+  "description": "Canonical structure for a project using SDD Framework.",
+  "framework": {
+    "package_id": "sdd-template",
+    "release_dir": ".agents/{{RELEASE_DIR}}",
+    "tools_registry": ".agents/{{RELEASE_DIR}}/.tools/registry.json",
+    "chatlog_dir": ".agents/{{RELEASE_DIR}}/.chatlog"
+  },
+  "folders": [
+    {
+      "name": ".agents",
+      "path": ".agents",
+      "description": "Framework release and other project-specific agent packages.",
+      "required": true
+    },
+    {
+      "name": ".source",
+      "path": ".source",
+      "description": "Project source materials for documentation analysis.",
+      "required": true
+    },
+    {
+      "name": ".tasks",
+      "path": ".tasks",
+      "description": "Project tasks and the PDD registry.",
+      "required": true
+    },
+    {
+      "name": ".issues",
+      "path": ".issues",
+      "description": "Project issues and problem reports.",
+      "required": true
+    },
+    {
+      "name": "docs",
+      "path": "docs",
+      "description": "Generated project documentation and diagrams.",
+      "required": false
+    },
+    {
+      "name": "tmp",
+      "path": "tmp",
+      "description": "Repository-local temporary staging; never an OS temporary directory.",
+      "required": false
+    }
+  ],
+  "files": {
+    "README.md": "Project entry page; create empty when absent.",
+    ".gitignore": "Project ignore rules; create when absent.",
+    ".editorconfig": "Editor settings; create when absent.",
+    ".gitattributes": "Git attributes; create when absent.",
+    ".project-structure.json": "This structure description."
+  }
+}

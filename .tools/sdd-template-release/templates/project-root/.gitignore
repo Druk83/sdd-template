@@ -1,0 +1,11 @@
+# Локальные данные SDD Framework и служебные файлы проекта
+.project-structure.json
+tmp/
+.source/
+.tasks/done/
+.issues/done/
+.agents/sdd-template-*/
+**/.runtime/
+**/__pycache__/
+**/*.py[cod]
+**/.env

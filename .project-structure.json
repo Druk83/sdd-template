@@ -33,6 +33,18 @@
       "required": true
     },
     {
+      "name": ".agents",
+      "path": ".agents",
+      "description": "Local dev-only release output and project-specific agent packages; ignored by Git in the framework source repository.",
+      "required": false
+    },
+    {
+      "name": "tmp",
+      "path": "tmp",
+      "description": "Repository-local temporary staging and source clone data; never an OS temporary directory.",
+      "required": false
+    },
+    {
       "name": "docs",
       "path": "docs",
       "description": "Documentation and diagrams.",

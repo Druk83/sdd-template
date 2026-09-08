@@ -11,8 +11,7 @@
     "exec": true,
     "runtime": "python",
     "instructions": ".tools/agent-logic/agent-logic.instructions.md",
-    "availability": "external-optional",
-    "install_manifest": ".tools/agent-logic/manifest.json"
+    "availability": "bundled"
   },
   {
     "name": "check-encoding",
@@ -49,5 +48,18 @@
     "tags": ["plantuml", "bpmn", "graphviz", "dot", "diagram", "render", "visualization"],
     "exec": true,
     "runtime": "python"
+  },
+  {
+    "name": "sdd-template-release",
+    "version": "0.1.0",
+    "path": ".tools/sdd-template-release/build_release.py",
+    "entry": "python .tools/sdd-template-release/build_release.py",
+    "entry_win": "python .tools/sdd-template-release/build_release.py",
+    "entry_unix": "python3 .tools/sdd-template-release/build_release.py",
+    "desc": "Build or install the single SDD Framework release selected by release-registry.json",
+    "tags": ["sdd", "release", "export", "package"],
+    "exec": true,
+    "runtime": "python",
+    "availability": "bundled"
   }
 ]

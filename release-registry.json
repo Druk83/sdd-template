@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "package_id": "sdd-template",
+  "display_name": "SDD Framework",
+  "source_repository": "Druk83/sdd-template.git",
+  "minimum_supported_version": "1.9.0",
+  "default_version": "1.9.0",
+  "releases": [
+    {
+      "version": "1.9.0",
+      "ref": "sdd-template-1.9.0",
+      "ref_type": "tag",
+      "tag": "sdd-template-1.9.0",
+      "commit": null,
+      "install_path": ".agents/sdd-template-1.9.0",
+      "commit_subject": "1.9.0 Автоматизация инициализации и обновления SDD Framework",
+      "released_at": "2026-09-08",
+      "status": "supported"
+    }
+  ]
+}

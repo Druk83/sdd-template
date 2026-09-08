@@ -1,8 +1,21 @@
-# Фреймворк для разработки технической документации в репозитории
+# SDD Framework — фреймворк для разработки технической документации
 
-> **Версия:** 1.8.1
+> **Версия:** 1.9.0
+
+Тема версии: **Автоматизация инициализации и обновления SDD Framework**.
+
+Короткий идентификатор пакета: `sdd-template`.
 
 Набор шаблонов для создания технической документации программных проектов с помощью AI-агентов.
+
+SDD Framework используется в проектах-потребителях как единый версионированный пакет
+в папке `.agents/sdd-template-X.Y.Z/`. В каждом проекте хранится только одна версия
+фреймворка; другие каталоги в `.agents/` принадлежат проекту и не изменяются.
+
+Источник релизов: [Druk83/sdd-template.git](https://github.com/Druk83/sdd-template.git).
+Официальный перечень доступных релизов: [release-registry.json](release-registry.json).
+Полные инструкции установки и обновления находятся в
+`.agents/sdd-template-X.Y.Z/sdd-template.instructions.md`.
 
 ## Назначение
 
@@ -30,50 +43,141 @@
 
 ## Быстрый старт
 
-### Создание нового проекта
+### Подключение к новому или существующему проекту
 
-**Linux / macOS / Git Bash (Windows):**
-```bash
-# Клонировать шаблон
-git clone --depth 1 https://github.com/Druk83/sdd-template.git <project-name>
-cd <project-name>
+Создайте или инициализируйте собственный репозиторий. Не копируйте в него
+корень мета-репозитория целиком. Передайте AI-агенту команду:
 
-# Отвязать от исходного репозитория
-rm -rf .git
-
-# Инициализировать свой репозиторий
-git init
-mkdir -p docs/requirements
-git add .
-git commit -m "Initial commit from sdd-template"
+```
+инициализируй сдд из Druk83/sdd-template.git
 ```
 
-<details>
-<summary><b>Windows PowerShell</b></summary>
+Обязательный маршрут первичной установки: из ветки `main` получают только
+`README.md` и `release-registry.json` без создания обзорного клона (например,
+через raw-файл GitHub). Затем
+выбранный по реестру `ref` мелко клонируется (`--depth 1`) ровно один раз в
+единственный каталог `tmp/sdd-template-source-X.Y.Z-<short-commit>/`, где
+`<short-commit>` — первые 8 символов фактического commit клона. Промежуточная
+сборка находится внутри этого клона. После этого установщик запускается из этой копии с
+`--target-root .`. Допустимый результат — только
+`.agents/sdd-template-X.Y.Z/`; каталоги исходной копии нельзя раскладывать в корне
+проекта.
 
-```powershell
-# Клонировать шаблон
-git clone --depth 1 https://github.com/Druk83/sdd-template.git <project-name>
-cd <project-name>
+После первичной установки источник уже однозначно определён установленными
+инструкциями Framework, поэтому можно использовать короткие команды:
 
-# Отвязать от исходного репозитория
-Remove-Item -Recurse -Force .git
-
-# Инициализировать свой репозиторий
-git init
-New-Item -ItemType Directory -Force -Path docs/requirements
-git add .
-git commit -m "Initial commit from sdd-template"
+```text
+инициализируй сдд
+обнови сдд
+вернись на версию 1.9.1
 ```
 
-</details>
+В репозитории `Druk83/sdd-template.git` папки `.agents/` и `tmp/` не являются
+исходными данными релиза: они используются только локально для проверки сборщика
+и игнорируются Git. После установки агент использует шаблоны из
+`.agents/sdd-template-X.Y.Z/.requirements/`, правила из
+`.agents/sdd-template-X.Y.Z/.manifest/`, а результаты сохраняет в
+`docs/requirements/`.
+Существующий `docs/requirements/` полностью сохраняется: при установке и смене
+версии в него ничего не переносится и не перезаписывается. Если каталога нет,
+создаются только каталог и `.gitkeep`.
+
+### Установка в существующий проект
+
+Релизный пакет имеет вид `.agents/sdd-template-X.Y.Z/`. Для получения релиза
+агент получает только `release-registry.json` из ветки `main` без создания
+обзорного клона, выбирает точную запись и затем один раз мелко клонирует
+`Druk83/sdd-template.git` только в каталог
+`tmp/sdd-template-source-X.Y.Z-<short-commit>/`. Из корня текущего проекта запускается точная
+команда:
+
+```text
+python tmp/sdd-template-source-X.Y.Z-<short-commit>/.tools/sdd-template-release/install_framework.py --source-root tmp/sdd-template-source-X.Y.Z-<short-commit> --target-root . --action init --write
+```
+
+Для `init` и `update` установщик берёт `default_version` реестра. Для выбранной версии
+используется `--action use --version X.Y.Z`. Установщик сам берёт точный `ref` и `install_path`
+из реестра; передавать ref вручную запрещено.
+
+Установщик проверяет результат и записывает готовый пакет непосредственно в
+`.agents/` текущего проекта.
+
+Корневой `docs/requirements/` не является местом размещения файлов Framework.
+Он содержит результаты конкретного проекта и не смешивается с шаблонами
+`.agents/sdd-template-X.Y.Z/.requirements/`.
+
+Копирование корня исходного репозитория или каталога
+`tmp/sdd-template-source-X.Y.Z-<short-commit>/` в корень проекта запрещено.
+
+Перед обновлением агент показывает текущую и доступную версии, проверяет инструкции
+и спрашивает, оставить, удалить или переместить старую папку в `tmp/`. После проверки
+операция получает статус `installed_pending_cleanup`; агент обязан показать
+пользователю `cleanup.question`, дождаться ответа «да» или «нет» и только затем
+считать операцию завершённой. Если
+`AGENTS.md` отсутствует, установщик создаёт его с управляемым разделом, содержащим
+полные инструкции Framework; если он существует, добавляет только этот раздел и
+сохраняет пользовательские правила вне него.
+Другие папки `.agents/` и содержимое `AGENTS.md` вне раздела не перезаписываются.
+Обнаруженные коллизии возвращаются отдельным списком для решения пользователем.
+При обновлении одна корректная пара маркеров позволяет заменить только
+управляемый раздел актуальными инструкциями Framework; текст пользователя вне
+раздела сохраняется.
+
+Если запись в `.agents/` была прервана после создания staging, повторный запуск
+этого же установщика автоматически использует staging только при совпадении
+версии, ref и commit. Несовместимый или повреждённый staging не перезаписывается:
+операция останавливается и сообщает о конфликте.
+
+Подробный регламент находится в `sdd-template.instructions.md` внутри установленного
+релиза. Сборка пакета и границы экспорта описаны в `.manifest/exportmanifest.md`.
+
+### Короткие команды Framework
+
+Короткие команды являются синонимами операций `sdd-template` и распознаются только
+при подтверждённом источнике `Druk83/sdd-template.git` и наличии инструкции
+`sdd-template.instructions.md` либо при явном указании источника в команде.
+
+| Команда | Операция |
+|---|---|
+| `инициализируй сдд` | Установить последнюю доступную версию при отсутствии релиза |
+| `обнови сдд` | Установить последнюю доступную версию |
+| `вернись на версию X.Y.Z` | Установить указанную версию; направление определяется сравнением версий |
+
+Для чистого проекта источник указывается один раз: `инициализируй сдд из
+Druk83/sdd-template.git`. Если источник не подтверждён, агент не должен трактовать
+общую фразу «инициализируй сдд» как команду этого Framework.
+
+### Поддерживаемый диапазон версий
+
+Автоматизированная установка, обновление и возврат поддерживаются для версий
+`1.9.0` и выше. При явном указании пользователем commit или tag агент может
+получить выбранную версию из `Druk83/sdd-template.git`, если в выбранном commit
+версия не ниже `1.9.0`. Версии ниже `1.9.0` не адаптированы к сборщику и должны
+быть отклонены до начала сборки.
+
+### Возврат к сохранённой версии
+
+Возврат выполняется только к пакету, который пользователь ранее сохранил в
+`tmp/sdd-template-old-X.Y.Z/` или в другой явно указанной папке проекта. Агент
+проверяет имя папки, версию в её `README.md` и `release-manifest.json`, затем
+показывает результат и запрашивает подтверждение.
+
+После подтверждения текущий пакет `.agents/sdd-template-X.Y.Z/` сначала переносится
+в новую свободную папку `tmp/`, затем сохранённый пакет переносится в `.agents/`.
+Другие каталоги `.agents/`, содержимое `tmp/` и пользовательский `AGENTS.md` не
+изменяются. Если сохранённого пакета нет, возврат автоматически не выполняется:
+нужно явно указать commit или tag версии не ниже `1.9.0` либо предоставить архив
+старой версии, соответствующий этому ограничению.
 
 ### Запуск документирования
 
 Дать AI-агенту команду:
 
 ```
-Ознакомься с .source/, .requirements/трек разработки.md и используй правила из .claude/CLAUDE.md или .github/agents/copilot-instructions.md или AGENTS.md и давай приступим к составлению технической документации для этого проекта
+Ознакомься с .source/, прочитай правила из .agents/sdd-template-X.Y.Z/.manifest/
+и шаблон .agents/sdd-template-X.Y.Z/.requirements/трек разработки.md.
+Используй AGENTS.md, если он существует, и давай приступим к составлению
+технической документации для этого проекта.
 ```
 
 Агент будет:
@@ -83,28 +187,34 @@ git commit -m "Initial commit from sdd-template"
 
 ### Рендеринг диаграмм
 
-Для рендеринга `*.plantuml`, `*.bpmn` и `*.dot` используется инструмент `.tools/plantuml-render/`.
+Для рендеринга `*.plantuml`, `*.bpmn` и `*.dot` используется инструмент
+`.agents/sdd-template-X.Y.Z/.tools/plantuml-render/` установленного релиза.
 Он формирует PNG или SVG через публичный Kroki либо локальный Docker-контур.
-Endpoint задаётся через `.env` или параметр `--kroki-url`: можно использовать публичный `https://kroki.io` либо локальный Kroki через Docker.
+Endpoint задаётся через `.agents/sdd-template-X.Y.Z/.tools/plantuml-render/.env`
+или параметр `--kroki-url`: можно использовать публичный `https://kroki.io`
+либо локальный Kroki через Docker.
 
-Перед первым запуском инструмента создайте рабочую конфигурацию из шаблона `.tools/plantuml-render/.env.example` в `.tools/plantuml-render/.env`.
+Перед первым запуском инструмента создайте рабочую конфигурацию из шаблона
+`.agents/sdd-template-X.Y.Z/.tools/plantuml-render/.env.example` в
+`.agents/sdd-template-X.Y.Z/.tools/plantuml-render/.env`.
 
 ```bash
 # Создать локальную конфигурацию
-cp .tools/plantuml-render/.env.example .tools/plantuml-render/.env
+cp .agents/sdd-template-X.Y.Z/.tools/plantuml-render/.env.example .agents/sdd-template-X.Y.Z/.tools/plantuml-render/.env
 
 # Локальный Kroki
-docker compose --env-file .tools/plantuml-render/.env \
-  -f .tools/plantuml-render/docker-compose.base.yml \
-  -f .tools/plantuml-render/docker-compose.dev.yml up -d
+docker compose --env-file .agents/sdd-template-X.Y.Z/.tools/plantuml-render/.env \
+  -f .agents/sdd-template-X.Y.Z/.tools/plantuml-render/docker-compose.base.yml \
+  -f .agents/sdd-template-X.Y.Z/.tools/plantuml-render/docker-compose.dev.yml up -d
 
 # Рендер диаграмм через локальный endpoint
-.tools/plantuml-render/plantuml-render \
+.agents/sdd-template-X.Y.Z/.tools/plantuml-render/plantuml-render \
   --kroki-url http://localhost:8000 \
   --path docs/requirements/
 ```
 
-Подробная инструкция и переменные окружения: `.tools/plantuml-render/README.md`.
+Подробная инструкция и переменные окружения:
+`.agents/sdd-template-X.Y.Z/.tools/plantuml-render/README.md`.
 
 ## Workflow: разработчик + агент
 
@@ -134,7 +244,8 @@ docker compose --env-file .tools/plantuml-render/.env \
 - **Gap tracking** — пробелы фиксируются в `docs/requirements/gap-tracking.md`
 - **Gap classification** — перед записью в gap-tracking определяется тип GAP (CRITICAL/CLARIFICATION/OPTIONAL/IMPLEMENTATION); тип IMPLEMENTATION не фиксируется
 - **Automatic stage detection** — агент определяет текущий этап из gap-tracking.md без уточнений
-- **Chat logging** — все взаимодействия логируются в `.chatlog/session.md` по запросу разработчика
+- **Chat logging** — в проекте-потребителе журналы Framework записываются в
+  `.agents/sdd-template-X.Y.Z/.chatlog/session.md` только по запросу разработчика
 
 ### Команды для агента
 
@@ -172,7 +283,7 @@ docs/requirements/      # Заполненная документация про
   readmemanifest.md, taskmanifest.md, tddmanifest.md,
   toolsmanifest.md, versionmanifest.md, normativeordermanifest.md,
   issuesmanifest.md
-.chatlog/               # Логи сессий работы с агентами (по запросу)
+.chatlog/               # В dev-репозитории: внутренние логи по запросу
 .tasks/                 # Задачи проекта
 .issues/                # Проблемы и баги
 .tools/                 # Инструменты автоматизации
@@ -271,7 +382,8 @@ docs/requirements/      # Заполненная документация про
 
 ## История изменений
 
-История релизов и ещё не опубликованных изменений: [CHANGELOG.md](CHANGELOG.md).
+Внутренняя история релизов и ещё не опубликованных изменений мета-репозитория:
+[CHANGELOG.md](CHANGELOG.md). Этот файл не входит в экспортный пакет для проектов-потребителей.
 
 ## Внешние справочники
 
