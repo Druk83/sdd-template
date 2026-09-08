@@ -31,5 +31,8 @@
 .issues/system-design-manifest-scope.md
 .issues/tag-selector-full-height-rule.md
 .tools/agent-logic/.runtime/
+.tools/check-encoding/tests/
 .chatlog/session.md
 .source/ui-specification-and-prototype.md
+CHANGELOG.md
+.tasks/done/

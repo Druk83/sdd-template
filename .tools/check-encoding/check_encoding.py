@@ -4,7 +4,7 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Dict, Iterable, List, TextIO, Tuple
+from typing import Dict, Iterable, List, Optional, TextIO, Tuple
 
 
 DEFAULT_PATHS = [
@@ -19,6 +19,8 @@ DEFAULT_PATHS = [
     ".issues",
 ]
 DEFAULT_MAX_FILE_SIZE_KB = 1024
+MAX_SNIPPET_LENGTH = 220
+ALLOWED_CONTROL_CODES = {0x09, 0x0A, 0x0D}
 SKIP_DIR_NAMES = {
     ".git",
     "node_modules",
@@ -109,6 +111,31 @@ def is_russian_cyrillic(ch: str) -> bool:
     return (0x0410 <= code <= 0x044F) or code in (0x0401, 0x0451)
 
 
+def is_forbidden_control_character(ch: str) -> bool:
+    """Определяет непечатный ASCII/C0-символ, который нужно диагностировать."""
+    code = ord(ch)
+    return (0x00 <= code <= 0x1F or code == 0x7F) and code not in ALLOWED_CONTROL_CODES
+
+
+def safe_snippet(value: str, focus_index: Optional[int] = None) -> str:
+    """Возвращает фрагмент без фактических управляющих символов."""
+    if len(value) > MAX_SNIPPET_LENGTH:
+        if focus_index is None:
+            value = value[:MAX_SNIPPET_LENGTH]
+        else:
+            start = max(0, min(focus_index - MAX_SNIPPET_LENGTH // 2, len(value) - MAX_SNIPPET_LENGTH))
+            value = value[start : start + MAX_SNIPPET_LENGTH]
+
+    escaped = []
+    for ch in value:
+        code = ord(ch)
+        if code < 0x20 or code == 0x7F:
+            escaped.append(f"\\x{code:02X}")
+        else:
+            escaped.append(ch)
+    return "".join(escaped)
+
+
 def find_line_issues(line: str, strict: bool = False) -> List[str]:
     issues: List[str] = []
     if "\ufffd" in line:
@@ -144,10 +171,27 @@ def scan_file(path: Path, strict: bool = False) -> Dict:
         }
 
     issues = []
-    for idx, line in enumerate(text.splitlines(), start=1):
+    # Нельзя использовать str.splitlines(): он считает 0x0B, 0x0C и ряд
+    # других управляющих символов разделителями строк и скрывает нарушение.
+    # Разделяем только реальные варианты переноса строки.
+    for idx, line in enumerate(re.split(r"\r\n|\r|\n", text), start=1):
         kinds = find_line_issues(line, strict=strict)
         if kinds:
-            issues.append({"line": idx, "kinds": kinds, "snippet": line[:220]})
+            issues.append({"line": idx, "kinds": kinds, "snippet": safe_snippet(line)})
+
+        for char_index, ch in enumerate(line):
+            if not is_forbidden_control_character(ch):
+                continue
+            code = ord(ch)
+            issues.append(
+                {
+                    "line": idx,
+                    "kinds": ["control_character"],
+                    "code_point": f"U+{code:04X}",
+                    "hex_code": f"0x{code:02X}",
+                    "snippet": safe_snippet(line, focus_index=char_index),
+                }
+            )
 
     return {"file": str(path), "issues": issues}
 
@@ -183,7 +227,10 @@ def render_text(results: List[Dict], warnings: List[str]) -> int:
         safe_write_line(f"\n{item['file']}")
         for issue in issues:
             kinds = ",".join(issue["kinds"])
-            safe_write_line(f"  L{issue['line']}: [{kinds}] {issue['snippet']}")
+            details = ""
+            if "code_point" in issue:
+                details = f" {issue['code_point']} ({issue['hex_code']})"
+            safe_write_line(f"  L{issue['line']}: [{kinds}]{details} {issue['snippet']}")
 
     if suspicious_count == 0:
         safe_write_line("No suspicious encoding artifacts found.")
