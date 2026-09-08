@@ -20,6 +20,10 @@
     plantuml_render.py
     plantuml-render
     plantuml-render.bat
+  sdd-template-release/
+    README.md
+    build_release.py
+    install_framework.py
 ```
 
 ## Инструменты
@@ -28,12 +32,12 @@
 * **check-encoding** — проверяет текстовые файлы на нарушения UTF-8 и mojibake.
 * **pdd-scan** — сканирует `@todo` и обновляет реестр задач.
 * **plantuml-render** — рендерит `.plantuml`, `.bpmn` и `.dot` в PNG/SVG через Kroki-compatible API; локальный Docker-стек включает BPMN companion-сервис и SVG-to-PNG rasterizer.
+* **sdd-template-release** — выбирает релиз из `release-registry.json`, собирает и устанавливает его в `.agents/sdd-template-X.Y.Z/`; каталоги `.agents/` и `tmp/` не публикуются.
 
-`agent-logic` является внешним опциональным пакетом (`external-optional`). Его
-локальная копия может отсутствовать в чистом клоне, потому что `.gitignore`
-исключает установленный экспорт инструмента. Перед запуском проверь
-`.tools/agent-logic/manifest.json` и следуй `.tools/agent-logic/agent-logic.instructions.md`.
-Реестр описывает ожидаемый пакет, но не заменяет его установку.
+`agent-logic` является обязательной частью поставки SDD Framework. Перед запуском
+проверь `.tools/agent-logic/manifest.json` и следуй
+`.tools/agent-logic/agent-logic.instructions.md`. Создаваемые инструментом данные
+хранятся в `.tools/agent-logic/.runtime/` и не входят в экспорт.
 
 ## Версионирование
 
@@ -79,3 +83,4 @@ python .tools/plantuml-render/plantuml_render.py \
 * Реестр инструментов: `.tools/registry.json`
 * Правила инструментов: `.manifest/toolsmanifest.md`
 * Общие правила версионирования: `.manifest/versionmanifest.md`
+* Стандарт экспорта SDD Framework: `.manifest/exportmanifest.md`
