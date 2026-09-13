@@ -67,3 +67,17 @@
 
 * Назад к разделу: `../README.md`
 * Исходник: `.tools/pdd/pdd_scan.py`
+
+## manifest-validator
+
+Проверяет H8-документ по выбранному манифесту без изменения файлов.
+
+```bash
+python .tools/pdd/manifest-validator.py \
+  --doc docs/requirements/gap-tracking.md \
+  --manifest gapmanifest \
+  --check-cleanup
+```
+
+Для Windows используй `.tools/pdd/manifest-validator.bat`, для Unix —
+`.tools/pdd/manifest-validator`. Формат `json` доступен через `--format json`.

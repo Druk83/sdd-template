@@ -2,9 +2,9 @@
 
 Проверка файлов на артефакты поврежденной кодировки (mojibake) и невалидный UTF-8.
 
-> Версия инструмента: `0.2.0`.
+> Версия инструмента: `0.3.0`.
 
-По умолчанию сканирует:
+По умолчанию используется профиль `repository`:
 - `docs/`
 - `README.md` в корне репозитория
 - `apps/`
@@ -14,6 +14,17 @@
 - `.requirements/`
 - `.tasks/`
 - `.issues/`
+
+## Профили
+
+| Профиль | Область |
+|---|---|
+| `minimal` | `README.md` |
+| `documentation` | `README.md`, `docs/`, `.manifest/`, `.requirements/` |
+| `repository` | `README.md`, `docs/`, `.manifest/`, `.requirements/`, `.tasks/`, `.issues/` и стандартные прикладные каталоги |
+| `framework` | Framework-документация, реестр и описания инструментов |
+
+`--paths` сохраняет точечный режим и имеет приоритет над `--profile`.
 
 ## Быстрый старт
 
@@ -43,7 +54,8 @@ Unix wrapper:
 
 ## Параметры
 
-- `--paths <list>` - список файлов/директорий для проверки (по умолчанию: `docs README.md apps services scripts .manifest .requirements .tasks .issues`)
+- `--profile <name>` - именованный профиль: `minimal`, `documentation`, `repository`, `framework`
+- `--paths <list>` - список файлов/директорий для проверки; переопределяет профиль
 - `--max-file-size-kb <int>` - пропуск файлов больше заданного размера
 - `--format <text|json>` - формат вывода
 - `--strict` - более чувствительные эвристики, может давать больше ложных срабатываний
@@ -53,6 +65,8 @@ Unix wrapper:
 ```bash
 python .tools/check-encoding/check_encoding.py --paths docs README.md --format text
 python .tools/check-encoding/check_encoding.py --paths docs/requirements README.md --format json
+python .tools/check-encoding/check_encoding.py --profile documentation --format text
+python .tools/check-encoding/check_encoding.py --profile framework --format json
 python .tools/check-encoding/check_encoding.py --strict
 ```
 

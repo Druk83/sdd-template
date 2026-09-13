@@ -18,6 +18,20 @@ DEFAULT_PATHS = [
     ".tasks",
     ".issues",
 ]
+PROFILE_PATHS = {
+    "minimal": ["README.md"],
+    "documentation": ["README.md", "docs", ".manifest", ".requirements"],
+    "repository": DEFAULT_PATHS,
+    "framework": [
+        "README.md",
+        ".manifest",
+        ".requirements",
+        ".tasks",
+        ".issues",
+        ".tools/README.md",
+        ".tools/registry.json",
+    ],
+}
 DEFAULT_MAX_FILE_SIZE_KB = 1024
 MAX_SNIPPET_LENGTH = 220
 ALLOWED_CONTROL_CODES = {0x09, 0x0A, 0x0D}
@@ -39,7 +53,9 @@ LATIN_MOJIBAKE_RE = re.compile(r"(Гђ|Г‘|Гѓ|Г‚|Гўв‚¬|Гўв‚¬�
 # 1) точечные паттерны, часто встречающиеся в репозитории;
 # 2) повтор пары [Р|С]+кириллица — типичный след UTF-8/CP1251 mojibake;
 # 3) латиница после Р/С — дополнительная эвристика для смешанных искажений.
-CYRILLIC_MOJIBAKE_RE = re.compile(r"(?:в„|Р¤Р|Р”Р|(?:[РС][А-Яа-яЁё]){2,}|Р[A-Za-z]|С[A-Za-z])")
+CYRILLIC_MOJIBAKE_RE = re.compile(
+    r"(?:в„|Р¤Р|Р”Р|[РС][\u0400-\u040F\u0450-\u045F])"
+)
 STRICT_BROKEN_WORD_RE = re.compile(r"\b(?:мя|сточник|сполнитель)\b")
 
 
@@ -49,10 +65,16 @@ def parse_args() -> argparse.Namespace:
         description="Scan repository for suspicious mojibake encoding artifacts.",
     )
     parser.add_argument(
+        "--profile",
+        choices=sorted(PROFILE_PATHS),
+        default="repository",
+        help="Named scan profile. Default: repository",
+    )
+    parser.add_argument(
         "--paths",
         nargs="+",
-        default=DEFAULT_PATHS,
-        help="Files/directories to scan. Default: docs README.md",
+        default=None,
+        help="Files/directories to scan; overrides --profile.",
     )
     parser.add_argument(
         "--max-file-size-kb",
@@ -242,7 +264,8 @@ def render_text(results: List[Dict], warnings: List[str]) -> int:
 
 def main() -> int:
     args = parse_args()
-    files, warnings = collect_files(args.paths, args.max_file_size_kb)
+    paths = args.paths if args.paths is not None else PROFILE_PATHS[args.profile]
+    files, warnings = collect_files(paths, args.max_file_size_kb)
     if not files and warnings:
         for warning in warnings:
             safe_write_line(f"[WARN] {warning}", stream=sys.stderr)

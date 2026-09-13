@@ -299,7 +299,7 @@ def refresh_agent_logic_manifest(stage: Path) -> None:
 
 
 def git_value(root: Path, args: list[str], fallback: str) -> str:
-    command = ["git", "-C", str(root), "-c", f"safe.directory={root}", *args]
+    command = ["git", "-C", str(root), "-c", f"safe.directory={root.as_posix()}", *args]
     try:
         result = subprocess.run(command, check=True, capture_output=True, text=True)
     except (OSError, subprocess.CalledProcessError):

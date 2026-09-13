@@ -1,10 +1,6 @@
 # Editor/OS files
 *.swp
 .DS_Store
-.source/последовательность событий.plantuml
-.source/3.plantuml
-.source/2.plantuml
-.source/1.plantuml
 .diagrams/3.plantuml
 .diagrams/3.png
 .diagrams/1.plantuml

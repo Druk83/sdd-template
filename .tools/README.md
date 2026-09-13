@@ -29,7 +29,8 @@
 ## Инструменты
 
 * **agent-logic** — компилирует UTF-8 text и Markdown в проверяемую модель ASIR и обрабатывает `agent_context`.
-* **check-encoding** — проверяет текстовые файлы на нарушения UTF-8 и mojibake.
+* **check-encoding** — проверяет текстовые файлы на нарушения UTF-8 и mojibake;
+  поддерживает профили `minimal`, `documentation`, `repository` и `framework`.
 * **pdd-scan** — сканирует `@todo` и обновляет реестр задач.
 * **plantuml-render** — рендерит `.plantuml`, `.bpmn` и `.dot` в PNG/SVG через Kroki-compatible API; локальный Docker-стек включает BPMN companion-сервис и SVG-to-PNG rasterizer.
 * **sdd-template-release** — выбирает релиз из `release-registry.json`, собирает и устанавливает его в `.agents/sdd-template-X.Y.Z/`; каталоги `.agents/` и `tmp/` не публикуются.
@@ -56,6 +57,25 @@
 ## Кроссплатформенный запуск
 
 Каждый исполняемый инструмент зарегистрирован в `.tools/registry.json` и имеет универсальную Python-точку входа, а также wrapper-скрипты для Windows и Unix-подобных систем.
+
+Для repo-level quality gate используй профиль `repository`:
+
+```bash
+python .tools/check-encoding/check_encoding.py --profile repository --strict
+```
+
+Перед commit новой версии релиза выполни сборочную проверку кандидата:
+
+```bash
+python .tools/sdd-template-release/verify_release.py
+```
+
+Команда обязательна для изменений, которые входят в поставляемый пакет. Она завершится
+ошибкой, если текущая версия отсутствует в `release-registry.json` или собранный пакет
+не проходит проверку состава и хешей.
+
+Профиль `framework` проверяет документацию Framework и публичные описания
+инструментов без включения исходного кода проверяющего скрипта.
 
 ```bash
 python .tools/plantuml-render/plantuml_render.py --format png --path <file-or-directory>
