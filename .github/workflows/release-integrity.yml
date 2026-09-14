@@ -1,0 +1,26 @@
+name: Validate release publication
+
+on:
+  push:
+    tags:
+      - "sdd-template-*"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout complete repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Verify published release
+        run: python .tools/sdd-template-release/verify_release.py --published

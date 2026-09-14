@@ -13,7 +13,9 @@ from build_release import (
     BuildError,
     build_release,
     ensure_version_registered,
+    git_value,
     release_entry,
+    registry_releases,
     read_release_registry,
     read_version,
     repository_root,
@@ -29,6 +31,11 @@ def parse_args() -> argparse.Namespace:
         "--root",
         type=Path,
         help="Корень мета-репозитория; по умолчанию определяется по расположению инструмента.",
+    )
+    parser.add_argument(
+        "--published",
+        action="store_true",
+        help="Проверить опубликованные refs и соответствие текущего commit релизу.",
     )
     return parser.parse_args()
 
@@ -114,12 +121,54 @@ def validate_package(package: Path, version: str) -> int:
     return len(actual)
 
 
+def validate_published_registry(root: Path, registry: dict[str, object], version: str) -> None:
+    """Проверить, что поддерживаемые релизы опубликованы на неизменяемых refs."""
+    head = git_value(root, ["rev-parse", "HEAD"], "")
+    if not head:
+        raise BuildError("Невозможно определить commit текущего релиза.")
+
+    for release in registry_releases(registry):
+        if release.get("status") != "supported":
+            continue
+        release_version = release.get("version")
+        ref_type = release.get("ref_type")
+        ref = release.get("ref")
+        if not isinstance(release_version, str) or not isinstance(ref, str):
+            raise BuildError("В supported-записи отсутствуют version или ref.")
+
+        if ref_type == "tag":
+            tag = release.get("tag")
+            if tag != ref:
+                raise BuildError(f"Для релиза {release_version} поля tag и ref должны совпадать.")
+            resolved = git_value(
+                root,
+                ["rev-parse", "--verify", f"refs/tags/{tag}^{{commit}}"],
+                "",
+            )
+        else:
+            resolved = git_value(root, ["rev-parse", "--verify", f"{ref}^{{commit}}"], "")
+
+        if not resolved:
+            raise BuildError(
+                f"Поддерживаемый релиз {release_version} ссылается на недоступный {ref_type}: {ref}."
+            )
+        registered_commit = release.get("commit")
+        if registered_commit is not None and registered_commit != resolved:
+            raise BuildError(f"Поле commit релиза {release_version} не совпадает с разрешённым ref.")
+        if release_version == version and resolved != head:
+            raise BuildError(
+                f"Текущий commit {head} не совпадает с ref релиза {version}: {ref} -> {resolved}."
+            )
+
+
 def main() -> int:
     args = parse_args()
     root = (args.root or repository_root()).resolve()
     version = read_version(root)
     registry = read_release_registry(root)
     ensure_version_registered(registry, version)
+    if args.published:
+        validate_published_registry(root, registry, version)
 
     with tempfile.TemporaryDirectory(prefix="sdd-template-release-verify-") as temporary:
         workspace = Path(temporary)

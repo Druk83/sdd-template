@@ -74,6 +74,12 @@ python .tools/sdd-template-release/verify_release.py
 ошибкой, если текущая версия отсутствует в `release-registry.json` или собранный пакет
 не проходит проверку состава и хешей.
 
+После commit и создания tag дополнительно выполни проверку публикации:
+
+```bash
+python .tools/sdd-template-release/verify_release.py --published
+```
+
 Профиль `framework` проверяет документацию Framework и публичные описания
 инструментов без включения исходного кода проверяющего скрипта.
 

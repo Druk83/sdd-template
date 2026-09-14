@@ -194,7 +194,8 @@ python tmp/sdd-template-source-X.Y.Z-<short-commit>/.tools/sdd-template-release/
 
 Для `use` добавить `--version X.Y.Z`. При замене существующего релиза после
 подтверждения пользователя добавить `--old-action move`, `--old-action delete` или
-`--old-action keep`.
+`--old-action keep`. Для `move` и `delete` после просмотра inventory передать его
+fingerprint через `--old-confirmation <old-inventory-fingerprint>`.
 
 Параметр `--target-root .` явно задаёт корень проекта-потребителя. Установщик создаёт
 готовый пакет непосредственно в корне проекта:
@@ -220,16 +221,19 @@ python tmp/sdd-template-source-X.Y.Z-<short-commit>/.tools/sdd-template-release/
 Если старой папки SDD Framework нет, после проверки запросить подтверждение
 первичной установки и запустить установщик с действием `init`.
 
-Если старая папка есть, показать пользователю обе версии и результат сравнения.
-После ответа пользователя выполнить только выбранное действие:
+Если старая папка есть, сначала получить inventory старого release и показать пользователю
+обе версии, fingerprint, сводку и полный список нестандартных путей. Новый release должен
+быть собран и проверен до destructive operation. После отдельного ответа пользователя
+выполнить только выбранное действие:
 
 - оставить старую версию и завершить операцию;
 - удалить старую папку;
 - переместить старую папку в `tmp/sdd-template-old-X.Y.Z/`.
 
-После ответа передать установщику только подтверждённое действие через
-`--old-action`: `keep`, `delete` или `move`. Установщик создаёт только новую папку
-`.agents/sdd-template-X.Y.Z/`. Не перезаписывать корневой `.agents/`, другие
+После ответа передать установщику подтверждённое действие через `--old-action` и для
+`move`/`delete` fingerprint через `--old-confirmation`. Установщик создаёт только новую папку
+`.agents/sdd-template-X.Y.Z/` после успешной сборки, а старую папку изменяет только после
+успешной проверки нового package. Не перезаписывать корневой `.agents/`, другие
 каталоги и существующую целевую папку без отдельного подтверждения.
 
 Если найдено более одной папки `sdd-template-*`, остановиться и сообщить о конфликте.
@@ -318,15 +322,16 @@ tmp/sdd-template-source-X.Y.Z-<short-commit>/
 ```
 
 До ответа статус операции — `installed_pending_cleanup`, а статус очистки —
-`awaiting_user_confirmation`. Агент обязан показать пользователю значение
-`cleanup.question` и `next_action.message`, дождаться ответа «да» или «нет» и не называть операцию
-завершённой до этого ответа. После ответа повторно запустить установщик с тем же
+`awaiting_user_confirmation`. Агент обязан показать пользователю значение `cleanup.question`,
+`next_action.message`, fingerprint, сводку и полный список нестандартных данных и не называть
+операцию завершённой до этого ответа. После ответа повторно запустить установщик с тем же
 `--source-root` и одним из действий:
 
 ```text
-python tmp/sdd-template-source-X.Y.Z-<short-commit>/.tools/sdd-template-release/install_framework.py --source-root tmp/sdd-template-source-X.Y.Z-<short-commit> --target-root . --cleanup-action delete
+python tmp/sdd-template-source-X.Y.Z-<short-commit>/.tools/sdd-template-release/install_framework.py --source-root tmp/sdd-template-source-X.Y.Z-<short-commit> --target-root . --cleanup-action delete --cleanup-fingerprint <cleanup-inventory-fingerprint>
 ```
 
-При ответе «нет» использовать `--cleanup-action keep`. Режим очистки разрешает
-удалять только указанный каталог клона целиком, включая его вложенный staging.
+При ответе «нет» использовать `--cleanup-action keep`. Без fingerprint удаление не
+выполняется; при изменении inventory после подтверждения оно блокируется. Режим очистки
+разрешает удалять только указанный каталог клона целиком, включая его вложенный staging.
 Весь `tmp/`, старые релизы и чужие временные данные не удалять.

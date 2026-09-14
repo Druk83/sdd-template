@@ -114,6 +114,8 @@ def read_release_registry(root: Path) -> dict[str, object]:
             raise BuildError(f"Версия {version} не может иметь статус supported.")
         if not isinstance(ref, str) or not ref or ref_type not in {"commit", "tag"}:
             raise BuildError("В реестре обнаружена неполная запись релиза.")
+        if ref_type == "tag" and release.get("tag") != ref:
+            raise BuildError(f"Для tag-релиза поля tag и ref должны совпадать: {version}")
         commit = release.get("commit")
         if commit is not None and (not isinstance(commit, str) or not re.fullmatch(r"[0-9a-f]{40}", commit)):
             raise BuildError(f"В реестре указан некорректный commit для версии {version}.")
@@ -191,18 +193,24 @@ def conflicting_dirs(agents_dir: Path, expected_name: str) -> list[Path]:
     )
 
 
-def ensure_source_state(root: Path, version: str) -> tuple[Path, list[Path]]:
+def ensure_source_state(
+    root: Path,
+    version: str,
+    allow_existing_releases: bool = False,
+) -> tuple[Path, list[Path]]:
     agents_dir = root / ".agents"
     expected = agents_dir / release_name(version)
     existing = direct_release_dirs(agents_dir)
     conflicts = conflicting_dirs(agents_dir, expected.name)
     if conflicts:
-        names = ", ".join(path.name for path in conflicts)
-        raise BuildError(f"В .agents обнаружены старые или неизвестные каталоги: {names}")
+        unknown = [path for path in conflicts if not RELEASE_PATTERN.fullmatch(path.name)]
+        if unknown or not allow_existing_releases:
+            names = ", ".join(path.name for path in conflicts)
+            raise BuildError(f"В .agents обнаружены старые или неизвестные каталоги: {names}")
     if len(existing) > 1:
         names = ", ".join(path.name for path in existing)
         raise BuildError(f"В .agents должно быть не более одной папки SDD Framework: {names}")
-    if existing and existing[0] != expected:
+    if existing and existing[0] != expected and not allow_existing_releases:
         raise BuildError(
             f"Существует старый релиз {existing[0].name}. "
             "Удалите или переместите его после подтверждения пользователя."
@@ -332,6 +340,10 @@ def portable_registry(root: Path, version: str) -> list[dict[str, object]]:
     if not isinstance(registry, list):
         raise BuildError("Корневой registry инструментов должен быть JSON-массивом.")
     package_prefix = f".agents/{release_name(version)}/"
+
+    def replace_manifest_path(match: re.Match[str]) -> str:
+        return f"{package_prefix}{match.group(1)}"
+
     portable = []
     for entry in registry:
         if entry.get("name") == "sdd-template-release":
@@ -344,7 +356,7 @@ def portable_registry(root: Path, version: str) -> list[dict[str, object]]:
                 if entry.get("name") == "check-encoding":
                     rewritten[key] = re.sub(
                         r"(?<![A-Za-z0-9_./\\-])(\.manifest|\.requirements)(?=(?:\s|$))",
-                        lambda match: f"{package_prefix}{match.group(1)}",
+                        replace_manifest_path,
                         rewritten[key],
                     )
         portable.append(rewritten)
@@ -483,13 +495,18 @@ def build_release(
     write: bool = False,
     resume_stage: bool = False,
     stage_root: Path | None = None,
+    allow_existing_releases: bool = False,
 ) -> dict[str, object]:
     root = root.resolve()
     output_root = output_root.resolve()
     registry = read_release_registry(root)
     version = read_version(root)
     ensure_version_registered(registry, version)
-    target, _ = ensure_source_state(output_root, version)
+    target, _ = ensure_source_state(
+        output_root,
+        version,
+        allow_existing_releases=allow_existing_releases,
+    )
     stage = (stage_root or output_root / "tmp" / f"sdd-template-build-{version}").resolve()
     if stage.exists() and not resume_stage:
         raise BuildError(

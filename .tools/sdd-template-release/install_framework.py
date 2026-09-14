@@ -4,9 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
 import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -35,6 +38,14 @@ def parse_args() -> argparse.Namespace:
         "--cleanup-action",
         choices=("keep", "delete"),
         help="Завершить отдельное подтверждение очистки клона: оставить или удалить.",
+    )
+    parser.add_argument(
+        "--cleanup-fingerprint",
+        help="Fingerprint inventory, явно подтверждённый пользователем для удаления source clone.",
+    )
+    parser.add_argument(
+        "--old-confirmation",
+        help="Fingerprint inventory старого release, явно подтверждённый пользователем для move/delete.",
     )
     parser.add_argument(
         "--agents-action",
@@ -598,7 +609,7 @@ def initialize_project_root(
         (requirements_dir / ".gitkeep").write_text("", encoding="utf-8", newline="\n")
         result["docs_requirements"] = "created"
 
-    files = {
+    files: dict[str, Path | None] = {
         ".editorconfig": None,
         ".gitattributes": None,
         "README.md": None,
@@ -608,19 +619,407 @@ def initialize_project_root(
         ".gitattributes": "* text=auto eol=lf\n",
         "README.md": "",
     }
-    for name, source in files.items():
+    for name, default_source in files.items():
         destination = target_root / name
         if destination.exists():
             continue
-        if source is not None:
-            shutil.copy2(source, destination)
+        if default_source is not None:
+            shutil.copy2(default_source, destination)
         else:
             destination.write_text(defaults[name], encoding="utf-8", newline="\n")
     return result
 
 
-def cleanup_source_clone(target_root: Path, source_root: Path, cleanup_action: str) -> dict[str, str]:
-    """Оставить или удалить только созданный клон внутри target-root/tmp."""
+INVENTORY_SCHEMA_VERSION = "1"
+
+
+def _safe_manifest_path(value: object) -> str | None:
+    if not isinstance(value, str) or not value:
+        return None
+    candidate = Path(value.replace("\\", "/"))
+    if candidate.is_absolute() or ".." in candidate.parts:
+        return None
+    return candidate.as_posix()
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _collect_entries(root: Path, skip_directories: set[str] | None = None) -> tuple[list[dict[str, object]], list[str]]:
+    entries: list[dict[str, object]] = []
+    skipped: list[str] = []
+    skip_directories = skip_directories or set()
+
+    def visit(directory: Path, relative_directory: str = "") -> None:
+        try:
+            children = sorted(os.scandir(directory), key=lambda item: item.name)
+        except OSError as error:
+            raise build_release.BuildError(f"Невозможно прочитать каталог inventory: {directory}: {error}") from error
+        for child in children:
+            relative = f"{relative_directory}/{child.name}".strip("/")
+            try:
+                stat_result = child.stat(follow_symlinks=False)
+            except OSError as error:
+                raise build_release.BuildError(f"Невозможно получить метаданные inventory: {child.path}: {error}") from error
+            if child.is_symlink():
+                entries.append(
+                    {
+                        "path": relative,
+                        "type": "symlink",
+                        "size": stat_result.st_size,
+                        "target": os.readlink(child.path),
+                    }
+                )
+                continue
+            if child.is_dir(follow_symlinks=False):
+                entries.append({"path": relative, "type": "directory", "size": 0})
+                if child.name in skip_directories:
+                    skipped.append(relative)
+                    continue
+                visit(Path(child.path), relative)
+                continue
+            if child.is_file(follow_symlinks=False):
+                file_path = Path(child.path)
+                entries.append(
+                    {
+                        "path": relative,
+                        "type": "file",
+                        "size": stat_result.st_size,
+                        "sha256": _sha256(file_path),
+                    }
+                )
+
+    visit(root)
+    return entries, skipped
+
+
+def _inventory_fingerprint(entries: list[dict[str, object]], errors: list[str]) -> str:
+    payload = json.dumps(
+        {"entries": entries, "errors": errors},
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _size_value(value: object) -> int:
+    return value if isinstance(value, int) else 0
+
+
+def _finalize_inventory(
+    entries: list[dict[str, object]],
+    errors: list[str],
+    scope: str,
+    skipped: list[str] | None = None,
+    extra: dict[str, object] | None = None,
+) -> dict[str, object]:
+    entries = sorted(entries, key=lambda item: str(item.get("path", "")))
+    nonstandard = [
+        item for item in entries
+        if item.get("classification") == "user_data"
+    ]
+    top_level = sorted({str(item["path"]).split("/", 1)[0] for item in nonstandard})
+    summary = {
+        "entries": len(entries),
+        "files": sum(item.get("type") == "file" for item in entries),
+        "directories": sum(item.get("type") == "directory" for item in entries),
+        "symlinks": sum(item.get("type") == "symlink" for item in entries),
+        "bytes": sum(_size_value(item.get("size")) for item in entries if item.get("type") == "file"),
+        "user_data_entries": len(nonstandard),
+        "user_data_bytes": sum(
+            _size_value(item.get("size")) for item in nonstandard if item.get("type") == "file"
+        ),
+        "classifications": {
+            classification: sum(item.get("classification") == classification for item in entries)
+            for classification in ("framework", "generated", "user_data")
+        },
+        "statuses": {
+            status: sum(item.get("status") == status for item in entries)
+            for status in ("tracked", "modified", "untracked", "ignored", "generated", "unknown", "service")
+        },
+    }
+    result: dict[str, object] = {
+        "schema_version": INVENTORY_SCHEMA_VERSION,
+        "scope": scope,
+        "status": "complete" if not errors else "incomplete",
+        "safe_to_delete": not errors,
+        "requires_confirmation": True,
+        "fingerprint": _inventory_fingerprint(entries, errors),
+        "entries": entries,
+        "nonstandard_paths": [str(item["path"]) for item in nonstandard],
+        "top_level_nonstandard": top_level,
+        "summary": summary,
+        "errors": errors,
+        "skipped_service_paths": sorted(skipped or []),
+    }
+    if extra:
+        result.update(extra)
+    return result
+
+
+def inventory_release(release_path: Path) -> dict[str, object]:
+    """Сравнить содержимое release с его release-manifest.json."""
+    if not release_path.is_dir() or release_path.is_symlink():
+        raise build_release.BuildError(f"Каталог release не найден или является ссылкой: {release_path}")
+    errors: list[str] = []
+    expected: dict[str, dict[str, object]] = {}
+    manifest_path = release_path / "release-manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        errors.append(f"Невозможно прочитать release-manifest.json: {error}")
+        manifest = {}
+    if isinstance(manifest, dict) and isinstance(manifest.get("files"), list):
+        for record in manifest["files"]:
+            if not isinstance(record, dict):
+                errors.append("В release-manifest.json обнаружена запись files не-объект.")
+                continue
+            relative = _safe_manifest_path(record.get("path"))
+            if relative is None or relative in expected:
+                errors.append("В release-manifest.json обнаружен некорректный или повторный путь files.")
+                continue
+            expected[relative] = record
+    else:
+        errors.append("В release-manifest.json отсутствует массив files.")
+    expected["release-manifest.json"] = {"path": "release-manifest.json"}
+    canonical_directories: set[str] = set()
+    for relative in expected:
+        path = Path(relative)
+        canonical_directories.update(
+            parent.as_posix() for parent in path.parents if parent.as_posix() != "."
+        )
+    entries, skipped = _collect_entries(release_path)
+    actual_paths = {str(item["path"]): item for item in entries}
+    for relative in expected:
+        if relative not in actual_paths:
+            errors.append(f"В release отсутствует канонический путь: {relative}")
+    for item in entries:
+        relative = str(item["path"])
+        item["status"] = "tracked"
+        if item.get("type") == "directory":
+            item["classification"] = "framework" if relative in canonical_directories else "user_data"
+            if item["classification"] == "user_data":
+                item["status"] = "unknown"
+            continue
+        record = expected.get(relative)
+        if record is None:
+            item["classification"] = "user_data"
+            item["status"] = "unknown"
+            continue
+        if relative == "release-manifest.json":
+            item["classification"] = "framework"
+            item["status"] = "service"
+            continue
+        expected_size = record.get("size")
+        expected_sha256 = record.get("sha256")
+        if (
+            item.get("type") != "file"
+            or not isinstance(expected_size, int)
+            or item.get("size") != expected_size
+            or not isinstance(expected_sha256, str)
+            or item.get("sha256") != expected_sha256
+        ):
+            item["classification"] = "user_data"
+            item["status"] = "modified"
+        else:
+            item["classification"] = "framework"
+    return _finalize_inventory(entries, errors, "installed_release", skipped)
+
+
+def _git_status(source_root: Path) -> tuple[bool, dict[str, str], str | None]:
+    command = [
+        "git",
+        "-C",
+        str(source_root),
+        "-c",
+        f"safe.directory={source_root.as_posix()}",
+        "status",
+        "--porcelain=v1",
+        "--untracked-files=all",
+        "--ignored=matching",
+    ]
+    try:
+        result = subprocess.run(command, check=False, capture_output=True, text=True)
+    except OSError as error:
+        return False, {}, str(error)
+    if result.returncode != 0:
+        return False, {}, result.stderr.strip() or "git status завершился с ошибкой"
+    statuses: dict[str, str] = {}
+    for line in result.stdout.splitlines():
+        if len(line) < 4:
+            continue
+        code = line[:2]
+        relative = line[3:]
+        if " -> " in relative and code[0] in {"R", "C"}:
+            relative = relative.rsplit(" -> ", 1)[1]
+        relative = relative.replace("\\", "/").rstrip("/")
+        if code == "!!":
+            statuses[relative] = "ignored"
+        elif code == "??":
+            statuses[relative] = "untracked"
+        else:
+            statuses[relative] = "modified"
+    return True, statuses, None
+
+
+def _status_for_path(relative: str, statuses: dict[str, str]) -> str | None:
+    matches = [
+        (candidate, status)
+        for candidate, status in statuses.items()
+        if relative == candidate or relative.startswith(candidate + "/")
+    ]
+    if not matches:
+        return None
+    return max(matches, key=lambda item: len(item[0]))[1]
+
+
+def _stage_expected_paths(source_root: Path) -> tuple[dict[str, set[str]], list[str]]:
+    expected_by_root: dict[str, set[str]] = {}
+    errors: list[str] = []
+    tmp_root = source_root / "tmp"
+    if not tmp_root.is_dir():
+        return expected_by_root, errors
+    for stage in sorted(tmp_root.iterdir(), key=lambda path: path.name):
+        if not stage.is_dir() or stage.is_symlink() or not stage.name.startswith("sdd-template-build-"):
+            continue
+        root_relative = stage.relative_to(source_root).as_posix()
+        manifest_path = stage / "release-manifest.json"
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            records = manifest.get("files") if isinstance(manifest, dict) else None
+            if not isinstance(records, list):
+                raise ValueError("отсутствует массив files")
+        except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as error:
+            errors.append(f"Невозможно определить канонический staging {root_relative}: {error}")
+            expected_by_root[root_relative] = {root_relative}
+            continue
+        expected = {root_relative, f"{root_relative}/release-manifest.json"}
+        for record in records:
+            if not isinstance(record, dict):
+                errors.append(f"В staging {root_relative} обнаружена некорректная запись files.")
+                continue
+            relative = _safe_manifest_path(record.get("path"))
+            if relative is None:
+                errors.append(f"В staging {root_relative} обнаружен некорректный путь files.")
+                continue
+            full_relative = f"{root_relative}/{relative}"
+            expected.add(full_relative)
+            expected.update(
+                f"{root_relative}/{parent.as_posix()}"
+                for parent in Path(relative).parents
+                if parent.as_posix() != "."
+            )
+        expected_by_root[root_relative] = expected
+    return expected_by_root, errors
+
+
+def inventory_source_clone(source_root: Path) -> dict[str, object]:
+    """Проверить source clone, его staging и пользовательские изменения."""
+    if not source_root.is_dir() or source_root.is_symlink():
+        raise build_release.BuildError(f"Каталог source clone не найден или является ссылкой: {source_root}")
+    git_available, git_status, git_error = _git_status(source_root)
+    entries, skipped = _collect_entries(source_root, skip_directories={".git"})
+    stage_expected, stage_errors = _stage_expected_paths(source_root)
+    errors = list(stage_errors)
+    if not git_available:
+        errors.append(f"Невозможно проверить git status source clone: {git_error or 'неизвестная ошибка'}")
+    for item in entries:
+        relative = str(item["path"])
+        status = _status_for_path(relative, git_status)
+        item["status"] = status or "tracked"
+        if relative == ".git":
+            item["classification"] = "framework"
+            item["status"] = "service"
+            continue
+        if relative == "tmp" and item.get("type") == "directory":
+            item["classification"] = "framework"
+            item["status"] = "service"
+            continue
+        generated = any(
+            relative == root_relative or relative.startswith(root_relative + "/")
+            for root_relative in stage_expected
+        )
+        if generated:
+            expected = next(
+                expected for root_relative, expected in stage_expected.items()
+                if relative == root_relative or relative.startswith(root_relative + "/")
+            )
+            if relative in expected:
+                item["classification"] = "generated"
+                item["status"] = "generated"
+            else:
+                item["classification"] = "user_data"
+                item["status"] = status or "unknown"
+        elif status:
+            item["classification"] = "user_data"
+        elif git_available:
+            item["classification"] = "framework"
+        else:
+            item["classification"] = "user_data"
+            item["status"] = "unknown"
+    user_data_paths = {
+        str(item["path"])
+        for item in entries
+        if item.get("classification") == "user_data"
+    }
+    for item in entries:
+        if item.get("type") != "directory" or item.get("classification") == "user_data":
+            continue
+        relative = str(item["path"])
+        if any(path.startswith(relative + "/") for path in user_data_paths):
+            item["classification"] = "user_data"
+            item["status"] = "contains_user_data"
+    git_report: dict[str, object] = {
+        "available": git_available,
+        "head": build_release.git_value(source_root, ["rev-parse", "HEAD"], "") if git_available else None,
+        "status_entries": git_status,
+    }
+    extra: dict[str, object] = {"git": git_report}
+    if git_error:
+        git_report["error"] = git_error
+    return _finalize_inventory(
+        entries,
+        errors,
+        "source_clone_and_nested_staging",
+        skipped,
+        extra,
+    )
+
+
+def inventory_message(inventory: dict[str, object], title: str) -> str:
+    summary_value = inventory.get("summary")
+    summary: dict[str, object] = summary_value if isinstance(summary_value, dict) else {}
+    lines = [
+        title,
+        f"Fingerprint inventory: {inventory.get('fingerprint')}",
+        f"Объектов: {summary.get('entries', 0)}, файлов: {summary.get('files', 0)}, "
+        f"размер файлов: {summary.get('bytes', 0)} байт.",
+    ]
+    errors = inventory.get("errors")
+    if isinstance(errors, list) and errors:
+        lines.append("Ошибки проверки:")
+        lines.extend(f"- {error}" for error in errors)
+    top_level = inventory.get("top_level_nonstandard")
+    if isinstance(top_level, list) and top_level:
+        lines.append("Нестандартные top-level пути:")
+        lines.extend(f"- {path}" for path in top_level)
+    else:
+        lines.append("Нестандартные пользовательские данные не обнаружены.")
+    paths = inventory.get("nonstandard_paths")
+    if isinstance(paths, list) and paths:
+        lines.append("Полный список нестандартных путей:")
+        lines.extend(f"- {path}" for path in paths)
+    return "\n".join(lines)
+
+
+def validate_cleanup_target(target_root: Path, source_root: Path) -> tuple[Path, str]:
+    """Проверить, что cleanup target — непосредственный source clone в tmp/."""
     if source_root.is_symlink():
         raise build_release.BuildError(f"Каталог клона не должен быть символьной ссылкой: {source_root}")
     tmp_root = (target_root / "tmp").resolve()
@@ -633,10 +1032,59 @@ def cleanup_source_clone(target_root: Path, source_root: Path, cleanup_action: s
     if not source_root.is_dir():
         raise build_release.BuildError(f"Каталог клона не найден или является ссылкой: {source_root}")
     try:
-        relative_path = source_root.relative_to(target_root).as_posix()
+        relative_path = source_root.relative_to(target_root.resolve()).as_posix()
     except ValueError as error:
         raise build_release.BuildError("Каталог клона должен находиться внутри корня проекта.") from error
+    return source_root, relative_path
+
+
+def cleanup_plan(target_root: Path, source_root: Path) -> dict[str, object]:
+    source_root, relative_path = validate_cleanup_target(target_root, source_root)
+    inventory = inventory_source_clone(source_root)
+    question = (
+        f"Удалить каталог {relative_path} после проверки inventory? "
+        "Ответьте «да» или «нет» и передайте fingerprint только для подтверждённого удаления."
+    )
+    return {
+        "status": "awaiting_user_confirmation",
+        "path": relative_path,
+        "scope": "source_clone_and_nested_staging",
+        "confirmation_required": True,
+        "question": question,
+        "inventory": inventory,
+        "next_action": {
+            "type": "user_confirmation",
+            "required": True,
+            "message": question,
+            "fingerprint": inventory.get("fingerprint"),
+        },
+    }
+
+
+def cleanup_source_clone(
+    target_root: Path,
+    source_root: Path,
+    cleanup_action: str,
+    expected_fingerprint: str | None = None,
+) -> dict[str, object]:
+    """Проверить inventory и оставить или удалить только подтверждённый source clone."""
+    source_root, relative_path = validate_cleanup_target(target_root, source_root)
+    inventory = inventory_source_clone(source_root)
+    current_fingerprint = inventory.get("fingerprint")
     if cleanup_action == "delete":
+        if not expected_fingerprint:
+            plan = cleanup_plan(target_root, source_root)
+            print(inventory_message(inventory, "Требуется отдельное подтверждение очистки."), file=sys.stderr)
+            return plan
+        if expected_fingerprint != current_fingerprint:
+            raise build_release.BuildError(
+                "Inventory source clone изменился после подтверждения; удаление заблокировано. "
+                f"Текущий fingerprint: {current_fingerprint}."
+            )
+        if inventory.get("errors"):
+            raise build_release.BuildError(
+                "Inventory source clone содержит ошибки; удаление заблокировано до повторной проверки."
+            )
         shutil.rmtree(source_root)
         status = "deleted"
     else:
@@ -645,6 +1093,41 @@ def cleanup_source_clone(target_root: Path, source_root: Path, cleanup_action: s
         "status": status,
         "path": relative_path,
         "scope": "source_clone_and_nested_staging",
+        "inventory": inventory,
+        "confirmed_fingerprint": expected_fingerprint,
+        "confirmation_required": cleanup_action == "delete",
+    }
+
+
+def old_release_confirmation_plan(
+    target_root: Path,
+    current_version: str,
+    current_path: Path,
+    target_version: str,
+    action: str,
+    inventory: dict[str, object],
+) -> dict[str, object]:
+    relative_path = current_path.relative_to(target_root).as_posix()
+    question = (
+        f"Обнаружен старый release {current_version} в {relative_path}. "
+        f"Подтвердите действие {action} после проверки inventory. "
+        "Для удаления или переноса передайте fingerprint отдельным вызовом."
+    )
+    return {
+        "status": "awaiting_user_confirmation",
+        "current_version": current_version,
+        "target_version": target_version,
+        "old_action": action,
+        "old_release": {
+            "path": relative_path,
+            "inventory": inventory,
+        },
+        "next_action": {
+            "type": "user_confirmation",
+            "required": True,
+            "message": question,
+            "fingerprint": inventory.get("fingerprint"),
+        },
     }
 
 
@@ -687,13 +1170,29 @@ def main() -> int:
     args = parse_args()
     target_root = args.target_root.resolve()
     if args.cleanup_action is not None:
-        if args.source_root is None or args.action is not None or args.version is not None or args.old_action != "ask" or args.write:
+        if (
+            args.source_root is None
+            or args.action is not None
+            or args.version is not None
+            or args.old_action != "ask"
+            or args.old_confirmation is not None
+            or args.write
+        ):
             raise build_release.BuildError(
-                "Для --cleanup-action укажите только --source-root, --target-root и действие очистки."
+                "Для --cleanup-action укажите только --source-root, --target-root, "
+                "--cleanup-action и при необходимости --cleanup-fingerprint."
             )
-        cleanup = cleanup_source_clone(target_root, args.source_root, args.cleanup_action)
-        print(json.dumps({"status": "cleanup_completed", "cleanup": cleanup}, ensure_ascii=False, indent=2))
+        cleanup = cleanup_source_clone(
+            target_root,
+            args.source_root,
+            args.cleanup_action,
+            args.cleanup_fingerprint,
+        )
+        top_status = "cleanup_completed" if cleanup.get("status") in {"deleted", "kept"} else "awaiting_user_confirmation"
+        print(json.dumps({"status": top_status, "cleanup": cleanup}, ensure_ascii=False, indent=2))
         return 0
+    if args.cleanup_fingerprint is not None:
+        raise build_release.BuildError("--cleanup-fingerprint разрешён только вместе с --cleanup-action.")
 
     if args.source_root is None or args.action is None:
         raise build_release.BuildError("Для установки необходимо указать --source-root и --action.")
@@ -727,6 +1226,16 @@ def main() -> int:
         raise build_release.BuildError(
             f"Инициализация невозможна: уже установлен релиз {current_version}. Используйте update или use."
         )
+    if args.old_confirmation is not None and current_path is None:
+        raise build_release.BuildError("--old-confirmation нельзя использовать без установленного старого release.")
+    if args.action == "update" and current_version is not None and version_key(current_version) > version_key(version):
+        raise build_release.BuildError(
+            f"Установлена более новая версия {current_version}; для возврата используйте действие use."
+        )
+    old_inventory: dict[str, object] | None = None
+    replacing_old_release = current_path is not None and current_version != version
+    if replacing_old_release and current_path is not None:
+        old_inventory = inventory_release(current_path)
     agents_review = inspect_agents_instructions(target_root, source_root, version)
     project_structure_review = inspect_project_structure(target_root, source_root, version)
     agents_conflicts = agents_review.get("conflicts")
@@ -761,6 +1270,11 @@ def main() -> int:
                 "message": confirmation_message,
             },
         }
+        if old_inventory is not None and current_path is not None:
+            review_plan["old_release"] = {
+                "path": current_path.relative_to(target_root).as_posix(),
+                "inventory": old_inventory,
+            }
         print(confirmation_message, file=sys.stderr)
         print(json.dumps(review_plan, ensure_ascii=False, indent=2))
         return 0
@@ -787,6 +1301,7 @@ def main() -> int:
         )
         agents_result = ensure_agents_instructions(target_root, source_root, version, args.agents_action)
         conflicts = agents_result.get("conflicts")
+        cleanup = cleanup_plan(target_root, source_root)
         plan = {
             "status": "installed_pending_cleanup",
             "action": args.action,
@@ -801,35 +1316,19 @@ def main() -> int:
                 "status": "required" if isinstance(conflicts, list) and conflicts else "clear",
                 "conflicts": conflicts if isinstance(conflicts, list) else [],
             },
+            "cleanup": cleanup,
+            "next_action": cleanup["next_action"],
         }
-        try:
-            cleanup_path = source_root.relative_to(target_root).as_posix()
-        except ValueError:
-            cleanup_path = source_root.as_posix()
-        cleanup_question = f"Удалить каталог {cleanup_path} после проверки? Ответьте «да» или «нет»."
-        plan["cleanup"] = {
-            "status": "awaiting_user_confirmation",
-            "path": cleanup_path,
-            "scope": "source_clone_and_nested_staging",
-            "confirmation_required": True,
-            "question": cleanup_question,
-        }
-        plan["next_action"] = {
-            "type": "user_confirmation",
-            "required": True,
-            "message": cleanup_question,
-        }
+        cleanup_inventory = cleanup.get("inventory")
         print(
-            f"Требуется подтверждение пользователя: удалить {cleanup_path} после проверки? Ответьте «да» или «нет».",
+            inventory_message(
+                cleanup_inventory if isinstance(cleanup_inventory, dict) else {},
+                "Требуется подтверждение очистки source clone.",
+            ),
             file=sys.stderr,
         )
         print(json.dumps(plan, ensure_ascii=False, indent=2))
         return 0
-    if args.action == "update" and current_version is not None and version_key(current_version) > version_key(version):
-        raise build_release.BuildError(
-            f"Установлена более новая версия {current_version}; для возврата используйте действие use."
-        )
-
     plan = {
         "status": "planned" if not args.write else "writing",
         "action": args.action,
@@ -840,28 +1339,59 @@ def main() -> int:
         "old_action": args.old_action,
         "write": args.write,
     }
+    if old_inventory is not None and current_path is not None:
+        plan["old_release"] = {
+            "path": current_path.relative_to(target_root).as_posix(),
+            "inventory": old_inventory,
+        }
     if not args.write:
         print(json.dumps(plan, ensure_ascii=False, indent=2))
         return 0
 
     if current_path is not None:
         if args.old_action == "ask":
-            raise build_release.BuildError(
-                f"Требуется подтверждение действия со старым релизом {current_version}: "
-                "используйте --old-action keep, move или delete."
+            confirmation = old_release_confirmation_plan(
+                target_root,
+                current_version or "unknown",
+                current_path,
+                version,
+                "keep, move или delete",
+                old_inventory or {},
             )
+            print(inventory_message(old_inventory or {}, "Требуется решение по старому release."), file=sys.stderr)
+            print(json.dumps({**plan, **confirmation}, ensure_ascii=False, indent=2))
+            return 0
         if args.old_action == "keep":
             plan["status"] = "kept"
             plan["write"] = False
             print(json.dumps(plan, ensure_ascii=False, indent=2))
             return 0
-        if args.old_action == "move":
-            backup = free_backup_path(target_root, current_version or "unknown")
-            backup.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(current_path), str(backup))
-            plan["old_path"] = backup.relative_to(target_root).as_posix()
-        elif args.old_action == "delete":
-            shutil.rmtree(current_path)
+        if args.old_action not in {"move", "delete"}:
+            raise build_release.BuildError(f"Неизвестное действие со старым release: {args.old_action}")
+        if old_inventory is None or old_inventory.get("errors"):
+            confirmation = old_release_confirmation_plan(
+                target_root,
+                current_version or "unknown",
+                current_path,
+                version,
+                args.old_action,
+                old_inventory or {},
+            )
+            print(inventory_message(old_inventory or {}, "Удаление или перенос старого release заблокированы."), file=sys.stderr)
+            print(json.dumps({**plan, **confirmation}, ensure_ascii=False, indent=2))
+            return 0
+        if args.old_confirmation != old_inventory.get("fingerprint"):
+            confirmation = old_release_confirmation_plan(
+                target_root,
+                current_version or "unknown",
+                current_path,
+                version,
+                args.old_action,
+                old_inventory,
+            )
+            print(inventory_message(old_inventory, "Требуется подтверждение inventory старого release."), file=sys.stderr)
+            print(json.dumps({**plan, **confirmation}, ensure_ascii=False, indent=2))
+            return 0
 
     stage_root = source_root / "tmp" / f"sdd-template-build-{version}"
     resume_stage = stage_root.exists()
@@ -872,6 +1402,7 @@ def main() -> int:
         write=True,
         stage_root=stage_root,
         resume_stage=resume_stage,
+        allow_existing_releases=True,
     )
     release_dir = result.get("release_dir")
     if not isinstance(release_dir, str):
@@ -893,27 +1424,24 @@ def main() -> int:
         "status": "required" if isinstance(conflicts, list) and conflicts else "clear",
         "conflicts": conflicts if isinstance(conflicts, list) else [],
     }
+    cleanup = cleanup_plan(target_root, source_root)
+    if current_path is not None and args.old_action == "move":
+        backup = free_backup_path(target_root, current_version or "unknown")
+        backup.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(current_path), str(backup))
+        plan["old_path"] = backup.relative_to(target_root).as_posix()
+    elif current_path is not None and args.old_action == "delete":
+        shutil.rmtree(current_path)
     plan.update(result)
     plan["status"] = "installed_pending_cleanup"
-    try:
-        cleanup_path = source_root.relative_to(target_root).as_posix()
-    except ValueError:
-        cleanup_path = source_root.as_posix()
-    cleanup_question = f"Удалить каталог {cleanup_path} после проверки? Ответьте «да» или «нет»."
-    plan["cleanup"] = {
-        "status": "awaiting_user_confirmation",
-        "path": cleanup_path,
-        "scope": "source_clone_and_nested_staging",
-        "confirmation_required": True,
-        "question": cleanup_question,
-    }
-    plan["next_action"] = {
-        "type": "user_confirmation",
-        "required": True,
-        "message": cleanup_question,
-    }
+    plan["cleanup"] = cleanup
+    plan["next_action"] = cleanup["next_action"]
+    cleanup_inventory = cleanup.get("inventory")
     print(
-        f"Требуется подтверждение пользователя: удалить {cleanup_path} после проверки? Ответьте «да» или «нет».",
+        inventory_message(
+            cleanup_inventory if isinstance(cleanup_inventory, dict) else {},
+            "Требуется подтверждение очистки source clone.",
+        ),
         file=sys.stderr,
     )
     print(json.dumps(plan, ensure_ascii=False, indent=2))

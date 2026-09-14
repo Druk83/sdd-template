@@ -26,6 +26,23 @@ SHA-256 всех файлов, копию `release-registry.json` и обяза�
 Рабочие `.agents/` и `tmp/` мета-репозитория не изменяются. Успешный результат этой команды
 является обязательной локальной проверкой перед commit релиза.
 
+После commit и создания tag проверь опубликованный релиз:
+
+```text
+python .tools/sdd-template-release/verify_release.py --published
+```
+
+Проверка требует, чтобы все записи со статусом `supported` ссылались на существующие
+immutable refs, а текущий commit совпадал с ref текущей версии. Для публикации новой версии
+создай tag локально на проверенном commit, выполни проверку, а затем используй atomic push
+ветки и tag одной операцией:
+
+```text
+git tag sdd-template-X.Y.Z
+python .tools/sdd-template-release/verify_release.py --published
+git push --atomic origin HEAD:main refs/tags/sdd-template-X.Y.Z
+```
+
 Создать локальный пакет для проверки:
 
 ```text
@@ -48,11 +65,17 @@ python .tools/sdd-template-release/build_release.py --write
 ```text
 python tmp/sdd-template-source-X.Y.Z-<short-commit>/.tools/sdd-template-release/install_framework.py --source-root tmp/sdd-template-source-X.Y.Z-<short-commit> --target-root . --action init --write
 python tmp/sdd-template-source-X.Y.Z-<short-commit>/.tools/sdd-template-release/install_framework.py --source-root tmp/sdd-template-source-X.Y.Z-<short-commit> --target-root . --action update --old-action move --write
-python tmp/sdd-template-source-X.Y.Z-<short-commit>/.tools/sdd-template-release/install_framework.py --source-root tmp/sdd-template-source-X.Y.Z-<short-commit> --target-root . --action use --version X.Y.Z --old-action move --write
+python tmp/sdd-template-source-X.Y.Z-<short-commit>/.tools/sdd-template-release/install_framework.py --source-root tmp/sdd-template-source-X.Y.Z-<short-commit> --target-root . --action update --old-action move --old-confirmation <old-inventory-fingerprint> --write
+python tmp/sdd-template-source-X.Y.Z-<short-commit>/.tools/sdd-template-release/install_framework.py --source-root tmp/sdd-template-source-X.Y.Z-<short-commit> --target-root . --action use --version X.Y.Z --old-action move --old-confirmation <old-inventory-fingerprint> --write
 ```
 
-`--old-action` передаётся только после подтверждения пользователя. Единственный
-допустимый результат — `.agents/sdd-template-X.Y.Z/` в корне проекта-потребителя.
+При наличии старого release первый вызов с `--old-action move|delete` только
+формирует inventory и возвращает `status: awaiting_user_confirmation`. Агент обязан
+показать пользователю fingerprint, сводку и полный список нестандартных путей.
+После отдельного подтверждения повторный вызов передаёт этот fingerprint через
+`--old-confirmation`. Старый release удаляется или переносится только после успешной
+сборки и проверки нового package. Единственный допустимый результат после выбранного
+действия — `.agents/sdd-template-X.Y.Z/` в корне проекта-потребителя.
 При первичной установке установщик дополнительно добавляет только отсутствующие
 элементы каркаса `.source/`, `.tasks/` и `.issues/`: README, каталоги `done` и
 реестр PDD. Корневой `.chatlog/` не создаётся.
@@ -64,17 +87,19 @@ python tmp/sdd-template-source-X.Y.Z-<short-commit>/.tools/sdd-template-release/
 `.agents/sdd-template-*/`. В существующий `.gitignore` эти правила добавляются
 только при отсутствии и не заменяют пользовательские строки.
 После записи установщик возвращает поле `cleanup` со статусом
-`awaiting_user_confirmation`; агент обязан показать пользователю значение
-`cleanup.question` и `next_action.message`, дождаться ответа «да» или «нет» и только затем считать
-операцию завершённой. Общий статус после установки —
-`installed_pending_cleanup`. После ответа повторно запустить этот же установщик
-с `--cleanup-action delete` или `--cleanup-action keep`.
+`awaiting_user_confirmation`, inventory и fingerprint; агент обязан показать пользователю
+`cleanup.question`, `next_action.message`, сводку и полный список нестандартных путей.
+Общий статус после установки — `installed_pending_cleanup`. После ответа «нет» повторно
+запустить установщик с `--cleanup-action keep`. Для удаления повторно запустить его с
+`--cleanup-action delete --cleanup-fingerprint <cleanup-inventory-fingerprint>`.
 
 ```text
-python tmp/sdd-template-source-X.Y.Z-<short-commit>/.tools/sdd-template-release/install_framework.py --source-root tmp/sdd-template-source-X.Y.Z-<short-commit> --target-root . --cleanup-action delete
+python tmp/sdd-template-source-X.Y.Z-<short-commit>/.tools/sdd-template-release/install_framework.py --source-root tmp/sdd-template-source-X.Y.Z-<short-commit> --target-root . --cleanup-action delete --cleanup-fingerprint <cleanup-inventory-fingerprint>
 ```
 
-Режим очистки удаляет только указанный клон и вложенный staging.
+Без fingerprint режим удаления только повторно формирует inventory и не удаляет данные.
+При несовпадении fingerprint удаление блокируется. Режим очистки удаляет только
+указанный клон и вложенный staging; корневой `tmp/` и соседние каталоги не затрагиваются.
 
 Перед записью установщик проверяет существующие `AGENTS.md` и
 `.project-structure.json`. Полный старый `AGENTS.md` Framework без маркеров,
@@ -105,6 +130,10 @@ python tmp/sdd-template-source-X.Y.Z-<short-commit>/.tools/sdd-template-release/
 - `--source-ref <ref>` — записать выбранный commit или tag в метаданные релиза.
 - `--target-root <path>` — корень проекта-потребителя, куда устанавливается готовый пакет.
 - `--cleanup-action <keep|delete>` — завершить ожидающее подтверждение очистки клона.
+- `--cleanup-fingerprint <sha256>` — fingerprint inventory, подтверждённый пользователем
+  для удаления source clone.
+- `--old-confirmation <sha256>` — fingerprint inventory старого release, подтверждённый
+  пользователем для `--old-action move|delete`.
 - `--agents-action <ask|keep|replace-legacy|replace-managed>` — разрешить
   расхождения `AGENTS.md` после подтверждения пользователя.
 - `--project-structure-action <ask|keep|replace>` — разрешить расхождения
