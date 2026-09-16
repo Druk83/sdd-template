@@ -238,6 +238,24 @@ fingerprint через `--old-confirmation <old-inventory-fingerprint>`.
 
 Если найдено более одной папки `sdd-template-*`, остановиться и сообщить о конфликте.
 
+Перед финализацией установки проверить согласованность Framework-owned ссылок в
+`.project-structure.json`, `AGENTS.md` и разрешённых project-документах. Установщик
+возвращает machine-readable `post_install_review` с категориями `valid`, `stale`,
+`missing` и `external`. Категория `external` только информирует, а `stale` и
+`missing` локальные ссылки блокируют успешный статус установки.
+
+Если нужно перенести только доказанные ссылки на текущий Framework, после просмотра
+diff повторно запусти установщик с:
+
+```text
+--agents-action migrate
+--project-structure-action migrate
+```
+
+Неоднозначные ссылки требуют ручного решения. Для смешанного пользовательского
+`AGENTS.md` установщик сохраняет файл без изменений и возвращает
+`awaiting_user_confirmation`; пользовательские разделы не заменяются целиком.
+
 ## Возврат к сохранённой версии
 
 Возврат разрешён только к пакету, который пользователь ранее сохранил в
@@ -284,6 +302,7 @@ fingerprint через `--old-confirmation <old-inventory-fingerprint>`.
 их решения. Для решения передай установщику только подтверждённое действие:
 
 ```text
+--agents-action migrate
 --agents-action replace-legacy
 --agents-action replace-managed
 --agents-action keep
@@ -301,14 +320,62 @@ fingerprint через `--old-confirmation <old-inventory-fingerprint>`.
 и запроси одно из действий:
 
 ```text
+--project-structure-action migrate
 --project-structure-action replace
 --project-structure-action keep
 ```
 
 `replace` разрешён только для известного шаблона мета-репозитория; произвольный
-пользовательский файл автоматически не заменяется.
+пользовательский файл автоматически не заменяется. `migrate` изменяет только
+доказанные Framework-owned пути, сохраняет остальные поля и возвращает diff;
+неоднозначные ссылки блокируют автоматическую запись.
 
 ## Очистка `tmp/`
+
+## UI-подэтап и reference artifacts
+
+Перед работой с пользовательским интерфейсом прочитай:
+
+- `FRAMEWORK_ROOT/.manifest/uimanifest.md`;
+- `FRAMEWORK_ROOT/.approach/ui-pattern-selection.md`;
+- `FRAMEWORK_ROOT/.requirements/пользовательский-интерфейс/README.md` и связанные
+  процедуры пользовательского интерфейса.
+
+Используй только официальный внешний каталог:
+
+`https://github.com/Druk83/ui-patterns.git`
+
+UI-подэтап выполняется после сценариев и до структуры данных. Сначала сформируй
+`screen pool`, затем предложи viewport matrix, pattern candidates, screen
+specifications и live reference prototypes. Каждый зависимый переход требует
+отдельного подтверждения разработчика. При отсутствии UI используй `gap` до решения
+и `not_applicable` только после подтверждённого отсутствия UI.
+
+По умолчанию результаты проекта размещаются в
+`docs/requirements/пользовательский-интерфейс/`:
+
+```text
+docs/requirements/пользовательский-интерфейс/
+├── манифест-спецификации-интерфейса.json
+├── пул-экранов.json
+├── screens/<screen-id>.md
+└── references/<reference-set>/
+    ├── screen-manifest.json
+    └── <viewport-orientation>/
+        ├── index.html
+        ├── reference-manifest.json
+        ├── README.md
+        ├── <screen-artifact>.html
+        └── assets/
+```
+
+Prototype является `reference-only`, работает offline на fixture data и не содержит
+project API, secrets или production data. Production code создаётся отдельным этапом.
+
+Перед миграцией или очисткой legacy `docs/.figma` выполни inventory и diff, покажи
+пользователю нестандартные файлы и не удаляй источник без отдельного подтверждения.
+Используй portable-инструмент `ui-reference` из установленного Framework для
+валидации и безопасной миграции.
 
 После проверки результата операция не считается завершённой, пока агент явно не
 задаст пользователю вопрос об очистке. В ответе обязательно перечислить один

@@ -15,6 +15,22 @@
     "tags": ["architecture", "selection", "decision", "external-catalog"]
   },
   {
+    "id": "ui-pattern-selection",
+    "name": "UI Pattern Selection",
+    "desc": "Формирование screen pool, выбор UI-паттернов и reusable screen templates с provenance и подтверждением",
+    "version": "1.0",
+    "stages": ["5.a", "7", "8"],
+    "artifacts": ["screen pool", "viewport matrix", "pattern selection decision", "screen specification", "live reference prototype"],
+    "file": ".approach/ui-pattern-selection.md",
+    "kind": "ui-pattern-selector",
+    "source": {
+      "type": "external-catalog",
+      "url": "https://github.com/Druk83/ui-patterns.git",
+      "revision_required": true
+    },
+    "tags": ["ui", "screen-pool", "selection", "external-catalog", "provenance"]
+  },
+  {
     "id": "event-storming",
     "name": "Event Storming",
     "desc": "Моделирование бизнес-процессов через события, команды и агрегаты",

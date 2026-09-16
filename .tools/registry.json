@@ -62,8 +62,21 @@
     "runtime": "python"
   },
   {
+    "name": "ui-reference",
+    "version": "0.2.0",
+    "path": ".tools/ui-reference/ui_reference.py",
+    "entry": "python .tools/ui-reference/ui_reference.py validate --package <path>",
+    "entry_win": ".tools/ui-reference/ui-reference.bat validate --package <path>",
+    "entry_unix": ".tools/ui-reference/ui-reference validate --package <path>",
+    "desc": "Validate UI documentation packages and safely migrate legacy reference artifacts",
+    "tags": ["ui", "validation", "migration", "reference", "safety"],
+    "exec": true,
+    "runtime": "python",
+    "availability": "bundled"
+  },
+  {
     "name": "sdd-template-release",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "path": ".tools/sdd-template-release/build_release.py",
     "entry": "python .tools/sdd-template-release/build_release.py",
     "entry_win": "python .tools/sdd-template-release/build_release.py",

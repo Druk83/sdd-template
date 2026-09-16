@@ -1,6 +1,6 @@
 # sdd-template-release — сборка релиза SDD Framework
 
-> Версия инструмента: `0.1.0`.
+> Версия инструмента: `0.2.0`.
 
 Инструмент собирает и устанавливает переносимый релиз SDD Framework из чистых исходников
 репозитория `Druk83/sdd-template.git`. Папки `.agents/` и `tmp/` в корне
@@ -110,12 +110,20 @@ python tmp/sdd-template-source-X.Y.Z-<short-commit>/.tools/sdd-template-release/
 пользователя передайте одно из подтверждённых действий:
 
 ```text
+--agents-action migrate
 --agents-action replace-legacy
 --agents-action replace-managed
 --agents-action keep
+--project-structure-action migrate
 --project-structure-action replace
 --project-structure-action keep
 ```
+
+`migrate` изменяет только доказанные Framework-owned ссылки и возвращает
+машиночитаемый diff. Неоднозначные ссылки требуют отдельного подтверждения и не
+перезаписываются автоматически. После записи запускается post-install validator:
+он классифицирует ссылки как `valid`, `stale`, `missing` или `external` и не даёт
+завершить установку успешным статусом при нерешённых локальных Framework-ссылках.
 
 Добавление нового managed-раздела поверх старых полных инструкций Framework
 без подтверждения запрещено. При отсутствии корневого `.project-structure.json`
@@ -134,9 +142,9 @@ python tmp/sdd-template-source-X.Y.Z-<short-commit>/.tools/sdd-template-release/
   для удаления source clone.
 - `--old-confirmation <sha256>` — fingerprint inventory старого release, подтверждённый
   пользователем для `--old-action move|delete`.
-- `--agents-action <ask|keep|replace-legacy|replace-managed>` — разрешить
+- `--agents-action <ask|keep|migrate|replace-legacy|replace-managed>` — разрешить
   расхождения `AGENTS.md` после подтверждения пользователя.
-- `--project-structure-action <ask|keep|replace>` — разрешить расхождения
+- `--project-structure-action <ask|keep|migrate|replace>` — разрешить расхождения
   корневого `.project-structure.json`.
 - `--help` — вывести справку.
 
@@ -174,3 +182,11 @@ python tmp/sdd-template-source-X.Y.Z-<short-commit>/.tools/sdd-template-release/
 - Стандарт экспорта: `../../.manifest/exportmanifest.md`.
 - Корневой README: `../../README.md`.
 - Реестр инструментов: `../registry.json`.
+## Контроль пользовательских данных при обновлении
+
+При обнаружении старого release первый ответ установщика содержит два независимых
+  inventory: старого каталога `.agents/sdd-template-X.Y.Z` и временного
+  `tmp/sdd-template-source-X.Y.Z-<short-commit>`. Для каждого набора данных
+  используется собственный fingerprint и отдельное подтверждение. Наличие любого
+  нестандартного файла или каталога устанавливает `safe_to_delete: false`; удаление
+  возможно только после явного подтверждения именно этого fingerprint.

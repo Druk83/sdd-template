@@ -15,6 +15,7 @@
   event-sourcing.md      # паттерн потоков данных
   pub-sub.md             # паттерн потоков данных
   archimate.md           # нотация для [7]
+  ui-pattern-selection.md # адаптер выбора UI-паттернов для [5.6]
 ```
 
 ## Методологии моделирования
@@ -61,6 +62,18 @@
 
 `CQRS`, `Event Sourcing`, `Pub/Sub` и другие подходы из реестра не считаются заменой архитектурному паттерну:
 их тип и область применения определяются полем `kind` в `.approach/registry.json`.
+
+## UI-паттерны
+
+Выбор UI-паттернов выполняется на этапе `[5.6]` через адаптер
+`.approach/ui-pattern-selection.md`.
+
+Адаптер использует внешний каталог `ui-patterns`, сохраняет exact revision и
+provenance, фильтрует паттерны по условиям задачи и передаёт решение в
+screen specification и acceptance criteria. Внешний каталог не копируется в
+Framework или consumer-проект.
+
+**Источник:** https://github.com/Druk83/ui-patterns.git
 
 ## Примечания об операционных файлах
 

@@ -15,7 +15,7 @@
 | Уровень | Назначение | Примеры |
 |---------|------------|---------|
 | H0 | Конституция | `.claude/CLAUDE.md`, `.github\agents\copilot-instructions.md`, `AGENTS.md` |
-| H1 | Взгляды (внутри H0) | H1.1-H1.14 в `.claude\CLAUDE.md` или `.github\agents\copilot-instructions.md` или `AGENTS.md` |
+| H1 | Взгляды (внутри H0) | H1.1-H1.13 в `.claude\CLAUDE.md` или `.github\agents\copilot-instructions.md` или `AGENTS.md` |
 | H2 | Манифесты | `.manifest/*.md` |
 | H3 | Политики (внутри H2) | Секции манифестов |
 | H4 | Стандарты (внутри H2) | Детали манифестов |

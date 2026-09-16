@@ -22,7 +22,7 @@ VERSION_NUMBER_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 RELEASE_PATTERN = re.compile(r"^sdd-template-([0-9]+\.[0-9]+\.[0-9]+)$")
 DENIED_NAMES = {".git", ".runtime", "__pycache__"}
 DENIED_SUFFIXES = {".pyc", ".pyo", ".env"}
-PORTABLE_TOOLS = ("check-encoding", "pdd", "plantuml-render")
+PORTABLE_TOOLS = ("check-encoding", "pdd", "plantuml-render", "ui-reference")
 DIAGRAM_REFERENCE_FILES = (
     Path("example AL.plantuml"),
     Path("example BL.plantuml"),
@@ -55,6 +55,11 @@ def parse_args() -> argparse.Namespace:
         "--target-root",
         type=Path,
         help="Корень проекта-потребителя, куда устанавливается пакет.",
+    )
+    parser.add_argument(
+        "--allow-candidate",
+        action="store_true",
+        help="Разрешить локальную сборку записи со статусом candidate без публикации.",
     )
     return parser.parse_args()
 
@@ -127,7 +132,7 @@ def read_release_registry(root: Path) -> dict[str, object]:
             raise BuildError(f"В реестре указан некорректный install_path для версии {version}.")
         if ref_type == "commit" and not re.fullmatch(r"[0-9a-f]{40}", ref):
             raise BuildError(f"В реестре указан некорректный commit для версии {version}.")
-        if status not in {"supported", "unsupported"}:
+        if status not in {"supported", "candidate", "unsupported"}:
             raise BuildError("В реестре обнаружен некорректный статус релиза.")
     default_entries = [
         release for release in releases
@@ -148,24 +153,34 @@ def registry_releases(registry: dict[str, object]) -> list[dict[str, object]]:
     return entries
 
 
-def ensure_version_registered(registry: dict[str, object], version: str) -> None:
+def ensure_version_registered(
+    registry: dict[str, object], version: str, allow_candidate: bool = False
+) -> None:
     releases = registry_releases(registry)
     matching = [
         release for release in releases
         if release.get("version") == version
     ]
-    if len(matching) != 1 or matching[0].get("status") != "supported":
-        raise BuildError(f"Версия {version} отсутствует среди поддерживаемых релизов.")
+    allowed = {"supported"}
+    if allow_candidate:
+        allowed.add("candidate")
+    if len(matching) != 1 or matching[0].get("status") not in allowed:
+        raise BuildError(f"Версия {version} отсутствует среди разрешённых релизов.")
 
 
-def release_entry(registry: dict[str, object], version: str) -> dict[str, object]:
+def release_entry(
+    registry: dict[str, object], version: str, allow_candidate: bool = False
+) -> dict[str, object]:
     releases = registry_releases(registry)
     matching = [
         release for release in releases
         if release.get("version") == version
     ]
-    if len(matching) != 1 or matching[0].get("status") != "supported":
-        raise BuildError(f"Версия {version} отсутствует среди поддерживаемых релизов.")
+    allowed = {"supported"}
+    if allow_candidate:
+        allowed.add("candidate")
+    if len(matching) != 1 or matching[0].get("status") not in allowed:
+        raise BuildError(f"Версия {version} отсутствует среди разрешённых релизов.")
     return matching[0]
 
 
@@ -496,12 +511,13 @@ def build_release(
     resume_stage: bool = False,
     stage_root: Path | None = None,
     allow_existing_releases: bool = False,
+    allow_candidate: bool = False,
 ) -> dict[str, object]:
     root = root.resolve()
     output_root = output_root.resolve()
     registry = read_release_registry(root)
     version = read_version(root)
-    ensure_version_registered(registry, version)
+    ensure_version_registered(registry, version, allow_candidate=allow_candidate)
     target, _ = ensure_source_state(
         output_root,
         version,
@@ -538,6 +554,7 @@ def main() -> int:
         source_ref=args.source_ref,
         write=args.write,
         resume_stage=args.resume_stage,
+        allow_candidate=args.allow_candidate,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0

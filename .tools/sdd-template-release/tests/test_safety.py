@@ -49,7 +49,9 @@ class SafetyInventoryTests(unittest.TestCase):
 
             inventory = cast(dict[str, Any], install_framework.inventory_release(release))
 
-            self.assertTrue(inventory["safe_to_delete"])
+            self.assertFalse(inventory["safe_to_delete"])
+            self.assertTrue(inventory["user_data_detected"])
+            self.assertTrue(inventory["deletion_blocked"])
             self.assertEqual(inventory["top_level_nonstandard"], [".figma"])
             self.assertIn(".figma/Samsung A51-A71/screen.html", inventory["nonstandard_paths"])
             self.assertEqual(inventory["summary"]["user_data_entries"], 3)
@@ -171,6 +173,9 @@ class SafetyInventoryTests(unittest.TestCase):
             old_release.mkdir(parents=True)
             readme = old_release / "README.md"
             readme.write_text("old", encoding="utf-8")
+            figma = old_release / ".figma" / "Samsung A51-A71"
+            figma.mkdir(parents=True)
+            (figma / "screen.html").write_text("user data", encoding="utf-8")
             manifest = {
                 "files": [file_record(readme, "README.md")],
             }
@@ -233,6 +238,8 @@ class SafetyInventoryTests(unittest.TestCase):
                 with redirect_stdout(first_output), redirect_stderr(first_error):
                     install_framework.main()
             self.assertTrue(old_release.exists())
+            self.assertIn(".figma", first_output.getvalue())
+            self.assertIn("source_cleanup", first_output.getvalue())
 
             argv.extend(["--old-confirmation", str(old_inventory["fingerprint"])])
             with patch.object(sys, "argv", argv), patch.object(
@@ -267,6 +274,10 @@ class SafetyInventoryTests(unittest.TestCase):
                 "ensure_agents_instructions",
                 return_value={"conflicts": []},
             ), patch.object(
+                install_framework,
+                "post_install_validate",
+                return_value={"status": "pass"},
+            ), patch.object(
                 install_framework.build_release,
                 "build_release",
                 side_effect=fake_build,
@@ -283,6 +294,160 @@ class SafetyInventoryTests(unittest.TestCase):
             self.assertEqual(events, [True])
             self.assertFalse(old_release.exists())
             self.assertTrue((target / ".agents" / "sdd-template-1.9.1").exists())
+
+
+class FrameworkPathMigrationTests(unittest.TestCase):
+    def test_project_structure_migrate_preserves_project_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary)
+            source = target / "source"
+            source.mkdir()
+            structure = {
+                "version": "1.0",
+                "framework_root": ".agents/sdd-template-1.9.1",
+                "folders": [
+                    {"name": "SDD Framework", "path": ".manifest"},
+                    {"name": "Project source", "path": ".source"},
+                ],
+                "tools": {"registry_path": ".tools/registry.json"},
+                "templates": {"task_template": ".requirements/task.md"},
+                "custom": {"owner": "project", "path": "docs/requirements"},
+            }
+            destination = target / ".project-structure.json"
+            destination.write_text(json.dumps(structure, ensure_ascii=False), encoding="utf-8")
+
+            review = cast(
+                dict[str, Any],
+                install_framework.inspect_project_structure(target, source, "1.9.2"),
+            )
+            self.assertEqual(review["status"], "conflict")
+            self.assertTrue(review["can_migrate"])
+            self.assertGreaterEqual(len(review["migration_changes"]), 4)
+
+            result = cast(
+                dict[str, Any],
+                install_framework.ensure_project_structure(target, source, "1.9.2", "migrate"),
+            )
+            self.assertEqual(result["status"], "migrated")
+            migrated = json.loads(destination.read_text(encoding="utf-8"))
+            self.assertEqual(migrated["framework_root"], ".agents/sdd-template-1.9.2")
+            self.assertEqual(migrated["folders"][1]["path"], ".source")
+            self.assertEqual(migrated["custom"], structure["custom"])
+
+    def test_project_structure_migrate_blocks_ambiguous_reference(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary)
+            source = target / "source"
+            source.mkdir()
+            original = {"note": "Пользовательская ссылка: .manifest/taskmanifest.md"}
+            destination = target / ".project-structure.json"
+            destination.write_text(json.dumps(original, ensure_ascii=False), encoding="utf-8")
+
+            result = cast(
+                dict[str, Any],
+                install_framework.ensure_project_structure(target, source, "1.9.2", "migrate"),
+            )
+            self.assertEqual(result["status"], "awaiting_user_confirmation")
+            self.assertEqual(json.loads(destination.read_text(encoding="utf-8")), original)
+
+    def test_agents_migrate_replaces_only_managed_block(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            source = base / "source"
+            source.mkdir()
+            (source / "AGENTS.md").write_text("# Current framework instructions\n", encoding="utf-8")
+            target = base / "target"
+            target.mkdir()
+            old_block = (
+                f"{install_framework.AGENTS_MANAGED_BEGIN}\n"
+                "See .agents/sdd-template-1.9.1/.manifest/taskmanifest.md\n"
+                f"{install_framework.AGENTS_MANAGED_END}\n"
+            )
+            agents = target / "AGENTS.md"
+            agents.write_text("# User instructions\n\n" + old_block, encoding="utf-8")
+
+            review = cast(
+                dict[str, Any],
+                install_framework.inspect_agents_instructions(target, source, "1.9.2"),
+            )
+            self.assertTrue(review["can_migrate"])
+            result = cast(
+                dict[str, Any],
+                install_framework.ensure_agents_instructions(target, source, "1.9.2", "migrate"),
+            )
+            content = agents.read_text(encoding="utf-8")
+            self.assertEqual(result["status"], "replaced")
+            self.assertIn("# User instructions", content)
+            self.assertIn("# Current framework instructions", content)
+            self.assertNotIn("sdd-template-1.9.1", content)
+
+    def test_agents_migrate_blocks_mixed_legacy_reference(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            source = base / "source"
+            source.mkdir()
+            (source / "AGENTS.md").write_text("# Current framework instructions\n", encoding="utf-8")
+            target = base / "target"
+            target.mkdir()
+            agents = target / "AGENTS.md"
+            original = "# User instructions\nSee .manifest/taskmanifest.md\n"
+            agents.write_text(original, encoding="utf-8")
+
+            review = cast(
+                dict[str, Any],
+                install_framework.inspect_agents_instructions(target, source, "1.9.2"),
+            )
+            self.assertEqual(review["status"], "conflict")
+            self.assertFalse(review["can_migrate"])
+            result = cast(
+                dict[str, Any],
+                install_framework.ensure_agents_instructions(target, source, "1.9.2", "migrate"),
+            )
+            self.assertEqual(result["status"], "awaiting_user_confirmation")
+            self.assertEqual(agents.read_text(encoding="utf-8"), original)
+
+
+class PostInstallValidationTests(unittest.TestCase):
+    def test_post_install_gate_classifies_stale_and_external_references(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary)
+            package = target / ".agents" / "sdd-template-1.9.2"
+            package.mkdir(parents=True)
+            readme = package / "README.md"
+            readme.write_text("framework\n", encoding="utf-8")
+            manifest = {"files": [file_record(readme, "README.md")]}
+            (package / "release-manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+            (target / "AGENTS.md").write_text(
+                "See .agents/sdd-template-1.9.1/.manifest/taskmanifest.md\n"
+                "External: https://example.test/.manifest/taskmanifest.md\n",
+                encoding="utf-8",
+            )
+
+            result = cast(dict[str, Any], install_framework.post_install_validate(target, "1.9.2", package))
+            self.assertEqual(result["status"], "blocked")
+            self.assertEqual(result["summary"]["stale"], 1)
+            self.assertEqual(result["summary"]["external"], 1)
+            self.assertEqual(len(result["unresolved"]), 1)
+
+    def test_post_install_gate_passes_for_current_reference(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            target = Path(temporary)
+            package = target / ".agents" / "sdd-template-1.9.2"
+            package.mkdir(parents=True)
+            readme = package / "README.md"
+            readme.write_text("framework\n", encoding="utf-8")
+            (package / "release-manifest.json").write_text(
+                json.dumps({"files": [file_record(readme, "README.md")]}),
+                encoding="utf-8",
+            )
+            (target / "AGENTS.md").write_text(
+                ".agents/sdd-template-1.9.2/README.md\n",
+                encoding="utf-8",
+            )
+
+            result = cast(dict[str, Any], install_framework.post_install_validate(target, "1.9.2", package))
+            self.assertEqual(result["status"], "pass")
+            self.assertEqual(result["unresolved"], [])
 
 
 if __name__ == "__main__":

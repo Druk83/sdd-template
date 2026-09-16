@@ -120,6 +120,11 @@
 `.tools/sdd-template-release/verify_release.py`, а после создания tag выполняется
 `.tools/sdd-template-release/verify_release.py --published`.
 
+До публикации запись новой версии имеет статус `candidate`, а `default_version`
+остаётся на последнем поддерживаемом релизе. Локальная проверка кандидата выполняется
+командой `.tools/sdd-template-release/verify_release.py --candidate`; такая запись не
+может использоваться установщиком для обычного обновления.
+
 Публикация новой версии выполняется atomic push ветки и tag. Нельзя объявлять релиз
 поддерживаемым в `release-registry.json`, если его `ref` ещё недоступен, не совпадает
 с commit текущей версии или не проходит проверку состава релизного пакета.

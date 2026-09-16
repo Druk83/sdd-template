@@ -37,6 +37,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Проверить опубликованные refs и соответствие текущего commit релизу.",
     )
+    parser.add_argument(
+        "--candidate",
+        action="store_true",
+        help="Проверить локальный release candidate, который ещё не опубликован.",
+    )
     return parser.parse_args()
 
 
@@ -47,7 +52,7 @@ def read_json(path: Path) -> object:
         raise BuildError(f"Невозможно прочитать JSON-файл {path}: {error}") from error
 
 
-def validate_package(package: Path, version: str) -> int:
+def validate_package(package: Path, version: str, allow_candidate: bool = False) -> int:
     validate_stage(package, version)
     manifest = read_json(package / "release-manifest.json")
     if not isinstance(manifest, dict):
@@ -100,9 +105,12 @@ def validate_package(package: Path, version: str) -> int:
             raise BuildError(f"Проверка хеша или размера не пройдена: {relative}")
 
     registry = read_release_registry(package)
-    if registry.get("default_version") != version:
+    selected = release_entry(registry, version, allow_candidate=True) if allow_candidate else None
+    if registry.get("default_version") != version and not (
+        selected is not None and selected.get("status") == "candidate"
+    ):
         raise BuildError("Копия release-registry.json в пакете указывает другую default_version.")
-    selected = release_entry(registry, version)
+    selected = selected or release_entry(registry, version)
     if selected.get("install_path") != f".agents/sdd-template-{version}":
         raise BuildError(f"Для релиза {version} указан неверный install_path.")
 
@@ -166,7 +174,7 @@ def main() -> int:
     root = (args.root or repository_root()).resolve()
     version = read_version(root)
     registry = read_release_registry(root)
-    ensure_version_registered(registry, version)
+    ensure_version_registered(registry, version, allow_candidate=args.candidate)
     if args.published:
         validate_published_registry(root, registry, version)
 
@@ -178,9 +186,10 @@ def main() -> int:
             output_root,
             write=True,
             stage_root=workspace / "staging",
+            allow_candidate=args.candidate,
         )
         package = output_root / ".agents" / f"sdd-template-{version}"
-        file_count = validate_package(package, version)
+        file_count = validate_package(package, version, allow_candidate=args.candidate)
         manifest = read_json(package / "release-manifest.json")
         source_dirty = manifest.get("source_dirty") if isinstance(manifest, dict) else None
 

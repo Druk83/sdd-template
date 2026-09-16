@@ -49,13 +49,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--agents-action",
-        choices=("ask", "keep", "replace-legacy", "replace-managed"),
+        choices=("ask", "keep", "migrate", "replace-legacy", "replace-managed"),
         default="ask",
         help="Разрешение расхождений AGENTS.md после подтверждения пользователя.",
     )
     parser.add_argument(
         "--project-structure-action",
-        choices=("ask", "keep", "replace"),
+        choices=("ask", "keep", "migrate", "replace"),
         default="ask",
         help="Разрешение расхождений корневого .project-structure.json.",
     )
@@ -148,6 +148,27 @@ GITIGNORE_RULES = (
 AGENTS_MANAGED_BEGIN = "<!-- SDD Framework: managed section begin -->"
 AGENTS_MANAGED_END = "<!-- SDD Framework: managed section end -->"
 AGENTS_VERSION_PATTERN = re.compile(r"\.agents[/\\]sdd-template-([0-9]+\.[0-9]+\.[0-9]+)")
+FRAMEWORK_ROOT_PATH_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9_.\-/])\.agents[/\\]sdd-template-(?P<version>[0-9]+\.[0-9]+\.[0-9]+)"
+    r"(?:[/\\][^\s`'\"<>),;]+)?"
+)
+LEGACY_FRAMEWORK_PATH_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9_.\-/])\.(?P<root>manifest|requirements|tools|approach|chatlog)"
+    r"(?:[/\\][^\s`'\"<>),;]+)?"
+)
+FRAMEWORK_ROOTS = {".manifest", ".requirements", ".tools", ".approach", ".chatlog"}
+POST_INSTALL_SCAN_ROOTS = (
+    "AGENTS.md",
+    ".project-structure.json",
+    ".approach",
+    ".catalog",
+    ".issues",
+    ".requirements",
+    ".source",
+    ".tasks",
+    "docs",
+)
+POST_INSTALL_TEXT_SUFFIXES = {".json", ".md", ".txt", ".yaml", ".yml"}
 LEGACY_AGENTS_SIGNATURES = (
     "# Rules and Constraints for Codex (H0)",
     "### H1.1.",
@@ -155,6 +176,80 @@ LEGACY_AGENTS_SIGNATURES = (
     "## H1.8.",
     "## H1.10",
 )
+
+
+def _clean_framework_path(value: str) -> str:
+    """Нормализовать найденный путь, не меняя содержимое исходного документа."""
+    return value.rstrip(".,:;!?)]}>")
+
+
+def _match_position(match: dict[str, object], key: str) -> int:
+    value = match.get(key)
+    return value if isinstance(value, int) else 0
+
+
+def _framework_path_matches(value: str) -> list[dict[str, object]]:
+    """Найти конкретные versioned и legacy пути Framework в строке."""
+    matches: list[dict[str, object]] = []
+    for match in FRAMEWORK_ROOT_PATH_PATTERN.finditer(value):
+        path = _clean_framework_path(match.group(0))
+        matches.append(
+            {
+                "path": path,
+                "start": match.start(),
+                "end": match.start() + len(path),
+                "kind": "versioned",
+                "version": match.group("version"),
+            }
+        )
+    for match in LEGACY_FRAMEWORK_PATH_PATTERN.finditer(value):
+        path = _clean_framework_path(match.group(0))
+        matches.append(
+            {
+                "path": path,
+                "start": match.start(),
+                "end": match.start() + len(path),
+                "kind": "legacy-root",
+                "root": "." + match.group("root"),
+            }
+        )
+    return sorted(matches, key=lambda item: (_match_position(item, "start"), _match_position(item, "end")))
+
+
+def _framework_root(version: str) -> str:
+    return f".agents/sdd-template-{version}"
+
+
+def _rewrite_framework_paths(value: str, version: str) -> str:
+    """Перевести только известные корневые пути Framework на текущий release."""
+    current_root = _framework_root(version)
+    matches = _framework_path_matches(value)
+    if not matches:
+        return value
+    rewritten: list[str] = []
+    cursor = 0
+    for item in matches:
+        start = _match_position(item, "start")
+        end = _match_position(item, "end")
+        path = str(item["path"])
+        if start < cursor:
+            continue
+        rewritten.append(value[cursor:start])
+        if item["kind"] == "versioned":
+            normalized_path = path.replace("\\", "/")
+            old_root = f".agents/sdd-template-{item['version']}"
+            suffix = normalized_path[len(old_root) :].lstrip("/")
+            replacement = f"{current_root}/{suffix}" if suffix else current_root
+        else:
+            root = str(item["root"])
+            suffix = path[len(root) :].lstrip("/\\")
+            replacement = f"{current_root}/{root}"
+            if suffix:
+                replacement += f"/{suffix}"
+        rewritten.append(replacement)
+        cursor = end
+    rewritten.append(value[cursor:])
+    return "".join(rewritten)
 
 
 def agents_managed_block(source_root: Path) -> str:
@@ -211,6 +306,44 @@ def is_legacy_framework_only(content: str) -> bool:
     )
 
 
+def agents_path_references(content: str, version: str) -> list[dict[str, object]]:
+    """Классифицировать Framework-ссылки с учётом managed-границ документа."""
+    begin = content.find(AGENTS_MANAGED_BEGIN)
+    end = content.find(AGENTS_MANAGED_END, begin + len(AGENTS_MANAGED_BEGIN)) if begin >= 0 else -1
+    references: list[dict[str, object]] = []
+    for match in _framework_path_matches(content):
+        start = _match_position(match, "start")
+        path = str(match["path"])
+        in_managed = begin >= 0 and end >= 0 and begin <= start < end + len(AGENTS_MANAGED_END)
+        if match["kind"] == "versioned":
+            referenced_version = str(match["version"])
+            classification = "valid" if referenced_version == version else "stale"
+            replacement = None if classification == "valid" else _rewrite_framework_paths(path, version)
+            reason = (
+                "Ссылка указывает на текущий Framework root."
+                if classification == "valid"
+                else "Ссылка указывает на другой release Framework."
+            )
+        elif in_managed or is_legacy_framework_only(content):
+            classification = "stale"
+            replacement = _rewrite_framework_paths(path, version)
+            reason = "Legacy-ссылка находится в части документа, принадлежащей Framework."
+        else:
+            classification = "ambiguous"
+            replacement = None
+            reason = "Нельзя доказать, что ссылка принадлежит Framework, а не пользователю."
+        references.append(
+            {
+                "path": path,
+                "classification": classification,
+                "replacement": replacement,
+                "location": "managed" if in_managed else "outside-managed",
+                "reason": reason,
+            }
+        )
+    return references
+
+
 def inspect_agents_instructions(target_root: Path, source_root: Path, version: str) -> dict[str, object]:
     """Проверить AGENTS.md до записи и сформировать объяснение расхождений."""
     expected_block = agents_managed_block(source_root)
@@ -233,6 +366,24 @@ def inspect_agents_instructions(target_root: Path, source_root: Path, version: s
         raise build_release.BuildError(f"Невозможно прочитать AGENTS.md: {error}") from error
 
     conflicts = detect_agents_conflicts(content, version)
+    path_references = agents_path_references(content, version)
+    path_differences = [
+        reference for reference in path_references
+        if reference.get("classification") == "stale" and isinstance(reference.get("replacement"), str)
+    ]
+    ambiguous_paths = [
+        reference for reference in path_references
+        if reference.get("classification") == "ambiguous"
+    ]
+    for reference in path_references:
+        if reference.get("classification") == "ambiguous":
+            conflicts.append(
+                f"AGENTS.md содержит неоднозначную Framework-ссылку: {reference.get('path')}"
+            )
+        elif reference.get("classification") == "stale" and reference.get("location") == "outside-managed":
+            conflicts.append(
+                f"AGENTS.md содержит устаревшую Framework-ссылку вне managed-раздела: {reference.get('path')}"
+            )
     differences: list[dict[str, object]] = []
     can_replace_legacy = False
     can_replace_managed = False
@@ -315,6 +466,9 @@ def inspect_agents_instructions(target_root: Path, source_root: Path, version: s
         "differences": differences,
         "can_replace_legacy": can_replace_legacy,
         "can_replace_managed": can_replace_managed,
+        "path_references": path_references,
+        "path_differences": path_differences,
+        "can_migrate": bool(path_differences) and not ambiguous_paths,
         "legacy_outside_managed": (
             bool(begin_positions)
             and (
@@ -344,6 +498,10 @@ def ensure_agents_instructions(
             return review
         if agents_action == "keep":
             return {**review, "status": "kept"}
+        if agents_action == "migrate":
+            if review.get("can_migrate") is not True:
+                return {**review, "status": "awaiting_user_confirmation"}
+            agents_action = "replace-managed" if AGENTS_MANAGED_BEGIN in destination.read_text(encoding="utf-8") else "replace-legacy"
         can_replace = (
             agents_action == "replace-legacy" and review.get("can_replace_legacy") is True
         ) or (
@@ -474,8 +632,166 @@ def normalized_json(path: Path) -> object | None:
         return None
 
 
+FRAMEWORK_STRUCTURE_FIELDS = {
+    "framework_root",
+    "registry_path",
+    "preferred_invocation",
+    "task_template",
+    "pdd_manifest",
+    "release_dir",
+}
+
+
+def _json_pointer_part(value: object) -> str:
+    if isinstance(value, int):
+        return str(value)
+    return str(value).replace("~", "~0").replace("/", "~1")
+
+
+def _iter_json_strings(value: object, path: tuple[object, ...] = ()) -> list[tuple[tuple[object, ...], str]]:
+    if isinstance(value, dict):
+        result: list[tuple[tuple[object, ...], str]] = []
+        for key, nested in value.items():
+            result.extend(_iter_json_strings(nested, path + (key,)))
+        return result
+    if isinstance(value, list):
+        result = []
+        for index, nested in enumerate(value):
+            result.extend(_iter_json_strings(nested, path + (index,)))
+        return result
+    if isinstance(value, str):
+        return [(path, value)]
+    return []
+
+
+def _is_framework_structure_field(path: tuple[object, ...], value: str) -> bool:
+    if path and str(path[-1]) in FRAMEWORK_STRUCTURE_FIELDS:
+        return True
+    if path and str(path[-1]) == "path" and "folders" in {str(item) for item in path}:
+        normalized = value.replace("\\", "/")
+        return normalized == ".agents" or normalized.startswith(".agents/") or normalized in FRAMEWORK_ROOTS or any(
+            normalized.startswith(root + "/") for root in FRAMEWORK_ROOTS
+        )
+    return False
+
+
+def _is_external_reference(value: str) -> bool:
+    normalized = value.strip()
+    return bool(
+        re.match(r"(?i)^(?:https?|file)://", normalized)
+        or re.match(r"^[A-Za-z]:[/\\]", normalized)
+        or normalized.startswith(("/", "\\\\"))
+    )
+
+
+def project_structure_references(
+    data: object,
+    target_root: Path,
+    version: str,
+) -> list[dict[str, object]]:
+    """Собрать Framework-ссылки в project structure до изменения файла."""
+    references: list[dict[str, object]] = []
+    current_root = _framework_root(version)
+    for path, value in _iter_json_strings(data):
+        matches = _framework_path_matches(value)
+        if not matches and _is_framework_structure_field(path, value) and _is_external_reference(value):
+            references.append(
+                {
+                    "json_path": "/" + "/".join(_json_pointer_part(item) for item in path),
+                    "value": value,
+                    "classification": "external",
+                    "reason": "Внешний абсолютный путь не является локальной Framework-ссылкой.",
+                }
+            )
+            continue
+        for match in matches:
+            reference_path = str(match["path"])
+            classification = "valid"
+            replacement: str | None = None
+            if match["kind"] == "versioned":
+                referenced_version = str(match["version"])
+                if referenced_version != version:
+                    classification = "stale"
+                    replacement = _rewrite_framework_paths(reference_path, version)
+                elif not (target_root / Path(reference_path)).exists():
+                    classification = "missing"
+            elif _is_framework_structure_field(path, value):
+                classification = "stale"
+                replacement = _rewrite_framework_paths(reference_path, version)
+            else:
+                classification = "ambiguous"
+            references.append(
+                {
+                    "json_path": "/" + "/".join(_json_pointer_part(item) for item in path),
+                    "value": reference_path,
+                    "classification": classification,
+                    "replacement": replacement,
+                    "reason": (
+                        "Ссылка использует старый Framework root."
+                        if classification == "stale"
+                        else "Целевой путь текущего Framework отсутствует."
+                        if classification == "missing"
+                        else "Невозможно доказать принадлежность ссылки Framework."
+                        if classification == "ambiguous"
+                        else "Ссылка указывает на текущий Framework root."
+                    ),
+                }
+            )
+    return references
+
+
+def _json_value_at(data: object, path: tuple[object, ...]) -> object:
+    current = data
+    for part in path:
+        if isinstance(part, int) and isinstance(current, list):
+            current = current[part]
+        elif isinstance(part, str) and isinstance(current, dict):
+            current = current[part]
+        else:
+            raise KeyError(path)
+    return current
+
+
+def _set_json_value(data: object, path: tuple[object, ...], value: object) -> None:
+    if not path:
+        raise KeyError("Нельзя заменить корневой JSON-объект этим способом.")
+    parent = _json_value_at(data, path[:-1])
+    last = path[-1]
+    if isinstance(last, int) and isinstance(parent, list):
+        parent[last] = value
+    elif isinstance(last, str) and isinstance(parent, dict):
+        parent[last] = value
+    else:
+        raise KeyError(path)
+
+
+def migrate_project_structure(
+    data: object,
+    version: str,
+) -> tuple[object, list[dict[str, object]]]:
+    """Создать копию структуры с точечными Framework-owned заменами."""
+    migrated = json.loads(json.dumps(data, ensure_ascii=False))
+    changes: list[dict[str, object]] = []
+    for path, value in _iter_json_strings(data):
+        if not _is_framework_structure_field(path, value):
+            continue
+        rewritten = _rewrite_framework_paths(value, version)
+        if rewritten == value:
+            continue
+        _set_json_value(migrated, path, rewritten)
+        changes.append(
+            {
+                "json_path": "/" + "/".join(_json_pointer_part(item) for item in path),
+                "old": value,
+                "new": rewritten,
+                "classification": "framework-owned",
+            }
+        )
+    return migrated, changes
+
+
 def inspect_project_structure(target_root: Path, source_root: Path, version: str) -> dict[str, object]:
-    """Проверить, не перенесена ли структура мета-репозитория в корень потребителя."""
+    """Проверить структуру потребителя и подготовить точечную миграцию путей."""
     destination = target_root / ".project-structure.json"
     if not destination.exists():
         return {"status": "absent", "path": ".project-structure.json", "conflicts": [], "differences": [], "can_replace": False}
@@ -490,24 +806,29 @@ def inspect_project_structure(target_root: Path, source_root: Path, version: str
             "differences": [{"code": "invalid_json", "message": "Файл нельзя безопасно сравнить.", "actions": ["keep"]}],
             "can_replace": False,
         }
+    references = project_structure_references(current, target_root, version)
+    unresolved = [
+        reference for reference in references
+        if reference.get("classification") in {"stale", "missing", "ambiguous"}
+    ]
+    migration_changes = [
+        reference for reference in references
+        if reference.get("classification") == "stale" and isinstance(reference.get("replacement"), str)
+    ]
     template = source_root / ".tools" / "sdd-template-release" / "templates" / "project-structure.json"
     template_value = normalized_json(template) if template.is_file() else None
-    folders = current.get("folders")
-    folder_paths: set[str] = set()
-    if isinstance(folders, list):
-        for item in folders:
-            if isinstance(item, dict):
-                path_value = item.get("path")
-                if isinstance(path_value, str):
-                    folder_paths.add(path_value)
-    meta_paths = {".manifest", ".requirements", ".tools"}
-    missing_meta_paths = sorted(
-        path for path in meta_paths
-        if path in folder_paths and not (target_root / path).exists()
-    )
     is_meta_template = template_value is not None and current == template_value
-    if not is_meta_template and not missing_meta_paths:
-        return {"status": "clear", "path": ".project-structure.json", "conflicts": [], "differences": [], "can_replace": False}
+    if not is_meta_template and not unresolved:
+        return {
+            "status": "clear",
+            "path": ".project-structure.json",
+            "conflicts": [],
+            "differences": [],
+            "references": references,
+            "migration_changes": [],
+            "can_replace": False,
+            "can_migrate": False,
+        }
     if is_meta_template:
         message = (
             "корневой .project-structure.json является структурой мета-репозитория; "
@@ -515,21 +836,27 @@ def inspect_project_structure(target_root: Path, source_root: Path, version: str
         )
         code = "meta_project_structure"
     else:
-        message = (
-            "корневой .project-structure.json требует отсутствующие корневые каталоги: "
-            + ", ".join(missing_meta_paths)
-        )
-        code = "missing_meta_paths"
+        message = "корневой .project-structure.json содержит устаревшие или неоднозначные Framework-ссылки"
+        code = "framework_path_references"
+    differences: list[dict[str, object]] = [
+        {
+            "code": code,
+            "message": message,
+            "references": references,
+            "actions": ["migrate", "replace", "keep"] if is_meta_template else ["migrate", "keep"],
+        }
+    ]
+    can_migrate = bool(migration_changes) and not any(
+        reference.get("classification") == "ambiguous" for reference in unresolved
+    )
     return {
         "status": "conflict",
         "path": ".project-structure.json",
         "conflicts": [message],
-        "differences": [{
-            "code": code,
-            "message": message,
-            "missing_paths": missing_meta_paths,
-            "actions": ["replace", "keep"] if is_meta_template else ["keep"],
-        }],
+        "differences": differences,
+        "references": references,
+        "migration_changes": migration_changes,
+        "can_migrate": can_migrate,
         "can_replace": is_meta_template,
     }
 
@@ -550,6 +877,27 @@ def ensure_project_structure(
             return review
         if project_structure_action == "keep":
             return {**review, "status": "kept"}
+        if project_structure_action == "migrate":
+            if review.get("can_migrate") is not True:
+                return {**review, "status": "awaiting_user_confirmation"}
+            current = normalized_json(destination)
+            if not isinstance(current, dict):
+                return {**review, "status": "awaiting_user_confirmation"}
+            migrated, changes = migrate_project_structure(
+                current,
+                version,
+            )
+            if not isinstance(migrated, dict):
+                raise build_release.BuildError("Миграция .project-structure.json не вернула JSON-объект.")
+            try:
+                destination.write_text(
+                    json.dumps(migrated, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8",
+                    newline="\n",
+                )
+            except OSError as error:
+                raise build_release.BuildError(f"Невозможно записать мигрированный .project-structure.json: {error}") from error
+            return {**review, "status": "migrated", "migration": {"changes": changes}}
         if project_structure_action != "replace" or review.get("can_replace") is not True:
             raise build_release.BuildError(
                 "Корневой .project-structure.json нельзя заменить автоматически: "
@@ -748,7 +1096,9 @@ def _finalize_inventory(
         "schema_version": INVENTORY_SCHEMA_VERSION,
         "scope": scope,
         "status": "complete" if not errors else "incomplete",
-        "safe_to_delete": not errors,
+        "safe_to_delete": not errors and not nonstandard,
+        "user_data_detected": bool(nonstandard),
+        "deletion_blocked": bool(errors or nonstandard),
         "requires_confirmation": True,
         "fingerprint": _inventory_fingerprint(entries, errors),
         "entries": entries,
@@ -830,6 +1180,187 @@ def inventory_release(release_path: Path) -> dict[str, object]:
         else:
             item["classification"] = "framework"
     return _finalize_inventory(entries, errors, "installed_release", skipped)
+
+
+EXTERNAL_FRAMEWORK_REFERENCE_PATTERN = re.compile(
+    r"(?P<path>(?:https?://|file://|[A-Za-z]:[/\\]|\\\\)[^\s`'\"<>),;]*"
+    r"(?:\.agents[/\\]sdd-template-|\.manifest|\.requirements|\.tools|\.approach|\.chatlog)"
+    r"[^\s`'\"<>),;]*)",
+    re.IGNORECASE,
+)
+
+
+def _post_install_files(target_root: Path) -> list[Path]:
+    """Получить allowlist текстовых project-документов для post-install проверки."""
+    files: dict[str, Path] = {}
+    ignored_parts = {".git", ".agents", "tmp", "node_modules", "__pycache__"}
+    for relative_root in POST_INSTALL_SCAN_ROOTS:
+        candidate = target_root / relative_root
+        if candidate.is_file():
+            if candidate.suffix.lower() in POST_INSTALL_TEXT_SUFFIXES or candidate.name in {"AGENTS.md", ".project-structure.json"}:
+                files[candidate.as_posix()] = candidate
+            continue
+        if not candidate.is_dir() or candidate.is_symlink():
+            continue
+        for path in candidate.rglob("*"):
+            if not path.is_file() or path.is_symlink() or path.suffix.lower() not in POST_INSTALL_TEXT_SUFFIXES:
+                continue
+            relative_parts = path.relative_to(target_root).parts
+            if any(part in ignored_parts for part in relative_parts):
+                continue
+            files[path.as_posix()] = path
+    return [files[key] for key in sorted(files)]
+
+
+def _post_install_file_fingerprint(files: list[Path], target_root: Path) -> str:
+    records: list[dict[str, object]] = []
+    for path in files:
+        try:
+            data = path.read_bytes()
+        except OSError as error:
+            records.append({"path": path.relative_to(target_root).as_posix(), "error": str(error)})
+            continue
+        records.append(
+            {
+                "path": path.relative_to(target_root).as_posix(),
+                "size": len(data),
+                "sha256": hashlib.sha256(data).hexdigest(),
+            }
+        )
+    return _inventory_fingerprint(records, [])
+
+
+def _post_install_reference_records(path: Path, target_root: Path, version: str) -> list[dict[str, object]]:
+    try:
+        content = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        return []
+    references: list[dict[str, object]] = []
+    relative_file = path.relative_to(target_root).as_posix()
+    matches: list[tuple[int, int, str, str]] = []
+    for framework_match in _framework_path_matches(content):
+        matches.append(
+            (
+                _match_position(framework_match, "start"),
+                _match_position(framework_match, "end"),
+                str(framework_match["path"]),
+                "local",
+            )
+        )
+    for external_match in EXTERNAL_FRAMEWORK_REFERENCE_PATTERN.finditer(content):
+        path_value = _clean_framework_path(external_match.group("path"))
+        matches.append(
+            (
+                external_match.start("path"),
+                external_match.start("path") + len(path_value),
+                path_value,
+                "external",
+            )
+        )
+    for start, end, reference, source_kind in sorted(matches, key=lambda item: (item[0], item[1])):
+        line = content.count("\n", 0, start) + 1
+        line_start = content.rfind("\n", 0, start) + 1
+        column = start - line_start + 1
+        replacement: str | None = None
+        if source_kind == "external":
+            classification = "external"
+            reason = "Внешняя ссылка не является локальной ошибкой Framework-путей."
+        elif reference.replace("\\", "/").startswith(".agents/sdd-template-"):
+            referenced_version_match = AGENTS_VERSION_PATTERN.search(reference)
+            referenced_version = referenced_version_match.group(1) if referenced_version_match else None
+            if referenced_version != version:
+                classification = "stale"
+                replacement = _rewrite_framework_paths(reference, version)
+                reason = "Ссылка указывает на другой release Framework."
+            else:
+                target = target_root / Path(reference.replace("\\", "/"))
+                classification = "valid" if target.exists() else "missing"
+                reason = (
+                    "Ссылка указывает на текущий Framework root."
+                    if classification == "valid"
+                    else "Целевой путь текущего Framework отсутствует."
+                )
+        else:
+            classification = "stale"
+            replacement = _rewrite_framework_paths(reference, version)
+            reason = "Ссылка использует legacy-корень Framework без версионированного FRAMEWORK_ROOT."
+        references.append(
+            {
+                "file": relative_file,
+                "line": line,
+                "column": column,
+                "value": reference,
+                "classification": classification,
+                "replacement": replacement,
+                "reason": reason,
+                "source": source_kind,
+            }
+        )
+    return references
+
+
+def post_install_validate(
+    target_root: Path,
+    version: str,
+    release_path: Path | None = None,
+) -> dict[str, object]:
+    """Проверить согласованность ссылок consumer-проекта после установки."""
+    framework_root = _framework_root(version)
+    package_path = release_path or target_root / Path(framework_root)
+    errors: list[str] = []
+    framework_fingerprint: str | None = None
+    if not package_path.is_dir():
+        errors.append(f"Не найден установленный Framework root: {framework_root}")
+    else:
+        try:
+            package_inventory = inventory_release(package_path)
+            fingerprint = package_inventory.get("fingerprint")
+            if isinstance(fingerprint, str):
+                framework_fingerprint = fingerprint
+            inventory_errors = package_inventory.get("errors")
+            if isinstance(inventory_errors, list):
+                errors.extend(str(item) for item in inventory_errors)
+        except build_release.BuildError as error:
+            errors.append(str(error))
+    files = _post_install_files(target_root)
+    references = [
+        reference
+        for path in files
+        for reference in _post_install_reference_records(path, target_root, version)
+    ]
+    unresolved = [
+        reference
+        for reference in references
+        if reference.get("classification") in {"stale", "missing", "ambiguous"}
+    ]
+    summary = {
+        classification: sum(reference.get("classification") == classification for reference in references)
+        for classification in ("valid", "stale", "missing", "ambiguous", "external")
+    }
+    file_fingerprint = _post_install_file_fingerprint(files, target_root)
+    blocked = bool(errors or unresolved)
+    result: dict[str, object] = {
+        "schema_version": "1",
+        "status": "blocked" if blocked else "pass",
+        "framework_root": framework_root,
+        "framework_root_fingerprint": framework_fingerprint,
+        "checked_files_fingerprint": file_fingerprint,
+        "checked_files": [path.relative_to(target_root).as_posix() for path in files],
+        "references": references,
+        "unresolved": unresolved,
+        "summary": summary,
+        "errors": errors,
+    }
+    if blocked:
+        result["next_action"] = {
+            "type": "resolve_framework_paths",
+            "required": True,
+            "message": (
+                "Исправьте stale/missing Framework-ссылки через явную миграцию "
+                "или подтвердите ручное решение; external-ссылки не блокируют установку."
+            ),
+        }
+    return result
 
 
 def _git_status(source_root: Path) -> tuple[bool, dict[str, str], str | None]:
@@ -1015,6 +1546,10 @@ def inventory_message(inventory: dict[str, object], title: str) -> str:
     if isinstance(paths, list) and paths:
         lines.append("Полный список нестандартных путей:")
         lines.extend(f"- {path}" for path in paths)
+        lines.append(
+            "Данные пользователя не удаляются автоматически; сохраните или перенесите их "
+            "либо передайте явное подтверждение по fingerprint."
+        )
     return "\n".join(lines)
 
 
@@ -1113,7 +1648,7 @@ def old_release_confirmation_plan(
         f"Подтвердите действие {action} после проверки inventory. "
         "Для удаления или переноса передайте fingerprint отдельным вызовом."
     )
-    return {
+    result: dict[str, object] = {
         "status": "awaiting_user_confirmation",
         "current_version": current_version,
         "target_version": target_version,
@@ -1129,6 +1664,20 @@ def old_release_confirmation_plan(
             "fingerprint": inventory.get("fingerprint"),
         },
     }
+    tmp_root = target_root / "tmp"
+    source_candidates = sorted(
+        (
+            child
+            for child in tmp_root.iterdir()
+            if child.is_dir() and not child.is_symlink() and child.name.startswith("sdd-template-source-")
+        ),
+        key=lambda path: path.name,
+    ) if tmp_root.is_dir() else []
+    if len(source_candidates) == 1:
+        source_cleanup = cleanup_plan(target_root, source_candidates[0])
+        result["source_cleanup"] = source_cleanup
+        result["next_actions"] = [result["next_action"], source_cleanup["next_action"]]
+    return result
 
 
 def agents_confirmation_message(review: dict[str, object]) -> str:
@@ -1147,7 +1696,7 @@ def agents_confirmation_message(review: dict[str, object]) -> str:
                 if isinstance(message, str) and message not in conflict_messages:
                     lines.append(f"- {message}")
     lines.append(
-        "Повторите установку с --agents-action replace-legacy, "
+        "Повторите установку с --agents-action migrate, --agents-action replace-legacy, "
         "--agents-action replace-managed или --agents-action keep после решения пользователя."
     )
     return "\n".join(lines)
@@ -1160,7 +1709,8 @@ def project_structure_confirmation_message(review: dict[str, object]) -> str:
     if isinstance(conflicts, list):
         lines.extend(f"- {item}" for item in conflicts if isinstance(item, str))
     lines.append(
-        "Повторите установку с --project-structure-action replace или "
+        "Повторите установку с --project-structure-action migrate, "
+        "--project-structure-action replace или "
         "--project-structure-action keep после решения пользователя."
     )
     return "\n".join(lines)
@@ -1248,7 +1798,24 @@ def main() -> int:
         and isinstance(project_structure_conflicts, list)
         and bool(project_structure_conflicts)
     )
-    if args.write and (agents_requires_confirmation or project_structure_requires_confirmation):
+    agents_migration_requires_confirmation = (
+        args.agents_action == "migrate"
+        and isinstance(agents_conflicts, list)
+        and bool(agents_conflicts)
+        and agents_review.get("can_migrate") is not True
+    )
+    project_structure_migration_requires_confirmation = (
+        args.project_structure_action == "migrate"
+        and isinstance(project_structure_conflicts, list)
+        and bool(project_structure_conflicts)
+        and project_structure_review.get("can_migrate") is not True
+    )
+    if args.write and (
+        agents_requires_confirmation
+        or project_structure_requires_confirmation
+        or agents_migration_requires_confirmation
+        or project_structure_migration_requires_confirmation
+    ):
         messages = []
         if agents_requires_confirmation:
             messages.append(agents_confirmation_message(agents_review))
@@ -1300,10 +1867,11 @@ def main() -> int:
             args.project_structure_action,
         )
         agents_result = ensure_agents_instructions(target_root, source_root, version, args.agents_action)
-        conflicts = agents_result.get("conflicts")
+        post_install_review = post_install_validate(target_root, version, current_path)
         cleanup = cleanup_plan(target_root, source_root)
+        post_install_blocked = post_install_review.get("status") != "pass"
         plan = {
-            "status": "installed_pending_cleanup",
+            "status": "installed_pending_review" if post_install_blocked else "installed_pending_cleanup",
             "action": args.action,
             "current_version": current_version,
             "target_version": version,
@@ -1312,13 +1880,12 @@ def main() -> int:
             "write": True,
             "project_root": project_root,
             "agents": agents_result,
-            "post_install_review": {
-                "status": "required" if isinstance(conflicts, list) and conflicts else "clear",
-                "conflicts": conflicts if isinstance(conflicts, list) else [],
-            },
+            "post_install_review": post_install_review,
             "cleanup": cleanup,
             "next_action": cleanup["next_action"],
         }
+        if post_install_blocked and isinstance(post_install_review.get("next_action"), dict):
+            plan["next_actions"] = [post_install_review["next_action"], cleanup["next_action"]]
         cleanup_inventory = cleanup.get("inventory")
         print(
             inventory_message(
@@ -1419,23 +1986,23 @@ def main() -> int:
     )
     agents_result = ensure_agents_instructions(target_root, source_root, version, args.agents_action)
     plan["agents"] = agents_result
-    conflicts = agents_result.get("conflicts")
-    plan["post_install_review"] = {
-        "status": "required" if isinstance(conflicts, list) and conflicts else "clear",
-        "conflicts": conflicts if isinstance(conflicts, list) else [],
-    }
+    post_install_review = post_install_validate(target_root, version, package_dir)
+    plan["post_install_review"] = post_install_review
     cleanup = cleanup_plan(target_root, source_root)
-    if current_path is not None and args.old_action == "move":
+    post_install_blocked = post_install_review.get("status") != "pass"
+    if not post_install_blocked and current_path is not None and args.old_action == "move":
         backup = free_backup_path(target_root, current_version or "unknown")
         backup.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(current_path), str(backup))
         plan["old_path"] = backup.relative_to(target_root).as_posix()
-    elif current_path is not None and args.old_action == "delete":
+    elif not post_install_blocked and current_path is not None and args.old_action == "delete":
         shutil.rmtree(current_path)
     plan.update(result)
-    plan["status"] = "installed_pending_cleanup"
+    plan["status"] = "installed_pending_review" if post_install_blocked else "installed_pending_cleanup"
     plan["cleanup"] = cleanup
     plan["next_action"] = cleanup["next_action"]
+    if post_install_blocked and isinstance(post_install_review.get("next_action"), dict):
+        plan["next_actions"] = [post_install_review["next_action"], cleanup["next_action"]]
     cleanup_inventory = cleanup.get("inventory")
     print(
         inventory_message(
