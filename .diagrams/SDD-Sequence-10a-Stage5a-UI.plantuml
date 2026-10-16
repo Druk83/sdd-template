@@ -1,0 +1,83 @@
+@startuml SDD-Sequence-10a-Stage5a-UI
+    title Последовательность событий SDD\nЭтап [5.a]: Планирование пользовательского интерфейса и пула экранов
+
+    actor "Разработчик" as Dev
+    participant "Агент" as Agent
+    database "docs/requirements/" as Docs
+    collections ".manifest/" as Manifest
+    collections ".requirements/" as Templates
+    collections ".approach/" as Approach
+    participant "Каталог UI-паттернов" as Catalog
+    participant ".tools/ui-reference" as Tool
+
+    == УСЛОВИЕ ЗАПУСКА ==
+
+    Agent -> Docs: Проверяет требования, сценарии и признаки UI
+    Agent -> Manifest: Читает uimanifest.md
+    Agent -> Approach: Читает ui-pattern-selection.md
+    Agent -> Templates: Читает процедуры пула и спецификации экранов
+    alt UI отсутствует или неприменим
+        Agent --> Dev: Предлагает подтверждение not_applicable или варианты UI
+        Dev -> Agent: Подтверждает not_applicable
+        Agent -> Docs: Фиксирует решение и обоснование
+    else UI требуется
+        Agent -> Catalog: Читает опубликованные UI-паттерны\nhttps://github.com/Druk83/ui-patterns.git
+        Agent -> Agent: Определяет типы интерфейса и роли пользователей
+
+        == ПУЛ ЭКРАНОВ ==
+
+        Agent -> Docs: Создаёт пул экранов
+        note right of Docs
+        Для каждого экрана:
+        screen_id, screen_type, purpose,
+        route, роли, границы и состояния.
+        end note
+        Agent --> Dev: Предлагает пул и кандидаты паттернов
+        Dev -> Agent: Подтверждает пул или корректирует его
+
+        == VIEWPORT И ПАТТЕРНЫ ==
+
+        Agent -> Agent: Предлагает viewport matrix в CSS px
+        Agent --> Dev: Показывает типы экранов и размеры viewport
+        Dev -> Agent: Подтверждает матрицу или корректирует размеры
+        Agent -> Catalog: Сопоставляет паттерны и фиксирует отклонённые кандидаты
+        Agent --> Dev: Предлагает паттерн и обоснование выбора
+        Dev -> Agent: Подтверждает паттерны
+
+        == СПЕЦИФИКАЦИЯ И ПРОТОТИП ==
+
+        Agent -> Docs: Создаёт спецификации экранов и traceability
+        note right of Docs
+        Полные записи: docs/requirements/
+        пользовательский-интерфейс/.
+        Материалы экрана: references/<reference-set>/.
+        end note
+        Agent --> Dev: Запрашивает подтверждение спецификаций
+        Dev -> Agent: Подтверждает спецификации
+        Agent -> Docs: Создаёт живой эталонный UI-прототип
+        note right of Docs
+        HTML/CSS/JS и fixture data.
+        Прототип не содержит production API,
+        production data или production code.
+        end note
+        Agent -> Tool: Проверяет структуру, viewport и доступность
+        Tool --> Agent: Отчёт проверки и визуального сравнения
+        Agent -> Docs: Сохраняет manifest, README и артефакты экрана
+        Agent --> Dev: Ф4: "Этап [5.a] готов. Принять?"
+        alt Принято
+            Dev -> Agent: "Принято"
+        else Требуется доработка
+            Dev -> Agent: "Доработать: <замечания>"
+            Agent -> Docs: Вносит исправления и повторяет проверки
+            Agent --> Dev: Ф4: "Исправлено. Принять?"
+            Dev -> Agent: "Принято"
+        end
+    end
+
+    note over Agent, Dev
+    После подтверждения [5.a] агент передаёт
+    требования к UI и утверждённые артефакты
+    на этап [6].
+    end note
+
+@enduml

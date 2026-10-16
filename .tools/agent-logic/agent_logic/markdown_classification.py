@@ -68,14 +68,22 @@ def classify_fragment(fragment: str) -> dict | None:
     return None
 
 
-def build_classification_proposals(gaps: object) -> list[dict]:
-    if not isinstance(gaps, list):
-        return []
+def build_classification_proposals(gaps: object, fragment_analyses: object = None) -> list[dict]:
+    """Строит предложения из прежних GAP и покрытых структурных фрагментов."""
     proposals: list[dict] = []
-    for gap in gaps:
-        if not isinstance(gap, Mapping) or gap.get('extraction_method') != 'unclassified_gap':
-            continue
-        source_ref = gap.get('source_ref')
+    candidates: list[tuple[str, Mapping]] = []
+    if isinstance(gaps, list):
+        candidates.extend(('gap', item) for item in gaps if isinstance(item, Mapping) and item.get('extraction_method') == 'unclassified_gap')
+    if isinstance(fragment_analyses, list):
+        candidates.extend(
+            ('fragment', item) for item in fragment_analyses
+            if isinstance(item, Mapping)
+            and item.get('structural_role') == 'list_item'
+            and item.get('semantic_role') is None
+            and item.get('coverage_status') in {'covered', 'review_required', 'unresolved'}
+        )
+    for origin, candidate in candidates:
+        source_ref = candidate.get('source_ref')
         if not isinstance(source_ref, Mapping):
             continue
         classification = classify_fragment(str(source_ref.get('fragment', '')))
@@ -83,7 +91,6 @@ def build_classification_proposals(gaps: object) -> list[dict]:
             continue
         proposal = {
             'id': f'classification-{len(proposals) + 1:03d}',
-            'gap_id': gap.get('id'),
             'target': classification['target'],
             'text': classification['text'],
             'status': 'proposed',
@@ -92,5 +99,9 @@ def build_classification_proposals(gaps: object) -> list[dict]:
             'source_ref': dict(source_ref),
             'evidence': [dict(source_ref)],
         }
+        if origin == 'gap':
+            proposal['gap_id'] = candidate.get('id')
+        else:
+            proposal['fragment_id'] = candidate.get('id')
         proposals.append(proposal)
     return proposals

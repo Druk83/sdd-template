@@ -308,7 +308,8 @@ def validate_agent_context(context: object) -> dict[str, Any]:
         raise InputError("user_guidance must be an object")
     if guidance.get("mode") not in {"NO_ACTION_REQUIRED", "REVIEW_REQUIRED", "HUMAN_DECISION_REQUIRED"}:
         raise InputError("user_guidance.mode is unsupported")
-    if not isinstance(guidance.get("summary"), str) or not guidance.get("summary").strip():
+    guidance_summary = guidance.get("summary")
+    if not isinstance(guidance_summary, str) or not guidance_summary.strip():
         raise InputError("user_guidance.summary must be a non-empty string")
     required_actions = guidance.get("required_actions")
     if not isinstance(required_actions, list) or not all(isinstance(item, dict) for item in required_actions):
@@ -318,7 +319,7 @@ def validate_agent_context(context: object) -> dict[str, Any]:
     if guidance.get("observations_are_context_only") is not True:
         raise InputError("user_guidance must keep observations as context only")
     for action in required_actions:
-        if action.get("kind") not in {"finding", "gap"}:
+        if action.get("kind") not in {"finding", "gap", "review_hypothesis"}:
             raise InputError("user_guidance action must originate from a finding or GAP")
     for field in ("available_actions", "applicable_rules", "unresolved_gaps"):
         if not isinstance(context.get(field), list):
@@ -381,7 +382,13 @@ def run_agent_cycle(context: dict, *, action_limit: int | None = None) -> dict:
             "plan": [{"step": index, "action": action} for index, action in enumerate(selected_actions, start=1)],
             "total_actions": len(actions), "rules": rules, "blockers": [], "review_items": [],
         }
-    actions = [item.get("next_step") for item in guidance.get("required_actions", []) if isinstance(item, dict) and isinstance(item.get("next_step"), str) and item.get("next_step").strip()]
+    actions: list[str] = []
+    for item in guidance.get("required_actions", []):
+        if not isinstance(item, dict):
+            continue
+        next_step = item.get("next_step")
+        if isinstance(next_step, str) and next_step.strip():
+            actions.append(next_step)
     selected_actions = actions if action_limit is None else actions[:action_limit]
     blockers = _review_blockers(context)
     question = guidance.get("human_question")

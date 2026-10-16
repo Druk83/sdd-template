@@ -1,6 +1,6 @@
 {
   "name": "agent-logic",
-  "version": "0.4.1",
+  "version": "0.5.1",
   "path": ".tools/agent-logic/agent-logic.py",
   "entry": "python .tools/agent-logic/agent-logic.py compile",
   "entry_win": ".tools/agent-logic/agent-logic.bat compile",

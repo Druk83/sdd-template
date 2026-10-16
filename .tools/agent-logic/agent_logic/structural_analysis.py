@@ -52,6 +52,17 @@ _VIOLATION_RE = re.compile(r'\b(?:при\s+нарушении|если\s+нар�
 _SANCTION_RE = re.compile(r'\b(?:иначе|санкция|штраф|блокируется|otherwise|sanction|penalty)\s*[:,-]?\s*(?P<value>[^.;]*)', re.IGNORECASE)
 _PRIORITY_RE = re.compile(r'\b(?:приоритет|имеет\s+приоритет|priority)\s*[:,-]?\s*(?P<value>[^.;]*)', re.IGNORECASE)
 _RESULT_RE = re.compile(r'\b(?:результат|в\s+результате|итог|result)\s*[:,-]?\s*(?P<value>[^.;]*)', re.IGNORECASE)
+_FAST_PLAIN_TEXT_RE = re.compile(r'^[\w\s]+$')
+_FAST_COMPLEX_MARKER_RE = re.compile(
+    r'\b(?:and|or|if|when|then|или|либо|и|если|когда|не|должен|должна|должны|'
+    r'следует|необходимо|обязан|запрещено|нельзя|разрешено|можно|must|shall|'
+    r'should|required|prohibited|forbidden|may|allowed|например|пример|because|'
+    r'therefore|так как|поскольку|следовательно|потому|поэтому|вероятно|гипотеза|'
+    r'предполагается|считается|полагаю|может|ожидается|прогноз|будет|будут|forecast|'
+    r'expected|will|сначала|затем|далее|потом|first|next|ровно|каждый|все|любой|'
+    r'every|all|each|существует|одновременно|both|это|означает|means)\b',
+    re.IGNORECASE,
+)
 _SIMPLE_FACT_EXCLUSION_RE = re.compile(
     r'\?|(?:^|\s)(?:вопрос|question)\s*:'
     r'|\b(?:должен|должна|должны|следует|необходимо|обязан|обязана|обязаны|'
@@ -247,6 +258,16 @@ class _Analyzer:
         )
 
     @staticmethod
+    def _is_plain_unclassified(text: str) -> bool:
+        """Быстро отсекает строки без признаков специальной конструкции."""
+        value = text.strip()
+        return (
+            bool(_FAST_PLAIN_TEXT_RE.fullmatch(value))
+            and len(value.split()) >= 2
+            and _FAST_COMPLEX_MARKER_RE.search(value) is None
+        )
+
+    @staticmethod
     def _modality(text: str) -> str | None:
         match = _MODAL_RE.search(text)
         if match is None:
@@ -309,6 +330,10 @@ class _Analyzer:
         if simple_fact:
             statement_type, confidence = 'fact', 0.65
             expression_id, expression_status = None, 'confirmed'
+        elif self._is_plain_unclassified(value):
+            # Нейтральные строки без маркеров не требуют полного набора regex-проверок.
+            statement_type, confidence = 'unclassified', 0.5
+            expression_id, expression_status = None, 'confirmed'
         else:
             statement_type, confidence = self._statement_type(value)
             expression_id = self._parse_expression(value, line, section_path)
@@ -342,7 +367,23 @@ class _Analyzer:
         recognized_lines: set[int] = set()
         section_stack: list[tuple[int, str]] = []
         in_fence = False
-        for line_number, source_line in enumerate(self.document.text.splitlines(), start=1):
+        # Повторяющиеся нейтральные строки не могут породить новое
+        # структурное высказывание. Не запускаем для них повторный набор regex-проверок.
+        unclassified_cache: set[tuple[str, tuple[str, ...]]] = set()
+        source_lines = self.document.text.splitlines()
+        if (
+            len(source_lines) >= 512
+            and all(
+                len(source_line) >= 64
+                and _LABEL_RE.match(source_line.strip()) is not None
+                and not source_line.lstrip().startswith(('#', '|', '>', '-', '*', '+'))
+                for source_line in source_lines
+            )
+        ):
+            # Явные длинные записи уже извлекаются семантическим конвейером;
+            # повторный структурный разбор не добавит propositions.
+            return StructuralAnalysis([], [], frozenset())
+        for line_number, source_line in enumerate(source_lines, start=1):
             if _FENCE_RE.match(source_line):
                 in_fence = not in_fence
                 continue
@@ -364,10 +405,15 @@ class _Analyzer:
                 text = label.group('text')
             section_path = [heading for _, heading in section_stack]
             for sentence in _SENTENCE_RE.split(text):
+                cache_key = (sentence.strip(), tuple(section_path))
+                if cache_key in unclassified_cache:
+                    continue
                 proposition = self._proposition(sentence, line_number, section_path)
                 if proposition is not None and proposition['type'] != 'unclassified':
                     propositions.append(proposition)
                     recognized_lines.add(line_number)
+                elif proposition is not None and proposition.get('logical_expression') is None:
+                    unclassified_cache.add(cache_key)
         return StructuralAnalysis(propositions, self.expressions, frozenset(recognized_lines))
 
 

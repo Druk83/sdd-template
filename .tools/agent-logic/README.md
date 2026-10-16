@@ -1,5 +1,5 @@
 # agent-logic — переносимый компилятор ASIR
-> Версия инструмента: `0.4.1`.
+> Версия инструмента: `0.5.1`.
 
 Локальный инструмент преобразует UTF-8 plain text и Markdown в проверяемую модель ASIR, сохраняет provenance и формирует контекст для ИИ-агента. Папка самодостаточна и не требует установки пакетов.
 
@@ -12,7 +12,7 @@
 
 ```bash
 python .tools/agent-logic/agent-logic.py compile .source --format context
-python .tools/agent-logic/agent-logic.py agent .tools/agent-logic/.runtime/agent-context.json --format text
+python .tools/agent-logic/agent-logic.py agent tmp/agent-logic/.runtime/agent-context.json --format text
 ```
 
 Для Windows доступен `agent-logic.bat`, для Unix-подобных систем — `agent-logic`.
@@ -25,6 +25,10 @@ python .tools/agent-logic/agent-logic.py agent .tools/agent-logic/.runtime/agent
 * `compile --request <text>` — сохранить исходный запрос пользователя в отчёте.
 * `compile --requested-at <ISO-8601>` — сохранить время регистрации запроса в отчёте.
 * `agent <context>` — прочитать `agent_context` и сформировать локальный план.
+* `logic-review [path]` — подготовить или проверить явный логический review
+  по локальной методике логического анализа ASIR.
+* `logic-review --result <json>` — проверить расширенный ответ агента с блоком
+  `expert_review` и карточками решений.
 * Для чтения контекста из pipe вместо имени файла укажите -.
 * `agent --limit <n>` — ограничить число действий в плане; `0` означает все действия.
 * `--help` — вывести справку.
@@ -39,20 +43,38 @@ python .tools/agent-logic/agent-logic.py agent .tools/agent-logic/.runtime/agent
 ## Примеры
 
 ```bash
-python .tools/agent-logic/agent-logic.py compile .source --format context --output .tools/agent-logic/.runtime/agent-context.json --write
-python .tools/agent-logic/agent-logic.py agent .tools/agent-logic/.runtime/agent-context.json --format json --limit 20
+python .tools/agent-logic/agent-logic.py compile .source --format context --output tmp/agent-logic/.runtime/agent-context.json --write
+python .tools/agent-logic/agent-logic.py agent tmp/agent-logic/.runtime/agent-context.json --format json --limit 20
 ```
 
 При `execution_policy.allowed=false` план не формируется, внешние действия не выполняются, а агенту возвращаются блокирующие элементы.
 ## Отчёт по запросу агента
 
-При просьбе пользователя проверить или проанализировать документ агент действует по `agent-logic.instructions.md`: передаёт исходный запрос и время регистрации, а Markdown-отчёт записывает только в `.tools/agent-logic/.runtime/exports/<compilationId>/`.
+При просьбе пользователя проверить или проанализировать документ агент действует по `agent-logic.instructions.md`: передаёт исходный запрос и время регистрации, а Markdown-отчёт записывает только в `tmp/agent-logic/.runtime/exports/<compilationId>/`.
 
 ```text
-python .tools/agent-logic/agent-logic.py compile .manifest/dependenciesmanifest.md --format md --request "Проверить логическую целостность манифеста" --requested-at "2026-08-09T18:45:00+05:00" --output .tools/agent-logic/.runtime/exports/<compilationId>/dependenciesmanifest.agent-logic.md --write
+python .tools/agent-logic/agent-logic.py compile .manifest/dependenciesmanifest.md --format md --request "Проверить логическую целостность манифеста" --requested-at "2026-08-09T18:45:00+05:00" --output tmp/agent-logic/.runtime/exports/<compilationId>/dependenciesmanifest.agent-logic.md --write
 ```
 
 Отчёт содержит `user_guidance`: при `NO_ACTION_REQUIRED` действия по результату проверки не требуются; при `REVIEW_REQUIRED` показаны только подтверждённые ручные действия; при `HUMAN_DECISION_REQUIRED` показан вопрос человеку. Неблокирующие `observations` являются только контекстом и не могут быть выданы за дефект или рекомендацию правки. Исходный документ и `.tasks/` не изменяются.
+
+## Локальный методический слой ASIR
+
+Запрос `logic-review` включает `method_pack`: локальный промпт, восемь этапов алгоритма,
+manifest и шесть спецификаций (`понятия`, `суждения`, `силлогизмы`, `индукция`,
+`логические_ошибки`, `законы_мышления`) с SHA-256. Агент обязан прочитать этот пакет до ответа.
+
+Пакет также содержит необязательный справочник
+`agent_logic/logic_specs/методический справочник логической проверки.md`.
+Он нужен для формирования экспертной части `expert_review` в сложных случаях и
+переносится вместе с экспортом; обязательными правилами остаются спецификации
+из `method_pack`, а полный текст справочника не загружается в каждый запрос.
+
+Результат версии контракта `0.2` разделяет `layers.deterministic_asir` и
+`layers.expert_logic.review`. Блок `expert_review` содержит структуру
+аргумента, скрытые посылки, силу индукции/аналогии, ограничения и открытый
+каталог ошибок с русским и латинским названием. Экспертное заключение не
+становится фактом, доказательством или разрешением действия автоматически.
 
 ## Политика хранения результатов
 
@@ -62,9 +84,9 @@ python .tools/agent-logic/agent-logic.py compile .manifest/dependenciesmanifest.
 python .tools/agent-logic/agent-logic.py compile .source --format context | python .tools/agent-logic/agent-logic.py agent - --format text
 ```
 
-* Рабочий контекст хранится только при явном `--write` в `.tools/agent-logic/.runtime/agent-context.json`.
+* Рабочий контекст хранится только при явном `--write` в `tmp/agent-logic/.runtime/agent-context.json`.
 * Для обновления рабочего контекста используйте `--write --replace`; без `--replace` существующий файл защищён.
-* Аудитные результаты сохраняйте в `.tools/agent-logic/.runtime/exports/<compilationId>/`, если их нужно передать или хранить.
+* Аудитные результаты сохраняйте в `tmp/agent-logic/.runtime/exports/<compilationId>/`, если их нужно передать или хранить.
 * В `text` и `md` сначала приведён профиль артефакта и применённые проверки, затем отдельно показаны проблемы, предупреждения, справочные блоки и элементы для решения.
 * В конце такого отчёта приведена готовая команда сохранения Markdown. Она не выполняется сама, не содержит `--replace` и записывает только путь, заданный через `--output --write`. При существующем пути выберите другое имя или осознанно добавьте `--replace`.
 * `.runtime/` временный и игнорируемый каталог; удаляйте его после завершения задачи, если трассировка больше не нужна.

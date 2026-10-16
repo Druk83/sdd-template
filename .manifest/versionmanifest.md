@@ -115,8 +115,9 @@
 
 ## version.H4.9 Публикация только проверенного immutable ref
 
-Запись со статусом `supported` разрешена только для существующего immutable ref: tag
-или полный commit. Проверка кандидата выполняется до commit командой
+В опубликованном `release-registry.json` запись со статусом `supported` разрешена
+только для существующего immutable ref: tag или полный commit. Проверка кандидата
+выполняется до commit командой
 `.tools/sdd-template-release/verify_release.py`, а после создания tag выполняется
 `.tools/sdd-template-release/verify_release.py --published`.
 
@@ -125,6 +126,16 @@
 командой `.tools/sdd-template-release/verify_release.py --candidate`; такая запись не
 может использоваться установщиком для обычного обновления.
 
-Публикация новой версии выполняется atomic push ветки и tag. Нельзя объявлять релиз
-поддерживаемым в `release-registry.json`, если его `ref` ещё недоступен, не совпадает
-с commit текущей версии или не проходит проверку состава релизного пакета.
+Для записи со статусом `candidate` поле `released_at` не указывается. Фактическую дату
+публикации добавляют в `released_at` только при переводе записи в `supported`.
+
+При подготовке финального релизного коммита укажи одну фактическую дату публикации в
+CHANGELOG.md и `released_at`, установи `status: supported` и переключи `default_version`
+на новую версию. До коммита проверь пакет командой
+`.tools/sdd-template-release/verify_release.py` без `--candidate`.
+
+После коммита создай локальный tag на этот commit и проверь его командой
+`.tools/sdd-template-release/verify_release.py --published`. Отправляй ветку и tag
+одной атомарной операцией; не публикуй ветку отдельно, пока tag не проверен.
+Нельзя объявлять релиз поддерживаемым в опубликованном `release-registry.json`, если
+его `ref` недоступен, не совпадает с commit текущей версии или пакет не прошёл проверку.

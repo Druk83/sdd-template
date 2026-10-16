@@ -13,6 +13,12 @@ from .compilation import compile_model
 from .decisions import apply_human_decision, decision_envelope
 from .errors import AgentLogicError, OutputError
 from .ingestion import load_sources
+from .logic_review import (
+    build_logic_review_report,
+    build_logic_review_request,
+    logic_review_output,
+    validate_logic_review_result,
+)
 from .proof_contract import build_proof_result, load_explicit_hypothesis, validate_formal_model
 from .proof_engine import evaluate
 from .reporting import build_report, output_content
@@ -31,6 +37,19 @@ def build_parser() -> argparse.ArgumentParser:
     compile_parser.add_argument("--replace", action="store_true", help="allow replacing an existing output; requires --write")
     compile_parser.add_argument("--request", help="original user request that initiated the check")
     compile_parser.add_argument("--requested-at", help="request registration time in ISO 8601 supplied by the caller")
+
+    logic_review_parser = commands.add_parser(
+        "logic-review",
+        help="создать или проверить явный запрос внешней логической проверки",
+    )
+    logic_review_parser.add_argument("path", nargs="?", default=".source", help="исходный файл или каталог")
+    logic_review_parser.add_argument("--result", help="проверенный JSON-результат локального логического агента; '-' — стандартный ввод")
+    logic_review_parser.add_argument("--format", choices=("json", "md", "text", "context"), default="json")
+    logic_review_parser.add_argument("--output", help="путь результата; требует --write")
+    logic_review_parser.add_argument("--write", action="store_true", help="записать только явно указанный новый файл результата")
+    logic_review_parser.add_argument("--replace", action="store_true", help="разрешить замену существующего результата; требует --write")
+    logic_review_parser.add_argument("--request", help="исходный запрос пользователя для этой проверки")
+    logic_review_parser.add_argument("--requested-at", help="время регистрации запроса в формате ISO 8601")
 
     agent_parser = commands.add_parser("agent", help="consume an agent context and build a local execution plan")
     agent_parser.add_argument("context", help="agent_context JSON file or - to read JSON from stdin")
@@ -65,16 +84,16 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _configure_runtime_commands(commands, compile_parser, decision_parser) -> None:
     compile_parser.add_argument('--store', action='store_true', help='persist the result in the local runtime store')
-    compile_parser.add_argument('--workspace', default='.', help='workspace containing .tools/agent-logic/.runtime')
+    compile_parser.add_argument('--workspace', default='.', help='workspace containing tmp/agent-logic/.runtime')
     decision_parser.add_argument('--store', action='store_true', help='persist the result in the local runtime store')
-    decision_parser.add_argument('--workspace', default='.', help='workspace containing .tools/agent-logic/.runtime')
+    decision_parser.add_argument('--workspace', default='.', help='workspace containing tmp/agent-logic/.runtime')
     runtime_parser = commands.add_parser('runtime', help='inspect or maintain the local runtime store')
     runtime_commands = runtime_parser.add_subparsers(dest='runtime_command', required=True)
     runtime_list = runtime_commands.add_parser('list', help='list stored model versions without creating a database')
-    runtime_list.add_argument('--workspace', default='.', help='workspace containing .tools/agent-logic/.runtime')
+    runtime_list.add_argument('--workspace', default='.', help='workspace containing tmp/agent-logic/.runtime')
     runtime_list.add_argument('--format', choices=('json', 'text'), default='text')
     runtime_cleanup = runtime_commands.add_parser('cleanup', help='remove unlinked intermediate versions')
-    runtime_cleanup.add_argument('--workspace', default='.', help='workspace containing .tools/agent-logic/.runtime')
+    runtime_cleanup.add_argument('--workspace', default='.', help='workspace containing tmp/agent-logic/.runtime')
     runtime_cleanup.add_argument('--write', action='store_true', help='apply cleanup; without it only show candidates')
     runtime_cleanup.add_argument('--format', choices=('json', 'text'), default='text')
     runtime_action = runtime_commands.add_parser('action', help='register a completed action for a stored version')
@@ -82,7 +101,7 @@ def _configure_runtime_commands(commands, compile_parser, decision_parser) -> No
     runtime_action.add_argument('--initiator', required=True, help='person, agent or plugin that performed the action')
     runtime_action.add_argument('--basis', required=True, help='decision or rule authorizing the action')
     runtime_action.add_argument('--result', required=True, help='registered action result')
-    runtime_action.add_argument('--workspace', default='.', help='workspace containing .tools/agent-logic/.runtime')
+    runtime_action.add_argument('--workspace', default='.', help='workspace containing tmp/agent-logic/.runtime')
     runtime_action.add_argument('--write', action='store_true', help='explicitly allow action registration')
     runtime_action.add_argument('--format', choices=('json', 'text'), default='text')
     runtime_parser.set_defaults(output=None, replace=False, write=False)
@@ -123,6 +142,18 @@ def _read_json(path: str) -> dict:
         raise OutputError(f'JSON root must be an object: {path}')
     return value
 
+
+def _read_json_input(path: str) -> dict:
+    if path == "-":
+        try:
+            value = json.load(sys.stdin)
+        except json.JSONDecodeError as exc:
+            raise OutputError("invalid JSON received from stdin") from exc
+        if not isinstance(value, dict):
+            raise OutputError("JSON root received from stdin must be an object")
+        return value
+    return _read_json(path)
+
 def _format_runtime(value: object, output_format: str) -> str:
     if output_format == 'json':
         return json.dumps(value, ensure_ascii=False, indent=2) + '\n'
@@ -137,11 +168,12 @@ def run(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     is_decision = args.command == 'decision'
     is_prove = args.command == 'prove'
+    is_logic_review = args.command == 'logic-review'
     is_runtime = args.command == 'runtime'
     is_solver = args.command == 'solver'
     if is_decision or is_runtime or is_prove or is_solver:
         args.command = 'compile'
-    if args.command not in {"compile", "agent"}:
+    if args.command not in {"compile", "agent", "logic-review"}:
         parser.error("unknown command")
     if args.output and not args.write:
         print("agent-logic: --output requires --write", file=sys.stderr)
@@ -156,6 +188,28 @@ def run(argv: list[str] | None = None) -> int:
         print("agent-logic: --limit must be non-negative", file=sys.stderr)
         return 1
     try:
+        if is_logic_review:
+            _validate_requested_at(args.requested_at)
+            input_materials = load_sources(args.path)
+            model = compile_model(input_materials.compilation_id, list(input_materials.sources))
+            request = build_logic_review_request(
+                model,
+                input_path=args.path,
+                request_text=args.request,
+                requested_at=args.requested_at,
+            )
+            if args.result:
+                result = validate_logic_review_result(_read_json_input(args.result), request)
+                report = build_logic_review_report(request, result)
+            else:
+                report = build_logic_review_report(request)
+            content = logic_review_output(report, args.format)
+            if args.write:
+                _write_new(args.output, content, replace=args.replace)
+            else:
+                sys.stdout.write(content)
+            return report["exit_code"]
+
         if args.command == "agent":
             context = load_agent_context(args.context)
             result = run_agent_cycle(

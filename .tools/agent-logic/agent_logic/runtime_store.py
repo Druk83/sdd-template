@@ -23,7 +23,7 @@ def _checksum(value: object) -> str:
 class RuntimeStore:
     def __init__(self, workspace: str | Path):
         self.workspace = Path(workspace)
-        self.runtime_dir = self.workspace / '.tools' / 'agent-logic' / '.runtime'
+        self.runtime_dir = self.workspace / 'tmp' / 'agent-logic' / '.runtime'
         self.store_dir = self.runtime_dir / 'store'
         self.current_dir = self.runtime_dir / 'current'
         self.exports_dir = self.runtime_dir / 'exports'

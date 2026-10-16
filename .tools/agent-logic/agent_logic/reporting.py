@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 
-
 import json
 from collections import defaultdict
 from collections.abc import Iterable, Mapping
@@ -217,6 +216,68 @@ def _append_structural_summary_markdown(lines: list[str], summary: Mapping) -> N
         for norm in norms[:5]:
             if isinstance(norm, Mapping):
                 lines.append(f"  - {norm.get('id')} [{norm.get('label', 'норма')}]: {norm.get('text', '')} ({_source_label(norm)}).")
+def _coverage_summary(model: Mapping) -> dict:
+    fragments = model.get('fragment_analyses', [])
+    roles: dict[str, int] = defaultdict(int)
+    statuses: dict[str, int] = defaultdict(int)
+    levels: dict[str, int] = defaultdict(int)
+    unresolved: list[dict] = []
+    if isinstance(fragments, list):
+        for fragment in fragments:
+            if not isinstance(fragment, Mapping):
+                continue
+            roles[str(fragment.get('structural_role', 'unknown'))] += 1
+            status = str(fragment.get('coverage_status', 'unresolved'))
+            statuses[status] += 1
+            values = fragment.get('applied_levels', [])
+            if isinstance(values, list):
+                for level in values:
+                    if isinstance(level, str) and level:
+                        levels[level] += 1
+            if status in {'review_required', 'unresolved'}:
+                unresolved.append({'id': fragment.get('id'), 'text': _display_text(fragment), 'role': fragment.get('structural_role'), 'status': status, 'reason': fragment.get('exclusion_reason') or 'Для фрагмента нет достаточного основания для окончательной трактовки.', 'hypothesis_ids': [item for item in fragment.get('hypothesis_ids', []) if isinstance(item, str)] if isinstance(fragment.get('hypothesis_ids'), list) else [], 'source': _source_label(fragment)})
+    hypotheses = model.get('review_hypotheses', [])
+    methods: dict[str, int] = defaultdict(int)
+    items: list[dict] = []
+    if isinstance(hypotheses, list):
+        for hypothesis in hypotheses:
+            if not isinstance(hypothesis, Mapping):
+                continue
+            method = str(hypothesis.get('method', 'unknown'))
+            methods[method] += 1
+            alternatives = hypothesis.get('alternatives', [])
+            items.append({'id': hypothesis.get('id'), 'fragment_id': hypothesis.get('fragment_id'), 'claim': hypothesis.get('claim'), 'method': method, 'status': hypothesis.get('status'), 'alternatives': [dict(item) for item in alternatives if isinstance(item, Mapping)] if isinstance(alternatives, list) else [], 'confirmation_consequence': hypothesis.get('confirmation_consequence'), 'rejection_consequence': hypothesis.get('rejection_consequence'), 'source': _source_label(hypothesis)})
+    relations = model.get('structural_relations', [])
+    relation_types: dict[str, int] = defaultdict(int)
+    if isinstance(relations, list):
+        for relation in relations:
+            if isinstance(relation, Mapping):
+                relation_types[str(relation.get('relationship_type', 'unknown'))] += 1
+    return {'fragments': {'total': sum(roles.values()), 'by_structural_role': dict(sorted(roles.items())), 'by_coverage_status': dict(sorted(statuses.items())), 'by_applied_level': dict(sorted(levels.items()))}, 'structural_relations': {'total': sum(relation_types.values()), 'by_type': dict(sorted(relation_types.items()))}, 'review_hypotheses': {'total': len(items), 'by_method': dict(sorted(methods.items())), 'items': items}, 'unresolved_fragments': unresolved}
+
+
+def _append_coverage_markdown(lines: list[str], coverage: Mapping) -> None:
+    fragments = coverage.get('fragments', {}) if isinstance(coverage, Mapping) else {}
+    relations = coverage.get('structural_relations', {}) if isinstance(coverage, Mapping) else {}
+    hypotheses = coverage.get('review_hypotheses', {}) if isinstance(coverage, Mapping) else {}
+    def render(values: object) -> str:
+        return ', '.join(f'{key}: {value}' for key, value in values.items()) if isinstance(values, Mapping) and values else 'нет'
+    lines.extend(['', '## Покрытие анализа', ''])
+    lines.append(f"- Фрагменты: {fragments.get('total', 0) if isinstance(fragments, Mapping) else 0}; роли: {render(fragments.get('by_structural_role') if isinstance(fragments, Mapping) else {})}.")
+    lines.append(f"- Статусы покрытия: {render(fragments.get('by_coverage_status') if isinstance(fragments, Mapping) else {})}.")
+    lines.append(f"- Применённые уровни: {render(fragments.get('by_applied_level') if isinstance(fragments, Mapping) else {})}.")
+    lines.append(f"- Межфрагментные связи: {relations.get('total', 0) if isinstance(relations, Mapping) else 0} ({render(relations.get('by_type') if isinstance(relations, Mapping) else {})}).")
+    lines.append(f"- Гипотезы проверки: {hypotheses.get('total', 0) if isinstance(hypotheses, Mapping) else 0} ({render(hypotheses.get('by_method') if isinstance(hypotheses, Mapping) else {})}).")
+    unresolved = coverage.get('unresolved_fragments', []) if isinstance(coverage, Mapping) else []
+    if isinstance(unresolved, list) and unresolved:
+        lines.extend(['', '### Неразрешённые фрагменты', ''])
+        for item in unresolved:
+            if isinstance(item, Mapping):
+                linked = ', '.join(str(value) for value in item.get('hypothesis_ids', [])) or 'нет'
+                lines.append(f"- {item.get('id')} [{item.get('role')}, {item.get('status')}] {item.get('source')}: {item.get('text')}")
+                lines.append(f"  - Причина: {item.get('reason')}")
+                lines.append(f"  - Гипотезы / варианты: {linked}; вопрос и последствия приведены в карточке решения.")
+
 def _report_summary(model: Mapping) -> dict:
     profiles = _profiles(model)
     reference_blocks = _reference_blocks(model)
@@ -248,6 +309,7 @@ def _report_summary(model: Mapping) -> dict:
             "information": sum(item.get("severity") not in {"error", "warning"} for item in findings),
         },
         "structural_analysis": _structural_summary(model),
+        "coverage": _coverage_summary(model),
     }
 
 
@@ -347,8 +409,18 @@ def _user_guidance(
         "Не изменять исходный документ автоматически.",
     ]
     if review_cards:
+        for card in review_cards:
+            if card.get("kind") != "review_hypothesis":
+                continue
+            required_actions.append({
+                "id": card.get("id"),
+                "kind": "review_hypothesis",
+                "rule_id": card.get("rule_id"),
+                "source": ", ".join(_source_label({"source_ref": item}) for item in card.get("sources", []) if isinstance(item, Mapping)) or "источник гипотезы",
+                "next_step": "Передать карточку человеку: утвердить, отклонить или изменить трактовку. Исходный документ автоматически не изменять.",
+            })
         question = review_cards[0].get("question")
-        return {"mode": "HUMAN_DECISION_REQUIRED", "summary": "Проверка требует решения человека по подтверждённой неоднозначности или карточке решения.", "required_actions": required_actions, "human_question": question if isinstance(question, str) else "Требуется решение человека по карточке анализа.", "prohibited_actions": prohibited_actions, "observations_are_context_only": True}
+        return {"mode": "HUMAN_DECISION_REQUIRED", "summary": "Проверка требует решения человека по карточке неоднозначности или проверочной гипотезе.", "required_actions": required_actions, "human_question": question if isinstance(question, str) else "Требуется решение человека по карточке анализа.", "prohibited_actions": prohibited_actions, "observations_are_context_only": True}
     gap_count = len([item for item in unresolved if item.get("type") == "gap"])
     if gap_count:
         required_actions.append({"id": "gap-review", "kind": "gap", "rule_id": None, "source": "полный раздел GAP отчёта", "next_step": f"Рассмотреть {gap_count} GAP по группам в полном отчёте; не добавлять содержание автоматически."})
@@ -390,7 +462,7 @@ def recommended_report_path(model: Mapping, input_path: str | None = None) -> st
     compilation_id = str(model.get("compilationId") or "<compilationId>")
     source = input_path or ".source"
     return (
-        ".tools/agent-logic/.runtime/exports/"
+        "tmp/agent-logic/.runtime/exports/"
         f"{compilation_id}/{_file_stem(source)}.agent-logic.md"
     )
 
@@ -622,6 +694,14 @@ def markdown_report(
                 lines.append("  - Применённые проверки: " + ", ".join(str(value) for value in checks) + ".")
     else:
         lines.append("- Профиль не определён: применены общие проверки входного текста.")
+    coverage = summary.get("coverage", {}) if isinstance(summary, Mapping) else {}
+    if isinstance(coverage, Mapping):
+        fragments = coverage.get("fragments", {})
+        hypotheses = coverage.get("review_hypotheses", {})
+        if isinstance(fragments, Mapping):
+            lines.append("coverage: fragments=" + str(fragments.get("total", 0)) + " statuses=" + json.dumps(fragments.get("by_coverage_status", {}), ensure_ascii=False, sort_keys=True))
+        if isinstance(hypotheses, Mapping):
+            lines.append("review_hypotheses: total=" + str(hypotheses.get("total", 0)) + " methods=" + json.dumps(hypotheses.get("by_method", {}), ensure_ascii=False, sort_keys=True))
     references = summary.get("reference_blocks", {}) if isinstance(summary, Mapping) else {}
     if isinstance(references, Mapping):
         reference_types = references.get("by_type", {})
@@ -634,6 +714,7 @@ def markdown_report(
     else:
         lines.append("Ошибок валидации нет.")
     _append_structural_summary_markdown(lines, summary.get('structural_analysis', {}))
+    _append_coverage_markdown(lines, summary.get('coverage', {}))
     _append_proof_markdown(lines, model)
     _append_findings_markdown(lines, _findings(model))
     _append_user_guidance_markdown(lines, user_guidance or _user_guidance(model, str(model.get("status", "BLOCKED")), unresolved, developer_action_plan or _developer_action_plan(model), {"cards": decision_cards or []}))
@@ -653,6 +734,9 @@ def markdown_report(
                     lines.append("  - Область действия: " + str(context.get("scope_boundary", "не определена")) + ".")
             for variant in card.get("variants", []):
                 lines.append("  - " + str(variant.get("id")) + ": " + str(variant.get("interpretation", "")))
+                if isinstance(variant, Mapping):
+                    lines.append("    - Различие: " + str(variant.get("difference", "не указано")))
+                    lines.append("    - Последствие: " + str(variant.get("consequences", "не указано")))
     elif unresolved:
         lines.append("Карточек решений нет; см. неразрешённые элементы ниже.")
     else:
@@ -754,6 +838,14 @@ def text_diagnostics(
                 checks = profile.get("applied_checks", [])
                 if isinstance(checks, list):
                     lines.append("checks: " + ",".join(str(value) for value in checks))
+    coverage = summary.get("coverage", {}) if isinstance(summary, Mapping) else {}
+    if isinstance(coverage, Mapping):
+        fragments = coverage.get("fragments", {})
+        hypotheses = coverage.get("review_hypotheses", {})
+        if isinstance(fragments, Mapping):
+            lines.append("coverage: fragments=" + str(fragments.get("total", 0)) + " statuses=" + json.dumps(fragments.get("by_coverage_status", {}), ensure_ascii=False, sort_keys=True))
+        if isinstance(hypotheses, Mapping):
+            lines.append("review_hypotheses: total=" + str(hypotheses.get("total", 0)) + " methods=" + json.dumps(hypotheses.get("by_method", {}), ensure_ascii=False, sort_keys=True))
     references = summary.get("reference_blocks", {}) if isinstance(summary, Mapping) else {}
     if isinstance(references, Mapping):
         lines.append(f"reference_blocks: {references.get('count', 0)}")
@@ -862,6 +954,10 @@ def _agent_context(
         "propositions": model.get("propositions", []),
         "logical_expressions": model.get("logical_expressions", []),
         "structural_analysis": report_summary.get("structural_analysis", {}),
+        "coverage": report_summary.get("coverage", {}),
+        "review_hypotheses": model.get("review_hypotheses", []),
+        "fragment_analyses": model.get("fragment_analyses", []),
+        "structural_relations": model.get("structural_relations", []),
         "analysis_summary": dict(report_summary),
         "logical_findings": [item for item in logical_findings if str(item.get("rule_id", "")).startswith(("STR-", "LGC-", "DNT-", "ARG-", "DEF-"))],
         "interpretation_requests": [item for item in decisions["cards"] if item.get("status") == "review_required"],
@@ -926,6 +1022,8 @@ def build_report(
         status = "confirmed"
         exit_code = 0
     summary = _report_summary(safe_model)
+    if isinstance(safe_model, dict):
+        safe_model["report_summary"] = dict(summary)
     request = _request_details(request_text, requested_at)
     developer_action_plan = _developer_action_plan(safe_model)
     known_version = safe_model.get("model_version") if isinstance(safe_model.get("model_version"), str) else None

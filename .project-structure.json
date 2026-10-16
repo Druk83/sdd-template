@@ -41,7 +41,7 @@
     {
       "name": "tmp",
       "path": "tmp",
-      "description": "Repository-local temporary staging and source clone data; never an OS temporary directory.",
+      "description": "Repository-local temporary workspace for staging, source clones, and namespaced tool runtime data; tools must use dedicated subdirectories and cleanup must never remove all of tmp. Never an OS temporary directory.",
       "required": false
     },
     {

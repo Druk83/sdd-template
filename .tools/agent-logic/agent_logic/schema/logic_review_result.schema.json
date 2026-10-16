@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://asir.local/schema/logic_review_result.schema.json",
+  "title": "Расширенный результат локального логического review ASIR",
+  "type": "object",
+  "required": ["contract", "contract_version", "request_id", "compilationId", "skill", "method_manifest", "status", "expert_review", "findings"],
+  "properties": {
+    "contract": {"const": "asir.logic_review_result"},
+    "contract_version": {"const": "0.2"},
+    "request_id": {"type": "string", "minLength": 1},
+    "compilationId": {"type": "string", "minLength": 1},
+    "skill": {"const": "asir.local.logic_review"},
+    "method_manifest": {"type": "object", "required": ["provider", "methodology", "adaptation_version", "pack_sha256", "specifications"]},
+    "status": {"enum": ["NO_FINDINGS", "REVIEW_REQUIRED", "INVALID_RESULT"]},
+    "expert_review": {"$ref": "#/$defs/expert_review"},
+    "findings": {"type": "array", "items": {"$ref": "#/$defs/finding"}}
+  },
+  "$defs": {
+    "expert_review": {
+      "type": "object",
+      "required": ["verdict", "argument_structure", "findings", "hidden_premises", "non_deductive_strength", "limitations"],
+      "properties": {
+        "provider": {"type": "string"},
+        "verdict": {"enum": ["NO_FINDINGS", "REVIEW_REQUIRED", "INVALID_RESULT", "INCONCLUSIVE"]},
+        "argument_structure": {"$ref": "#/$defs/argument_structure"},
+        "findings": {"type": "array", "items": {"$ref": "#/$defs/finding"}},
+        "hidden_premises": {"type": "array", "items": {"type": "string"}},
+        "non_deductive_strength": {"type": "array", "items": {"type": "object"}},
+        "limitations": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "argument_structure": {
+      "type": "object",
+      "required": ["theses", "premises", "conclusions", "inferences"],
+      "properties": {"theses": {"type": "array"}, "premises": {"type": "array"}, "conclusions": {"type": "array"}, "inferences": {"type": "array"}}
+    },
+    "finding": {
+      "type": "object",
+      "required": ["id", "code", "family", "name_ru", "name_latin", "truth_scope", "severity", "confidence", "fragment_ids", "source_refs", "message", "explanation"],
+      "properties": {
+        "id": {"type": "string"}, "code": {"type": "string"}, "family": {"type": "string"},
+        "name_ru": {"type": "string"}, "name_latin": {"type": "string"},
+        "truth_scope": {"enum": ["formal", "material", "both", "unknown"]},
+        "message": {"type": "string"}, "explanation": {"type": "string"},
+        "severity": {"enum": ["info", "low", "medium", "high", "critical"]},
+        "confidence": {"enum": ["low", "medium", "high"]},
+        "fragment_ids": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "source_refs": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["relative_path"]}},
+        "hidden_premises": {"type": "array", "items": {"type": "string"}},
+        "consequences": {"type": "array", "items": {"type": "string"}},
+        "suggested_fix": {"type": "string"}
+      }
+    }
+  }
+}

@@ -15,16 +15,25 @@
 python .tools/sdd-template-release/build_release.py
 ```
 
-Проверить перед commit, что текущий кандидат действительно собирается в новый релиз:
+Для промежуточного непубликуемого кандидата проверь сборку командой:
 
 ```text
-python .tools/sdd-template-release/verify_release.py
+python .tools/sdd-template-release/verify_release.py --candidate
 ```
 
 Проверка создаёт пакет во временной директории и проверяет `release-manifest.json`, состав и
 SHA-256 всех файлов, копию `release-registry.json` и обязательные файлы поставляемого пакета.
 Рабочие `.agents/` и `tmp/` мета-репозитория не изменяются. Успешный результат этой команды
-является обязательной локальной проверкой перед commit релиза.
+является обязательной локальной проверкой кандидата.
+
+Если следующий commit предназначен для публикации релиза, перед ним переведи запись
+реестра из `candidate` в `supported`, установи `default_version` на новую версию,
+укажи фактическую дату публикации в CHANGELOG.md и `released_at`, затем проверь пакет
+без флага `--candidate`:
+
+```text
+python .tools/sdd-template-release/verify_release.py
+```
 
 После commit и создания tag проверь опубликованный релиз:
 

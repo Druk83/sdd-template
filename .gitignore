@@ -9,6 +9,7 @@
 .tools/plantuml-render/.env
 .issues/done
 */__pycache__/
+.tools/sdd-template-release/__pycache__/
 .tools/agent-logic/.runtime/
 .tools/check-encoding/tests/
 tmp/
@@ -19,5 +20,11 @@ tmp/
 .agents/**/__pycache__/
 .agents/**/*.py[cod]
 .agents/**/.env
-.tasks/TD-011.md
 .tasks/questions/
+.source/*
+.tasks/A3.md
+.tasks/A5.md
+.tasks/A6.md
+.tasks/A7.md
+.tasks/TD-012.md
+.tasks/A8.md

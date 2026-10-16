@@ -1,5 +1,5 @@
 @startuml SDD-Sequence-Ideal
-    title Последовательность событий SDD\n(4 фазы в каждом этапе/подэтапе)
+    title Последовательность событий SDD\n(актуальная последовательность Framework 1.9.3)
 
     actor "Разработчик" as Dev
     participant "Агент" as Agent
@@ -20,6 +20,8 @@
     | Gap Tracking - на всех этапах |
     | Чеклисты готовности - на всех этапах |
     | Точки подтверждения - [2],[6],[7] |
+    | Профиль требований - [3] |
+    | Пул экранов и UI - [5.a], если применимо |
     | Плейсхолдеры - по необходимости |
     |= Подходы (.approach/) |
     | **Выбор на этапе [2]** |
@@ -29,7 +31,7 @@
     |= Нотация |
     | ArchiMate - всегда для [7] |
     |= Инструменты диаграмм |
-    | PlantUML - [5.4],[7.1] |
+    | PlantUML - исходники диаграмм и рендеринг по манифесту |
     | Конвенции - diagrams.H4.2 |
     | Рендеринг - .tools/plantuml-render/ |
     endlegend
@@ -188,18 +190,31 @@
 
     == ЭТАП [3]: ТРЕБОВАНИЯ ==
 
-    Agent -> Templates: Читает H6 шаблон
-    Agent -> Docs: Ф1: Создает скелет
-    Agent -> Docs: Ф2: Заполняет FR/NFR
-    note right of Agent: Базовый контекст:\nFR-*, NFR-*
-    alt Есть неясности
-        Agent -> Agent: Ф3: Классифицирует тип GAP
-        Agent --> Dev: Ф3: Вопросы
-        Dev -> Agent: Ответы
+    Agent -> Manifest: Читает requirementsprofilemanifest.md
+    Agent -> Templates: Читает H6 и profiles.json
+    Agent -> Source: Проверяет источники требований
+    Agent -> Agent: Определяет ровно один профиль требований
+    note right of Agent
+    Профили: gost-19, gost-34, sdd,
+    iso-29148; при отсутствии выбора
+    действует профиль по умолчанию.
+    end note
+    Agent -> Docs: Ф1: Создает H8-скелет выбранного профиля
+    Agent -> Docs: Ф2: Заполняет требования и метаданные профиля
+    note right of Docs
+    ID и обязательные разделы зависят
+    от выбранного профиля.
+    end note
+    alt Есть неясности или пробелы
+        Agent -> Agent: Ф3: Классифицирует GAP и проверяет полноту
+        Agent -> Docs: Сохраняет draft и обновляет gap-tracking.md
+        Agent --> Dev: Ф3: Вопросы и варианты решения
+        Dev -> Agent: Ответы или подтверждение GAP
+        Agent -> Docs: Ф2: Уточняет требования по решениям
     else Все ясно
-        Agent -> Agent: Ф3: Пропуск
+        Agent -> Agent: Ф3: Проверяет покрытие без GAP
     end
-    Agent -> Agent: Чеклист H6 + GAP tracking
+    Agent -> Agent: Чеклист H6 + проверка профиля + GAP tracking
     Agent --> Dev: Ф4: "Этап [3] готов. Принять?"
     alt Принято
         Dev -> Agent: "Принято"
@@ -389,6 +404,56 @@
             Agent --> Dev: "Ошибка рендеринга: <описание>"
             Dev -> Agent: "Исправить/Пропустить"
         end
+    end
+
+    /'========================================='/
+    /'  ПОДЭТАП [5.a]: ПОЛЬЗОВАТЕЛЬСКИЙ UI     '/
+    /'========================================='/
+
+    opt UI присутствует или требуется
+        == ПОДЭТАП [5.a]: ПЛАНИРОВАНИЕ UI ==
+        Agent -> Manifest: Читает uimanifest.md
+        Agent -> Approach: Читает ui-pattern-selection.md
+        Agent -> Templates: Читает процедуры пула и спецификаций экранов
+        Agent -> Source: Проверяет требования и сценарии UI
+        Agent -> Source: Читает опубликованный каталог UI-паттернов
+        note right of Source
+        Официальный источник:
+        https://github.com/Druk83/ui-patterns.git
+        end note
+        Agent -> Docs: Ф1: Создает пул экранов
+        Agent -> Docs: Ф2: Заполняет типы экранов, роли и состояния
+        Agent --> Dev: Предлагает пул и кандидаты паттернов
+        Dev -> Agent: Подтверждает пул или вносит изменения
+        Agent -> Agent: Формирует viewport matrix в CSS px
+        Agent --> Dev: Предлагает размеры viewport и типы экранов
+        Dev -> Agent: Подтверждает viewport matrix
+        Agent -> Docs: Ф2: Создает спецификации экранов и traceability
+        Agent --> Dev: Запрашивает подтверждение спецификаций
+        Dev -> Agent: Подтверждает спецификации
+        Agent -> Docs: Ф2: Создает живой эталонный UI-прототип
+        note right of Docs
+        HTML/CSS/JS с fixture data;
+        production API и production code
+        не являются результатом [5.a].
+        end note
+        Agent -> Tools: Проверяет структуру, viewport и доступность
+        Tools --> Agent: Отчет проверки
+        Agent -> Docs: Сохраняет manifests, README и артефакты экранов
+        Agent -> Agent: Чеклист H6 + UI traceability + GAP tracking
+        Agent --> Dev: Ф4: "[5.a] готов. Принять?"
+        alt Принято
+            Dev -> Agent: "Принято"
+        else Требуется доработка
+            Dev -> Agent: "Доработать: <замечания>"
+            Agent -> Docs: Вносит исправления и повторяет проверки
+            Agent --> Dev: Ф4: "Исправлено. Принять?"
+            Dev -> Agent: "Принято"
+        end
+    else UI отсутствует
+        Agent --> Dev: Предлагает not_applicable или варианты UI
+        Dev -> Agent: Подтверждает not_applicable
+        Agent -> Docs: Фиксирует решение и обоснование
     end
 
     /'========================================='/

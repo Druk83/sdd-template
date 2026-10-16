@@ -332,6 +332,18 @@ diff повторно запусти установщик с:
 
 ## Очистка `tmp/`
 
+## Профиль требований этапа [3]
+
+Перед составлением требований прочитай
+`FRAMEWORK_ROOT/.manifest/requirementsprofilemanifest.md` и каталог
+`FRAMEWORK_ROOT/.requirements/требования/профили.json`. Выбор `requirements_profile`
+записывается на этапе [2] в `docs/requirements/обоснование выбора.md`.
+Для проверки выбора и результата используй переносимый инструмент
+`FRAMEWORK_ROOT/.tools/requirements-profile/requirements_profile.py` с
+`--project-root`, указывающим корень проекта. Старые решения по ГОСТ 19/34
+обрабатывай по правилу совместимости; перевод содержимого в версии 1.9.3
+не выполняется.
+
 ## UI-подэтап и reference artifacts
 
 Перед работой с пользовательским интерфейсом прочитай:

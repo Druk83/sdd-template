@@ -213,6 +213,14 @@ def _validate_classification_proposals(model: Mapping, source_paths: set[str]) -
             issues.append(_issue('invalid_classification_status', f'{location} has unsupported status'))
         if not isinstance(proposal.get('text'), str) or not proposal.get('text'):
             issues.append(_issue('invalid_classification_text', f'{location} text must be non-empty'))
+        fragment_id = proposal.get('fragment_id')
+        gap_id = proposal.get('gap_id')
+        if fragment_id is not None and (not isinstance(fragment_id, str) or not fragment_id):
+            issues.append(_issue('invalid_classification_source', f'{location}.fragment_id must be a non-empty string'))
+        if gap_id is not None and (not isinstance(gap_id, str) or not gap_id):
+            issues.append(_issue('invalid_classification_source', f'{location}.gap_id must be a non-empty string'))
+        if not isinstance(fragment_id, str) and not isinstance(gap_id, str):
+            issues.append(_issue('missing_classification_source', f'{location} must reference a fragment or GAP'))
         if not _number_in_range(proposal.get('confidence')):
             issues.append(_issue('invalid_confidence', f'{location} confidence must be between 0 and 1'))
         issues.extend(_validate_ref(proposal.get('source_ref'), f'{location}.source_ref', source_paths))
@@ -465,6 +473,169 @@ def _validate_structural_contract(model: Mapping, source_paths: set[str], seen_i
         issues.extend(_validate_evidence(expression.get('evidence'), f'{location}.evidence', source_paths))
     return issues
 
+def _validate_structural_relations(model: Mapping, source_paths: set[str], seen_ids: set[str]) -> list[dict]:
+    """Проверяет связи, созданные между структурными фрагментами."""
+    values = model.get('structural_relations')
+    if values is None:
+        return []
+    if not isinstance(values, list):
+        return [_issue('invalid_collection', 'structural_relations must be an array')]
+    fragments = model.get('fragment_analyses', [])
+    fragment_ids = {item.get('id') for item in fragments if isinstance(item, Mapping) and isinstance(item.get('id'), str)} if isinstance(fragments, list) else set()
+    issues: list[dict] = []
+    for index, relation in enumerate(values):
+        location = f'structural_relations[{index}]'
+        if not isinstance(relation, Mapping):
+            issues.append(_issue('invalid_structural_relation', f'{location} must be an object'))
+            continue
+        identifier = relation.get('id')
+        if not isinstance(identifier, str) or not identifier:
+            issues.append(_issue('invalid_structural_relation', f'{location}.id must be a non-empty string'))
+        elif identifier in seen_ids:
+            issues.append(_issue('duplicate_id', f'duplicate ASIR element id: {identifier}'))
+        else:
+            seen_ids.add(identifier)
+        for field in ('source_fragment_id', 'target_fragment_id'):
+            value = relation.get(field)
+            if not isinstance(value, str) or value not in fragment_ids:
+                issues.append(_issue('broken_fragment_reference', f'{location}.{field} references an unknown fragment'))
+        if relation.get('relationship_type') not in {'introduces', 'enumerates', 'defines_notation', 'illustrates', 'references', 'concludes_from'}:
+            issues.append(_issue('invalid_structural_relation', f'{location}.relationship_type is unsupported'))
+        if relation.get('status') not in {'confirmed', 'review_required'}:
+            issues.append(_issue('invalid_structural_relation', f'{location}.status is unsupported'))
+        if not _number_in_range(relation.get('confidence')):
+            issues.append(_issue('invalid_confidence', f'{location}.confidence must be between 0 and 1'))
+        issues.extend(_validate_ref(relation.get('source_ref'), f'{location}.source_ref', source_paths))
+        issues.extend(_validate_evidence(relation.get('evidence'), f'{location}.evidence', source_paths))
+    return issues
+
+def _validate_fragment_contract(model: Mapping, source_paths: set[str], seen_ids: set[str]) -> list[dict]:
+    """Проверяет совместимый контракт покрытия фрагментов и review-гипотез."""
+    issues: list[dict] = []
+    analyses = model.get('fragment_analyses')
+    hypotheses = model.get('review_hypotheses')
+    if analyses is None and hypotheses is None:
+        return issues
+    if analyses is None:
+        analyses = []
+    if not isinstance(analyses, list):
+        return [_issue('invalid_collection', 'fragment_analyses must be an array')]
+    if hypotheses is None:
+        hypotheses = []
+    if not isinstance(hypotheses, list):
+        issues.append(_issue('invalid_collection', 'review_hypotheses must be an array'))
+        hypotheses = []
+    fragment_ids: set[str] = set()
+    proposition_ids = {
+        item.get('id') for item in model.get('propositions', [])
+        if isinstance(item, Mapping) and isinstance(item.get('id'), str)
+    } if isinstance(model.get('propositions', []), list) else set()
+    finding_ids = {
+        item.get('id') for item in model.get('findings', [])
+        if isinstance(item, Mapping) and isinstance(item.get('id'), str)
+    } if isinstance(model.get('findings', []), list) else set()
+    for index, analysis in enumerate(analyses):
+        location = f'fragment_analyses[{index}]'
+        if not isinstance(analysis, Mapping):
+            issues.append(_issue('invalid_fragment_analysis', f'{location} must be an object'))
+            continue
+        identifier = analysis.get('id')
+        if not isinstance(identifier, str) or not identifier:
+            issues.append(_issue('invalid_fragment_analysis', f'{location}.id must be a non-empty string'))
+        elif identifier in seen_ids:
+            issues.append(_issue('duplicate_id', f'duplicate ASIR element id: {identifier}'))
+        else:
+            seen_ids.add(identifier)
+            fragment_ids.add(identifier)
+        if not isinstance(analysis.get('text'), str) or not str(analysis.get('text')).strip():
+            issues.append(_issue('invalid_fragment_analysis', f'{location}.text must be a non-empty string'))
+        if analysis.get('structural_role') not in {
+            'heading', 'paragraph', 'list_item', 'table', 'table_row', 'formula',
+            'notation_definition', 'figure_caption', 'citation', 'reference_list', 'unknown',
+        }:
+            issues.append(_issue('invalid_fragment_role', f'{location}.structural_role is unsupported'))
+        semantic_role = analysis.get('semantic_role')
+        if semantic_role is not None and (not isinstance(semantic_role, str) or not semantic_role):
+            issues.append(_issue('invalid_fragment_analysis', f'{location}.semantic_role must be a string or null'))
+        if analysis.get('coverage_status') not in {'covered', 'review_required', 'not_applicable', 'unresolved'}:
+            issues.append(_issue('invalid_fragment_coverage', f'{location}.coverage_status is unsupported'))
+        applied_levels = analysis.get('applied_levels')
+        if not isinstance(applied_levels, list) or not applied_levels or any(not isinstance(value, str) or not value for value in applied_levels):
+            issues.append(_issue('invalid_fragment_analysis', f'{location}.applied_levels must be a non-empty array of strings'))
+        for field, known_ids in (('proposition_ids', proposition_ids), ('finding_ids', finding_ids)):
+            values = analysis.get(field)
+            if not isinstance(values, list) or any(not isinstance(value, str) or not value for value in values):
+                issues.append(_issue('invalid_fragment_analysis', f'{location}.{field} must be an array of strings'))
+            elif field == 'proposition_ids' and any(value not in known_ids for value in values):
+                issues.append(_issue('broken_fragment_reference', f'{location}.{field} references an unknown proposition'))
+            elif field == 'finding_ids' and any(value not in known_ids for value in values):
+                issues.append(_issue('broken_fragment_reference', f'{location}.{field} references an unknown finding'))
+        raw_hypothesis_ids = analysis.get('hypothesis_ids')
+        fragment_hypothesis_ids: list[str] = [
+            value for value in raw_hypothesis_ids
+            if isinstance(value, str) and value
+        ] if isinstance(raw_hypothesis_ids, list) else []
+        if not isinstance(raw_hypothesis_ids, list) or len(fragment_hypothesis_ids) != len(raw_hypothesis_ids):
+            issues.append(_issue('invalid_fragment_analysis', f'{location}.hypothesis_ids must be an array of strings'))
+        if not _number_in_range(analysis.get('confidence')):
+            issues.append(_issue('invalid_confidence', f'{location}.confidence must be between 0 and 1'))
+        if analysis.get('coverage_status') == 'not_applicable' and not isinstance(analysis.get('exclusion_reason'), str):
+            issues.append(_issue('missing_exclusion_reason', f'{location}.not_applicable requires exclusion_reason'))
+        source_ref = analysis.get('source_ref')
+        ref_issues = _validate_ref(source_ref, f'{location}.source_ref', source_paths)
+        issues.extend(ref_issues)
+        evidence = analysis.get('evidence')
+        # analyze_fragments намеренно использует один и тот же объект ссылки
+        # в source_ref и evidence[0]. Не проверяем валидный объект дважды.
+        if not (not ref_issues and isinstance(evidence, list) and len(evidence) == 1 and evidence[0] is source_ref):
+            issues.extend(_validate_evidence(evidence, f'{location}.evidence', source_paths))
+        if not isinstance(analysis.get('extraction_method'), str) or not str(analysis.get('extraction_method')).strip():
+            issues.append(_issue('invalid_fragment_analysis', f'{location}.extraction_method must be a non-empty string'))
+
+    review_hypothesis_ids: set[str] = set()
+    for index, hypothesis in enumerate(hypotheses):
+        location = f'review_hypotheses[{index}]'
+        if not isinstance(hypothesis, Mapping):
+            issues.append(_issue('invalid_review_hypothesis', f'{location} must be an object'))
+            continue
+        identifier = hypothesis.get('id')
+        if not isinstance(identifier, str) or not identifier:
+            issues.append(_issue('invalid_review_hypothesis', f'{location}.id must be a non-empty string'))
+        elif identifier in seen_ids:
+            issues.append(_issue('duplicate_id', f'duplicate ASIR element id: {identifier}'))
+        else:
+            seen_ids.add(identifier)
+            review_hypothesis_ids.add(identifier)
+        if hypothesis.get('fragment_id') not in fragment_ids:
+            issues.append(_issue('broken_fragment_reference', f'{location}.fragment_id references an unknown fragment'))
+        for field in ('claim', 'method', 'confirmation_consequence', 'rejection_consequence'):
+            if not isinstance(hypothesis.get(field), str) or not str(hypothesis.get(field)).strip():
+                issues.append(_issue('invalid_review_hypothesis', f'{location}.{field} must be a non-empty string'))
+        alternatives = hypothesis.get('alternatives')
+        if not isinstance(alternatives, list) or len(alternatives) < 2:
+            issues.append(_issue('invalid_review_hypothesis', f'{location}.alternatives must contain at least two variants'))
+        else:
+            for alternative_index, alternative in enumerate(alternatives):
+                alternative_location = f'{location}.alternatives[{alternative_index}]'
+                if not isinstance(alternative, Mapping):
+                    issues.append(_issue('invalid_review_hypothesis', f'{alternative_location} must be an object'))
+                    continue
+                for field in ('id', 'interpretation', 'consequence'):
+                    if not isinstance(alternative.get(field), str) or not str(alternative.get(field)).strip():
+                        issues.append(_issue('invalid_review_hypothesis', f'{alternative_location}.{field} must be a non-empty string'))
+        if hypothesis.get('status') not in {'proposed', 'review_required'}:
+            issues.append(_issue('invalid_review_hypothesis', f'{location}.status is unsupported'))
+        if not _number_in_range(hypothesis.get('confidence')):
+            issues.append(_issue('invalid_confidence', f'{location}.confidence must be between 0 and 1'))
+        issues.extend(_validate_ref(hypothesis.get('source_ref'), f'{location}.source_ref', source_paths))
+        issues.extend(_validate_evidence(hypothesis.get('evidence'), f'{location}.evidence', source_paths))
+    for analysis in analyses:
+        if not isinstance(analysis, Mapping):
+            continue
+        linked = analysis.get('hypothesis_ids')
+        if isinstance(linked, list) and any(identifier not in review_hypothesis_ids for identifier in linked):
+            issues.append(_issue('broken_fragment_reference', 'fragment_analyses.hypothesis_ids references an unknown review hypothesis'))
+    return issues
 def validate_model(model: object) -> list[dict]:
     if not isinstance(model, Mapping):
         return [_issue("invalid_model", "SemanticModel must be an object")]
@@ -565,6 +736,8 @@ def validate_model(model: object) -> list[dict]:
                 ))
 
     issues.extend(_validate_structural_contract(model, source_paths, seen_ids))
+    issues.extend(_validate_fragment_contract(model, source_paths, seen_ids))
+    issues.extend(_validate_structural_relations(model, source_paths, seen_ids))
 
     model_evidence = model.get("evidence", [])
     if not isinstance(model_evidence, list):
@@ -594,19 +767,29 @@ def validate_model(model: object) -> list[dict]:
 
     if "formal_model" in model:
         formal_model = model.get("formal_model")
-        artifact_kinds = {
-            profile.get("relative_path"): profile.get("artifact_kind")
-            for profile in model.get("artifact_profiles", [])
-            if isinstance(profile, Mapping) and isinstance(profile.get("relative_path"), str) and isinstance(profile.get("artifact_kind"), str)
-        } if isinstance(model.get("artifact_profiles", []), list) else {}
-        source_context = {
-            source.get("relative_path"): {
-                "input_kind": source.get("input_kind"),
-                "artifact_kind": artifact_kinds.get(source.get("relative_path")),
+        artifact_kinds: dict[str, str] = {}
+        artifact_profiles = model.get("artifact_profiles", [])
+        if isinstance(artifact_profiles, list):
+            for profile in artifact_profiles:
+                if not isinstance(profile, Mapping):
+                    continue
+                relative_path = profile.get("relative_path")
+                artifact_kind = profile.get("artifact_kind")
+                if isinstance(relative_path, str) and isinstance(artifact_kind, str):
+                    artifact_kinds[relative_path] = artifact_kind
+
+        source_context: dict[str, dict[str, object]] = {}
+        for source in sources:
+            if not isinstance(source, Mapping):
+                continue
+            relative_path = source.get("relative_path")
+            input_kind = source.get("input_kind")
+            if not isinstance(relative_path, str) or not isinstance(input_kind, str):
+                continue
+            source_context[relative_path] = {
+                "input_kind": input_kind,
+                "artifact_kind": artifact_kinds.get(relative_path),
             }
-            for source in sources
-            if isinstance(source, Mapping) and isinstance(source.get("relative_path"), str) and isinstance(source.get("input_kind"), str)
-        }
         for error in validate_formal_model(formal_model, source_context):
             issues.append(_issue("invalid_formal_model", error))
         if isinstance(formal_model, Mapping):

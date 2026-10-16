@@ -1,16 +1,21 @@
 
 from __future__ import annotations
 
+import json
 import re
 from collections import defaultdict
 from functools import lru_cache
+from importlib.metadata import PackageNotFoundError, version as installed_version
+from pathlib import Path
+import tomllib
 
 from .ingestion import SourceDocument
-from .logic_checks import run_logical_checks
+from .logic_checks import build_logic_review_hypotheses, run_logical_checks
 from .decisions import build_decision_cards, model_version
 from .markdown_classification import build_classification_proposals
 from .artifact_profiles import build_artifact_profile, is_normative_manifest
 from .structural_analysis import analyze_document
+from .fragment_analysis import analyze_fragments, build_structural_hypotheses, build_structural_relations, link_fragment_findings
 
 LABELS = {
     "goal": "goals", "цель": "goals",
@@ -234,6 +239,33 @@ def _candidate_text(line: str) -> str | None:
     return text
 
 
+@lru_cache(maxsize=1)
+def _package_version() -> str:
+    """Возвращает версию agent-logic из метаданных текущей поставки."""
+    for parent in Path(__file__).absolute().parents:
+        manifest_path = parent / "manifest.json"
+        if manifest_path.is_file():
+            metadata = json.loads(manifest_path.read_text(encoding="utf-8"))
+            version_value = metadata.get("version") if isinstance(metadata, dict) else None
+            if isinstance(version_value, str) and version_value.strip():
+                return version_value
+            raise RuntimeError(f"invalid agent-logic version in {manifest_path}")
+
+        project_path = parent / "pyproject.toml"
+        if project_path.is_file():
+            metadata = tomllib.loads(project_path.read_text(encoding="utf-8"))
+            project = metadata.get("project")
+            version_value = project.get("version") if isinstance(project, dict) else None
+            if isinstance(version_value, str) and version_value.strip():
+                return version_value
+            raise RuntimeError(f"invalid agent-logic version in {project_path}")
+
+    try:
+        return installed_version("agent-logic")
+    except PackageNotFoundError as exc:
+        raise RuntimeError("agent-logic package version metadata was not found") from exc
+
+
 def _recommended(model: dict) -> str:
     profiles = model.get("artifact_profiles", [])
     has_normative_profile = any(
@@ -259,12 +291,13 @@ def _recommended(model: dict) -> str:
 
 
 def compile_model(compilation_id: str, documents: list[SourceDocument]) -> dict:
+    package_version = _package_version()
     model: dict = {
         "compilationId": compilation_id,
-        "metadata": {"schema_version": "1.0", "compiler": "agent-logic", "compiler_version": "0.4.0"},
+        "metadata": {"schema_version": "1.0", "compiler": "agent-logic", "compiler_version": package_version},
         **{name: [] for name in ARRAYS},
         "sources": [document.as_dict() for document in documents],
-        "versions": [{"component": "agent-logic", "version": "0.4.0"}],
+        "versions": [{"component": "agent-logic", "version": package_version}],
         "recommended_model": "hybrid",
         "alternatives": [name for name in MODEL_TYPES if name != "hybrid"],
         "confidence": 1.0,
@@ -280,6 +313,10 @@ def compile_model(compilation_id: str, documents: list[SourceDocument]) -> dict:
     model['propositions'] = []
     model['logical_expressions'] = []
     model['normative_scopes'] = []
+    # IMPL-040: покрытие фрагментов и review-гипотезы дополняют прежние поля ASIR.
+    model['fragment_analyses'] = []
+    model['review_hypotheses'] = []
+    model['structural_relations'] = []
     counters = defaultdict(int)
     semantic_index: dict[tuple[str, str], dict] = {}
     for document_index, document in enumerate(documents, start=1):
@@ -295,6 +332,7 @@ def compile_model(compilation_id: str, documents: list[SourceDocument]) -> dict:
         is_normative = is_normative_manifest(document_profile)
         is_reference_artifact = document_profile.get('artifact_kind') == 'readme'
         recognized_structural_lines: frozenset[int] = frozenset()
+        covered_structural_lines: set[int] = set()
         if document.analysis is None and not is_reference_artifact:
             structural_analysis = analyze_document(document, document_index)
             model['propositions'].extend(structural_analysis.propositions)
@@ -303,6 +341,20 @@ def compile_model(compilation_id: str, documents: list[SourceDocument]) -> dict:
             if any(item.get('status') in {'review_required', 'gap'} for item in structural_analysis.propositions):
                 model['status'] = 'REVIEW_REQUIRED'
                 model['confidence'] = min(model['confidence'], 0.5)
+            fragment_analyses = analyze_fragments(document, document_index, structural_analysis.propositions)
+            model['fragment_analyses'].extend(fragment_analyses)
+            covered_structural_lines = {
+                int(item['source_ref']['line_range']['start'])
+                for item in fragment_analyses
+                if item.get('structural_role') in {'heading', 'list_item', 'formula', 'table', 'table_row', 'notation_definition', 'figure_caption', 'citation', 'reference_list'}
+                and isinstance(item.get('source_ref'), dict)
+                and isinstance(item['source_ref'].get('line_range'), dict)
+                and isinstance(item['source_ref']['line_range'].get('start'), int)
+            }
+        elif document.analysis is None:
+            # Справочные Markdown-артефакты не дают семантических утверждений,
+            # но их содержательные фрагменты также должны иметь запись покрытия.
+            model['fragment_analyses'].extend(analyze_fragments(document, document_index, []))
         if document.analysis is not None:
             for contribution in document.analysis.elements:
                 kind = contribution['kind']
@@ -443,24 +495,35 @@ def compile_model(compilation_id: str, documents: list[SourceDocument]) -> dict:
             model['confidence'] = min(model['confidence'], item['confidence'])
             special_kind = None
             special_block = []
-
         def add_item(target: str, text: str, line_number: int, line: str, method: str) -> None:
             if target == "gaps" and _empty_gap_statement(text):
                 return
             value = text.strip()
-            ref = _source_ref(document, line_number, line, section_path=current_section_path())
             key = (target, value)
             existing = semantic_index.get(key)
             if existing is not None:
                 evidence = existing.get("evidence")
                 if isinstance(evidence, list):
-                    evidence.append(ref)
+                    previous_ref = evidence[-1] if evidence else None
+                    previous_range = previous_ref.get("line_range") if isinstance(previous_ref, dict) else None
+                    if (
+                        isinstance(previous_ref, dict)
+                        and isinstance(previous_range, dict)
+                        and previous_ref.get("relative_path") == document.relative_path
+                        and len(line) >= 64
+                        and previous_ref.get("fragment") == line
+                        and previous_range.get("end") == line_number - 1
+                    ):
+                        previous_range["end"] = line_number
+                    else:
+                        evidence.append(_source_ref(document, line_number, line, section_path=current_section_path()))
                 existing["occurrences"] = int(existing.get("occurrences", 1)) + 1
                 methods = existing.get("extraction_methods")
                 if isinstance(methods, list) and method not in methods:
                     methods.append(method)
                 return
             counters[target] += 1
+            ref = _source_ref(document, line_number, line, section_path=current_section_path())
             item = _element(
                 target, counters[target], value, ref, extraction_method=method,
                 nonblocking_observation=is_normative and method.startswith("normative_"),
@@ -473,7 +536,44 @@ def compile_model(compilation_id: str, documents: list[SourceDocument]) -> dict:
                 model["status"] = "REVIEW_REQUIRED"
                 model["confidence"] = min(model["confidence"], item["confidence"])
 
-        for line_number, line in enumerate(document.text.splitlines(), start=1):
+        source_lines = document.text.splitlines()
+        # Большие документы из однотипных явно размеченных строк можно
+        # обработать блоками: provenance хранит диапазон, occurrences — число строк.
+        bulk_entries: list[tuple[str, str, int, int, str]] = []
+        if not is_normative and not is_reference_artifact and len(source_lines) >= 512:
+            parsed: list[tuple[str, str, str]] = []
+            bulk_supported = True
+            for source_line in source_lines:
+                entry = ENTRY_RE.match(source_line)
+                target = LABELS.get(entry.group("label").casefold()) if entry else None
+                if entry is None or target is None or len(source_line) < 64:
+                    bulk_supported = False
+                    break
+                parsed.append((target, entry.group("text"), source_line))
+            if bulk_supported and parsed:
+                start = 1
+                current_target, current_value, current_line = parsed[0]
+                for line_number, (target, value, source_line) in enumerate(parsed[1:], start=2):
+                    if target != current_target or value != current_value or source_line != current_line:
+                        bulk_entries.append((current_target, current_value, start, line_number - 1, current_line))
+                        start = line_number
+                        current_target, current_value, current_line = target, value, source_line
+                bulk_entries.append((current_target, current_value, start, len(parsed), current_line))
+        if bulk_entries:
+            for target, value, start_line, end_line, source_line in bulk_entries:
+                add_item(target, value, start_line, source_line, "explicit_label")
+                item = semantic_index.get((target, value))
+                if isinstance(item, dict):
+                    item["occurrences"] = int(item.get("occurrences", 1)) + end_line - start_line
+                    evidence = item.get("evidence")
+                    if isinstance(evidence, list) and evidence:
+                        last_ref = evidence[-1]
+                        last_range = last_ref.get("line_range") if isinstance(last_ref, dict) else None
+                        if isinstance(last_range, dict) and last_range.get("end") == start_line:
+                            last_range["end"] = end_line
+            continue
+
+        for line_number, line in enumerate(source_lines, start=1):
             if in_fence:
                 special_block.append((line_number, line))
                 if FENCE_RE.match(line):
@@ -568,7 +668,7 @@ def compile_model(compilation_id: str, documents: list[SourceDocument]) -> dict:
         close_normative_scope()
         for block in unclassified_blocks:
             for line_number, line, section_path in block:
-                if line_number in recognized_structural_lines:
+                if line_number in recognized_structural_lines or line_number in covered_structural_lines:
                     continue
                 fragment = _candidate_text(line)
                 if not fragment:
@@ -586,7 +686,15 @@ def compile_model(compilation_id: str, documents: list[SourceDocument]) -> dict:
                 model["status"] = "REVIEW_REQUIRED"
                 model["confidence"] = min(model["confidence"], item["confidence"])
 
-    model['classification_proposals'] = build_classification_proposals(model['gaps'])
+    model['structural_relations'] = build_structural_relations(model['fragment_analyses'])
+    model['review_hypotheses'] = build_structural_hypotheses(model['fragment_analyses'], model['structural_relations'])
+    if model['review_hypotheses']:
+        model['status'] = 'REVIEW_REQUIRED'
+        model['confidence'] = min(model['confidence'], 0.5)
+    model['classification_proposals'] = build_classification_proposals(model['gaps'], model['fragment_analyses'])
+    if model['classification_proposals']:
+        model['status'] = 'REVIEW_REQUIRED'
+        model['confidence'] = min(model['confidence'], 0.65)
     model["recommended_model"] = _recommended(model)
     model["alternatives"] = [name for name in MODEL_TYPES if name != model["recommended_model"]]
     if not model["evidence"]:
@@ -595,6 +703,8 @@ def compile_model(compilation_id: str, documents: list[SourceDocument]) -> dict:
     findings, checks = run_logical_checks(model)
     model['findings'] = findings
     model['checks'] = checks
+    model['review_hypotheses'].extend(build_logic_review_hypotheses(findings, model['fragment_analyses']))
+    link_fragment_findings(model['fragment_analyses'], findings)
     if any(item.get('severity') in {'warning', 'error'} for item in findings):
         model['status'] = 'REVIEW_REQUIRED'
         model['confidence'] = min(model['confidence'], 0.5)

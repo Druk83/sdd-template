@@ -20,6 +20,9 @@
     plantuml_render.py
     plantuml-render
     plantuml-render.bat
+  requirements-profile/
+    README.md
+    requirements_profile.py
   sdd-template-release/
     README.md
     build_release.py
@@ -33,12 +36,14 @@
   поддерживает профили `minimal`, `documentation`, `repository` и `framework`.
 * **pdd-scan** — сканирует `@todo` и обновляет реестр задач.
 * **plantuml-render** — рендерит `.plantuml`, `.bpmn` и `.dot` в PNG/SVG через Kroki-compatible API; локальный Docker-стек включает BPMN companion-сервис и SVG-to-PNG rasterizer.
+* **requirements-profile** — выбирает профиль требований этапа [3] и проверяет его результат; см. `.tools/requirements-profile/README.md`.
 * **sdd-template-release** — выбирает релиз из `release-registry.json`, собирает и устанавливает его в `.agents/sdd-template-X.Y.Z/`; каталоги `.agents/` и `tmp/` не публикуются.
 
 `agent-logic` является обязательной частью поставки SDD Framework. Перед запуском
 проверь `.tools/agent-logic/manifest.json` и следуй
 `.tools/agent-logic/agent-logic.instructions.md`. Создаваемые инструментом данные
-хранятся в `.tools/agent-logic/.runtime/` и не входят в экспорт.
+хранятся в `tmp/agent-logic/.runtime/` в корне проекта-потребителя, игнорируются Git
+и не входят в экспорт.
 
 ## Версионирование
 

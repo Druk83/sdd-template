@@ -1,7 +1,7 @@
 [
   {
     "name": "agent-logic",
-    "version": "0.4.1",
+    "version": "0.5.1",
     "path": ".tools/agent-logic/agent-logic.py",
     "entry": "python .tools/agent-logic/agent-logic.py compile",
     "entry_win": ".tools/agent-logic/agent-logic.bat compile",
@@ -70,6 +70,19 @@
     "entry_unix": ".tools/ui-reference/ui-reference validate --package <path>",
     "desc": "Validate UI documentation packages and safely migrate legacy reference artifacts",
     "tags": ["ui", "validation", "migration", "reference", "safety"],
+    "exec": true,
+    "runtime": "python",
+    "availability": "bundled"
+  },
+  {
+    "name": "requirements-profile",
+    "version": "0.1.0",
+    "path": ".tools/requirements-profile/requirements_profile.py",
+    "entry": "python .tools/requirements-profile/requirements_profile.py resolve --project-root <path>",
+    "entry_win": ".tools/requirements-profile/requirements-profile.bat resolve --project-root <path>",
+    "entry_unix": ".tools/requirements-profile/requirements-profile resolve --project-root <path>",
+    "desc": "Select and validate requirements profiles for stage [3]",
+    "tags": ["requirements", "profile", "validation", "compatibility"],
     "exec": true,
     "runtime": "python",
     "availability": "bundled"

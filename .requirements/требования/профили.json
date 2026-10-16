@@ -1,0 +1,47 @@
+{
+  "schema_version": "1.0",
+  "default_profile": "gost-19",
+  "profiles": [
+    {
+      "id": "gost-19",
+      "title": "Техническое задание по ГОСТ 19",
+      "scope": ["software"],
+      "source": "ГОСТ 19.201-78",
+      "instruction": ".requirements/требования/требования_гост19.md",
+      "output": "docs/requirements/требования/требования_гост19.md",
+      "requirement_id": "FR-001 / NFR-001",
+      "required_sections": ["Введение", "Основания для разработки", "Назначение разработки", "Требования к программе", "Порядок контроля и приемки"]
+    },
+    {
+      "id": "gost-34",
+      "title": "Техническое задание по ГОСТ 34",
+      "scope": ["system"],
+      "source": "ГОСТ 34.602-2020",
+      "instruction": ".requirements/требования/требования_гост34.md",
+      "output": "docs/requirements/требования/требования_гост34.md",
+      "requirement_id": "FR-001 / NFR-001 (Приложение Г)",
+      "required_sections": ["Общие сведения", "Цели и назначение", "Требования к автоматизированной системе", "Порядок контроля и приемки"]
+    },
+    {
+      "id": "sdd",
+      "title": "Требования SDD Framework",
+      "scope": ["software", "system"],
+      "source": "SDD Framework, этап [3] и правила трассируемости",
+      "instruction": ".requirements/требования/требования_sdd.md",
+      "output": "docs/requirements/требования/требования_sdd.md",
+      "requirement_id": "FR-001 / NFR-001",
+      "required_sections": ["Границы", "Источники", "Функциональные требования", "Нефункциональные требования", "Матрица трассируемости"]
+    },
+    {
+      "id": "iso-29148",
+      "title": "Инженерия требований ISO/IEC/IEEE 29148:2018",
+      "scope": ["software", "system"],
+      "source": "ISO/IEC/IEEE 29148:2018",
+      "source_document_url": "https://drkasbokar.com/wp-content/uploads/2024/09/29148-2018-ISOIECIEEE.pdf",
+      "instruction": ".requirements/требования/требования_iso29148.md",
+      "output": "docs/requirements/требования/требования_iso29148.md",
+      "requirement_id": "REQ-001 (тип FR или NFR)",
+      "required_sections": ["9.2", "9.5", "9.6", "Приложение Г"]
+    }
+  ]
+}

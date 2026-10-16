@@ -244,6 +244,29 @@ def _classification_cards(model: Mapping, base_version: str) -> list[dict]:
             })
     return cards
 
+def _fragment_group_cards(model: Mapping, base_version: str) -> list[dict]:
+    """Собирает структурно распознанные, но семантически неразрешённые фрагменты."""
+    values = model.get('fragment_analyses', [])
+    proposals = model.get('classification_proposals', [])
+    proposed_ids = {item.get('fragment_id') for item in proposals if isinstance(item, Mapping) and item.get('status') == 'proposed' and isinstance(item.get('fragment_id'), str)} if isinstance(proposals, list) else set()
+    groups: dict[str, list[dict]] = defaultdict(list)
+    for item in values if isinstance(values, list) else []:
+        if not isinstance(item, Mapping) or item.get('id') in proposed_ids or item.get('coverage_status') != 'review_required' or item.get('semantic_role') is not None or item.get('classification_status') in {'approved', 'rejected'}:
+            continue
+        role = item.get('structural_role')
+        if isinstance(role, str): groups[role].append(dict(item))
+    return [{'id': f'fragment-group-{role}', 'finding_id': f'fragment-group-{role}', 'rule_id': 'FRG-001', 'status': 'review_required', 'kind': 'fragment_group', 'question': f'Как трактовать {len(items)} фрагм. со структурной ролью «{role}» без достаточного семантического признака?', 'variants': [{'id': 'A', 'interpretation': 'Признать фрагменты справочными или техническими.', 'difference': 'Не создавать семантические элементы ASIR.', 'consequences': 'Происхождение и решение человека сохраняются, но факты не добавляются.'}, {'id': 'B', 'interpretation': 'Оставить фрагменты на доработку источника.', 'difference': 'Не делать семантический вывод до уточнения текста.', 'consequences': 'После изменения документа требуется повторная проверка.'}], 'recommendation': None, 'sources': [item['source_ref'] for item in items if isinstance(item.get('source_ref'), Mapping)], 'base_model_version': base_version, 'fragment_ids': [item['id'] for item in items if isinstance(item.get('id'), str)], 'structural_role': role} for role, items in sorted(groups.items())]
+
+
+def _apply_fragment_group(updated: dict, card: Mapping, status: str, record: dict) -> None:
+    fragment_ids = set(card.get('fragment_ids', []))
+    for fragment in updated.get('fragment_analyses', []):
+        if isinstance(fragment, dict) and fragment.get('id') in fragment_ids:
+            fragment['classification_status'] = status
+            fragment['decision_card_id'] = card['id']
+            fragment['decision_record'] = record
+            if status == 'approved': fragment['coverage_status'] = 'covered'
+
 def _gap_group_cards(model: Mapping, base_version: str, proposed_gap_ids: set[str]) -> list[dict]:
     """Собирает нераспознанные GAP в компактные карточки ручной трактовки."""
     groups: dict[str, list[dict]] = defaultdict(list)
@@ -278,6 +301,66 @@ def _gap_group_cards(model: Mapping, base_version: str, proposed_gap_ids: set[st
             'base_model_version': base_version,
             'gap_ids': [item['id'] for item in values if isinstance(item.get('id'), str)],
             'extraction_method': method,
+        })
+    return cards
+
+def _review_hypothesis_cards(model: Mapping, base_version: str) -> list[dict]:
+    """Создаёт адресные карточки только для неутверждённых гипотез проверки."""
+    values = model.get('review_hypotheses', [])
+    records = model.get('decision_records', [])
+    resolved: dict[str, str] = {}
+    if isinstance(records, list):
+        for record in records:
+            if isinstance(record, Mapping):
+                card_id = record.get('decision_card_id')
+                status = record.get('status')
+                if isinstance(card_id, str) and status in DECISION_STATUSES:
+                    resolved[card_id] = status
+    cards: list[dict] = []
+    for hypothesis in values if isinstance(values, list) else []:
+        if not isinstance(hypothesis, Mapping):
+            continue
+        hypothesis_id = hypothesis.get('id')
+        if not isinstance(hypothesis_id, str) or not hypothesis_id:
+            continue
+        card_id = 'review-card-' + hypothesis_id.removeprefix('review-hypothesis-')
+        status = resolved.get(card_id, 'review_required')
+        alternatives = hypothesis.get('alternatives', [])
+        variants: list[dict] = []
+        if isinstance(alternatives, list):
+            for alternative in alternatives:
+                if not isinstance(alternative, Mapping):
+                    continue
+                identifier = alternative.get('id')
+                interpretation = alternative.get('interpretation')
+                consequence = alternative.get('consequence')
+                if isinstance(identifier, str) and isinstance(interpretation, str) and isinstance(consequence, str):
+                    variants.append({
+                        'id': identifier,
+                        'interpretation': interpretation,
+                        'difference': 'Выбрать одну из трактовок, не меняя исходный документ автоматически.',
+                        'consequences': consequence,
+                    })
+        variants.append({
+            'id': 'CHANGE',
+            'interpretation': 'Изменить трактовку или сформулировать дополнительный вопрос.',
+            'difference': 'Ни одна из предложенных трактовок не утверждается.',
+            'consequences': 'Решение человека сохраняется в журнале; источник можно изменить только отдельным ручным действием.',
+        })
+        cards.append({
+            'id': card_id,
+            'finding_id': hypothesis_id,
+            'rule_id': str(hypothesis.get('method', 'HYP-001')),
+            'status': status,
+            'kind': 'review_hypothesis',
+            'question': str(hypothesis.get('claim', 'Требуется подтвердить или отклонить трактовку фрагмента.')),
+            'variants': variants,
+            'recommendation': None,
+            'sources': [item for item in hypothesis.get('evidence', []) if isinstance(item, dict)] if isinstance(hypothesis.get('evidence'), list) else [],
+            'base_model_version': base_version,
+            'fragment_id': hypothesis.get('fragment_id'),
+            'confirmation_consequence': hypothesis.get('confirmation_consequence'),
+            'rejection_consequence': hypothesis.get('rejection_consequence'),
         })
     return cards
 
@@ -323,7 +406,7 @@ def build_decision_cards(model: Mapping, *, base_version: str | None = None) -> 
             'context': _deontic_scope_context(finding),
             'base_model_version': base_version,
         })
-    return cards + _classification_cards(model, base_version) + _gap_group_cards(model, base_version, proposed_gap_ids)
+    return cards + _review_hypothesis_cards(model, base_version) + _classification_cards(model, base_version) + _fragment_group_cards(model, base_version) + _gap_group_cards(model, base_version, proposed_gap_ids)
 
 
 def decision_envelope(model: Mapping, *, base_version: str | None = None) -> dict:
@@ -351,6 +434,8 @@ def _apply_classification(updated: dict, card: Mapping, status: str, record: dic
     if not isinstance(gaps, list):
         raise InputError('gaps collection is invalid')
     gap_by_id = {gap.get('id'): gap for gap in gaps if isinstance(gap, dict)}
+    fragments = updated.get('fragment_analyses', [])
+    fragment_by_id = {item.get('id'): item for item in fragments if isinstance(item, dict)} if isinstance(fragments, list) else {}
     target_items = updated.setdefault(target, [])
     if not isinstance(target_items, list):
         raise InputError(f'{target} collection is invalid')
@@ -363,6 +448,11 @@ def _apply_classification(updated: dict, card: Mapping, status: str, record: dic
             gap['status'] = status
             gap['decision_card_id'] = card['id']
             gap['decision_record'] = record
+        fragment = fragment_by_id.get(proposal.get('fragment_id'))
+        if isinstance(fragment, dict):
+            fragment['classification_status'] = status
+            fragment['decision_card_id'] = card['id']
+            fragment['decision_record'] = record
         if status != 'approved':
             continue
         source_ref = proposal.get('source_ref')
@@ -424,6 +514,11 @@ def apply_human_decision(model: Mapping, response: Mapping) -> dict:
     records.append(record)
     if card.get('kind') == 'classification_group':
         _apply_classification(updated, card, status, record)
+    elif card.get('kind') == 'review_hypothesis':
+        # Гипотеза не превращается в факт и не меняет источник: сохраняется только решение человека.
+        pass
+    elif card.get('kind') == 'fragment_group':
+        _apply_fragment_group(updated, card, status, record)
     elif card.get('kind') == 'gap_group':
         _apply_gap_group(updated, card, status, record)
     else:
@@ -444,6 +539,7 @@ def apply_human_decision(model: Mapping, response: Mapping) -> dict:
     unresolved = [item for item in updated.get('findings', []) if isinstance(item, dict) and item.get('status') not in {'approved', 'rejected', 'auto_decided'} and item.get('severity') in {'warning', 'error'}]
     for name in SINGULAR:
         unresolved += [item for item in updated.get(name, []) if isinstance(item, dict) and item.get('status') in {'gap', 'REVIEW_REQUIRED', 'assumed', 'BLOCKED'}]
-    if not unresolved:
+    pending_classifications = [item for item in updated.get('classification_proposals', []) if isinstance(item, dict) and item.get('status') == 'proposed']
+    if not unresolved and not pending_classifications:
         updated['status'] = 'confirmed'
     return updated

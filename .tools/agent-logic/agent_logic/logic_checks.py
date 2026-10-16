@@ -10,10 +10,13 @@ ARRAYS = ('goals', 'entities', 'attributes', 'facts', 'states', 'events', 'actio
 STRUCTURAL_RULES = ('STR-001', 'STR-002')
 LOGIC_RULES = ('LGC-001', 'LGC-002', 'LGC-003')
 DEONTIC_RULES = ('DNT-001', 'DNT-002', 'DNT-003', 'DNT-004')
-ARGUMENT_RULES = ('ARG-001',)
+ARGUMENT_RULES = ('ARG-001', 'ARG-002')
+MODALITY_RULES = ('MOD-001',)
+TERM_RULES = ('TRM-001',)
+CROSS_REPRESENTATION_RULES = ('XRF-001',)
 DEFINITION_RULES = ('DEF-001', 'DEF-002')
 LEGACY_RULES = ('LOG-001', 'LOG-002', 'LOG-003', 'LOG-004', 'LOG-005', 'LOG-006', 'LOG-007', 'LOG-008', 'POL-001', 'POL-002', 'POL-003', 'POL-004')
-RULE_ORDER = STRUCTURAL_RULES + LOGIC_RULES + DEONTIC_RULES + ARGUMENT_RULES + DEFINITION_RULES + LEGACY_RULES
+RULE_ORDER = STRUCTURAL_RULES + LOGIC_RULES + DEONTIC_RULES + ARGUMENT_RULES + MODALITY_RULES + TERM_RULES + CROSS_REPRESENTATION_RULES + DEFINITION_RULES + LEGACY_RULES
 NEGATION_RE = re.compile(r'\b(?:не|not|forbidden|cannot)\b', re.IGNORECASE)
 ARROW_RE = re.compile(r'(?P<left>[A-Za-z\u0400-\u04ff][\w\u0400-\u04ff ._-]{0,80}?)\s*(?:->|=>)\s*(?P<right>[A-Za-z\u0400-\u04ff][\w\u0400-\u04ff ._-]{0,80})')
 UNDEFINED_MARKER_RE = re.compile(r'(?<!@)\b(?:TBD|TODO|FIXME)\b|\?\?\?|\[\?\]', re.IGNORECASE)
@@ -316,11 +319,18 @@ def _structural_checks(model: Mapping, add) -> None:
             if missing == ['subject'] and path in normative_paths:
                 continue
             if missing:
-                add('STR-001', 'Norm has no explicit ' + ' and '.join(missing) + '.', [proposition])
+                labels = {'subject': 'субъекта', 'predicate': 'предиката'}
+                if len(missing) == 1:
+                    message = 'Норма не содержит явного ' + labels[missing[0]] + '.'
+                else:
+                    message = 'Норма не содержит явных субъекта и предиката.'
+                add('STR-001', message, [proposition])
     for expression in _expression_index(model).values():
         alternatives = expression.get('alternatives')
         if expression.get('status') == 'review_required' or isinstance(alternatives, list) and alternatives:
-            add('STR-002', 'Logical connector requires human choice: ' + str(expression.get('operator', 'unknown')) + '.', [expression])
+            operators = {'OR': 'ИЛИ', 'AND': 'И', 'NOT': 'НЕ', 'XOR': 'ИСКЛЮЧАЮЩЕЕ ИЛИ'}
+            operator = str(expression.get('operator', 'неизвестно'))
+            add('STR-002', 'Логическая связка требует решения человека: ' + operators.get(operator, operator) + '.', [expression])
 
 
 def _logical_expression_checks(model: Mapping, add) -> None:
@@ -417,6 +427,114 @@ def _argument_checks(model: Mapping, add) -> None:
             add('ARG-001', 'Argument conclusion has no explicit premise in the same statement.', [proposition])
 
 
+def _formula_symbol_checks(model: Mapping, add) -> None:
+    fragments = model.get('fragment_analyses', [])
+    if not isinstance(fragments, list):
+        return
+    symbols_by_path: dict[str, set[str]] = defaultdict(set)
+    symbol_re = re.compile(r"(?<!\w)(?:[A-Za-z]|Σ)[A-Za-z0-9_']*")
+    for fragment in fragments:
+        if not isinstance(fragment, Mapping) or fragment.get('structural_role') != 'notation_definition':
+            continue
+        ref = fragment.get('source_ref')
+        path = ref.get('relative_path') if isinstance(ref, Mapping) else None
+        if isinstance(path, str):
+            symbols_by_path[path].update(symbol_re.findall(str(fragment.get('text', ''))))
+    for fragment in fragments:
+        if not isinstance(fragment, Mapping) or fragment.get('structural_role') != 'formula' or fragment.get('proposition_ids'):
+            continue
+        ref = fragment.get('source_ref')
+        path = ref.get('relative_path') if isinstance(ref, Mapping) else None
+        text = str(fragment.get('text', ''))
+        if not isinstance(path, str) or ':' in text or not re.search(r'(?:->|=>|→|=)', text):
+            continue
+        undefined = sorted(symbol for symbol in set(symbol_re.findall(text)) if symbol not in symbols_by_path[path])
+        if undefined:
+            add('TRM-001', 'Formula uses symbols without an explicit notation definition: ' + ', '.join(undefined) + '.', [fragment], severity='info', status='REVIEW_REQUIRED')
+
+
+def _cross_representation_checks(model: Mapping, add) -> None:
+    values = model.get('review_hypotheses', [])
+    if not isinstance(values, list):
+        return
+    for hypothesis in values:
+        if isinstance(hypothesis, Mapping) and hypothesis.get('method') == 'local_structural_relation':
+            add('XRF-001', 'Structural representation requires a human-confirmed relation before a textual conclusion is used.', [hypothesis], severity='info', status='REVIEW_REQUIRED')
+
+
+def build_logic_review_hypotheses(findings: object, analyses: object) -> list[dict]:
+    """Преобразует эвристические findings в проверочные гипотезы без статуса факта."""
+    if not isinstance(findings, list) or not isinstance(analyses, list):
+        return []
+    locations: dict[tuple[str, int], dict] = {}
+    for fragment in analyses:
+        if not isinstance(fragment, dict):
+            continue
+        ref = fragment.get('source_ref')
+        line_range = ref.get('line_range') if isinstance(ref, Mapping) else None
+        path = ref.get('relative_path') if isinstance(ref, Mapping) else None
+        line = line_range.get('start') if isinstance(line_range, Mapping) else None
+        if isinstance(path, str) and isinstance(line, int): locations[(path, line)] = fragment
+    result: list[dict] = []
+    for finding in findings:
+        if not isinstance(finding, Mapping) or finding.get('rule_id') not in {'ARG-002', 'MOD-001', 'TRM-001', 'XRF-001'}:
+            continue
+        ref = finding.get('source_ref')
+        line_range = ref.get('line_range') if isinstance(ref, Mapping) else None
+        path = ref.get('relative_path') if isinstance(ref, Mapping) else None
+        line = line_range.get('start') if isinstance(line_range, Mapping) else None
+        fragment = locations.get((path, line)) if isinstance(path, str) and isinstance(line, int) else None
+        if not isinstance(fragment, dict) or not isinstance(fragment.get('id'), str) or not isinstance(ref, Mapping):
+            continue
+        identifier = f'review-hypothesis-logic-{len(result) + 1:03d}'
+        result.append({'id': identifier, 'fragment_id': fragment['id'], 'claim': str(finding.get('message', 'Требуется проверка трактовки.')), 'method': str(finding.get('rule_id')), 'alternatives': [{'id': 'A', 'interpretation': 'Подтвердить связь или дополнить исходный текст явным основанием.', 'consequence': 'После решения человека можно пересчитать модель.'}, {'id': 'B', 'interpretation': 'Оставить фрагмент без заявленной связи или вывода.', 'consequence': 'Гипотеза не становится фактом, premise или действием агента.'}], 'confidence': 0.5, 'status': 'review_required', 'confirmation_consequence': 'Решение человека определяет дальнейшую формализацию.', 'rejection_consequence': 'Неявный вывод не добавляется в ASIR-модель.', 'source_ref': dict(ref), 'evidence': [dict(ref)]})
+        linked = fragment.get('hypothesis_ids')
+        if isinstance(linked, list): linked.append(identifier)
+    return result
+
+def _same_section(left: Mapping, right: Mapping) -> bool:
+    left_ref, right_ref = left.get('source_ref'), right.get('source_ref')
+    if not isinstance(left_ref, Mapping) or not isinstance(right_ref, Mapping):
+        return False
+    return left_ref.get('relative_path') == right_ref.get('relative_path') and left_ref.get('section_path', []) == right_ref.get('section_path', [])
+
+
+def _source_line(value: Mapping) -> int:
+    reference = value.get('source_ref')
+    line_range = reference.get('line_range') if isinstance(reference, Mapping) else None
+    line = line_range.get('start') if isinstance(line_range, Mapping) else 0
+    return line if isinstance(line, int) else 0
+
+
+def _argument_context_checks(model: Mapping, add) -> None:
+    values = [item for item in model.get('propositions', []) if isinstance(item, Mapping)] if isinstance(model.get('propositions', []), list) else []
+    ordered = sorted(values, key=lambda item: (str((item.get('source_ref') or {}).get('relative_path', '')), _source_line(item)))
+    for index, proposition in enumerate(ordered):
+        reference = proposition.get('source_ref')
+        fragment = str(reference.get('fragment', '')) if isinstance(reference, Mapping) else ''
+        if not re.search(r'\b(?:следовательно|therefore|thus|hence)\b', fragment, re.IGNORECASE):
+            continue
+        previous = ordered[index - 1] if index else None
+        if previous is None or not _same_section(previous, proposition):
+            add('ARG-002', 'Conclusion has no adjacent explicit premise in the same section.', [proposition])
+
+
+def _modal_transition_checks(model: Mapping, add) -> None:
+    values = [item for item in model.get('propositions', []) if isinstance(item, Mapping)] if isinstance(model.get('propositions', []), list) else []
+    ordered = sorted(values, key=lambda item: (str((item.get('source_ref') or {}).get('relative_path', '')), _source_line(item)))
+    speculative = re.compile(r'\b(?:может|могут|предполагается|вероятно|возможно|may|might|probably|assume)\b', re.IGNORECASE)
+    categorical = re.compile(r'\b(?:доказано|установлено|несомненно|точно|proven|established|certainly)\b', re.IGNORECASE)
+    for index, proposition in enumerate(ordered):
+        reference = proposition.get('source_ref')
+        fragment = str(reference.get('fragment', '')) if isinstance(reference, Mapping) else ''
+        if not categorical.search(fragment) or not index:
+            continue
+        previous = ordered[index - 1]
+        previous_ref = previous.get('source_ref')
+        previous_fragment = str(previous_ref.get('fragment', '')) if isinstance(previous_ref, Mapping) else ''
+        if _same_section(previous, proposition) and speculative.search(previous_fragment):
+            add('MOD-001', 'Categorical conclusion follows an explicitly speculative statement; human confirmation is required.', [previous, proposition])
+
 def _definition_parts(text: str) -> tuple[str, str] | None:
     match = EXPLICIT_DEFINITION_RE.match(text)
     if match is None:
@@ -485,6 +603,10 @@ def run_logical_checks(model: Mapping) -> tuple[list[dict], list[dict]]:
     _deontic_checks(model, add)
     _normative_scope_checks(model, add)
     _argument_checks(model, add)
+    _argument_context_checks(model, add)
+    _modal_transition_checks(model, add)
+    _formula_symbol_checks(model, add)
+    _cross_representation_checks(model, add)
     _definition_checks(model, add)
     _policy_structure(model, add)
     _policy_structure_format(model, add)
