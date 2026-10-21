@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sdd-template/ui-package-manifest/2",
+  "title": "UI package manifest contract 2",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "contract_version",
+    "workflow_mode",
+    "template_set_version",
+    "source_url",
+    "revision",
+    "status",
+    "screen_pool",
+    "screens",
+    "reference_sets",
+    "traceability",
+    "gaps"
+  ],
+  "properties": {
+    "schema_version": { "const": "2.0" },
+    "contract_version": { "const": "2" },
+    "workflow_mode": { "enum": ["early-prototype", "track-integrated"] },
+    "template_set_version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "source_url": { "const": "https://github.com/Druk83/ui-patterns.git" },
+    "revision": { "type": "string", "minLength": 1 },
+    "status": {
+      "enum": ["proposed", "confirmed", "rejected", "gap", "superseded", "not_applicable"]
+    },
+    "screen_pool": { "const": "пул-экранов.json" },
+    "screens": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/screen" }
+    },
+    "reference_sets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/referenceSet" }
+    },
+    "traceability": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/traceability" }
+    },
+    "gaps": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/gap" }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "workflow_mode": { "const": "early-prototype" } }, "required": ["workflow_mode"] },
+      "then": { "properties": { "status": { "const": "proposed" } } }
+    }
+  ],
+  "$defs": {
+    "screen": {
+      "type": "object",
+      "required": ["screen_id", "specification", "status", "pattern_refs", "template_refs", "reference_artifacts"],
+      "properties": {
+        "screen_id": { "type": "string", "minLength": 1 },
+        "specification": { "type": "string", "minLength": 1 },
+        "status": {
+          "enum": ["proposed", "confirmed", "rejected", "gap", "superseded", "not_applicable"]
+        },
+        "pattern_refs": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "template_refs": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "reference_artifacts": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+      },
+      "additionalProperties": false
+    },
+    "referenceSet": {
+      "type": "object",
+      "required": ["reference_set_id", "path"],
+      "properties": {
+        "reference_set_id": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "traceability": {
+      "type": "object",
+      "required": ["screen_id"],
+      "properties": {
+        "screen_id": { "type": "string", "minLength": 1 },
+        "requirement_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "scenario_refs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "acceptance_criteria": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      },
+      "additionalProperties": false
+    },
+    "gap": {
+      "type": "object",
+      "required": ["gap_id", "owner", "blocking_condition", "status"],
+      "properties": {
+        "gap_id": { "type": "string", "minLength": 1 },
+        "screen_id": { "type": "string", "minLength": 1 },
+        "area": { "type": "string", "minLength": 1 },
+        "owner": { "type": "string", "minLength": 1 },
+        "blocking_condition": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "minLength": 1 },
+        "closure_evidence": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

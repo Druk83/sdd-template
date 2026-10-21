@@ -1,0 +1,43 @@
+{
+  "schema_version": "2.0",
+  "contract_version": "2",
+  "reference_set_id": "{{reference_set.id}}",
+  "template_set_version": "{{provenance.template_set_version}}",
+  "source_url": "https://github.com/Druk83/ui-patterns.git",
+  "revision": "{{provenance.revision}}",
+  "artifacts": [
+    {
+      "artifact_id": "{{artifact.id}}",
+      "screen_id": "{{screen.screen_id}}",
+      "role": "{{artifact.role}}",
+      "state": "{{artifact.state}}",
+      "viewport": {
+        "viewport_id": "{{viewport.id}}",
+        "width": "{{viewport.width}}",
+        "height": "{{viewport.height}}",
+        "unit": "css-px",
+        "orientation": "{{viewport.orientation}}"
+      },
+      "path": "{{artifact.path}}",
+      "pattern_refs": [],
+      "template_refs": [],
+      "shell_binding": {
+        "status": "{{artifact.shell_binding.status}}",
+        "catalog_url": "{{artifact.shell_binding.catalog_url}}",
+        "catalog_revision": "{{artifact.shell_binding.catalog_revision}}",
+        "shell_id": "{{artifact.shell_binding.shell_id}}",
+        "shell_version": "{{artifact.shell_binding.shell_version}}",
+        "viewport_id": "{{artifact.shell_binding.viewport_id}}",
+        "shell_viewport": {
+          "width": "{{artifact.shell_binding.shell_viewport.width}}",
+          "height": "{{artifact.shell_binding.shell_viewport.height}}",
+          "unit": "css-px",
+          "orientation": "{{artifact.shell_binding.shell_viewport.orientation}}"
+        },
+        "rationale": "{{artifact.shell_binding.rationale}}",
+        "reason": "{{artifact.shell_binding.reason}}",
+        "decision_needed": "{{artifact.shell_binding.decision_needed}}"
+      }
+    }
+  ]
+}

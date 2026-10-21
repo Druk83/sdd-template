@@ -1,0 +1,52 @@
+{
+  "schema_version": "2.0",
+  "contract_version": "2",
+  "workflow_mode": "early-prototype",
+  "template_set_version": "{{provenance.template_set_version}}",
+  "status": "proposed",
+  "source_refs": [],
+  "screens": [
+    {
+      "screen_id": "{{screen.screen_id}}",
+      "title": "{{screen.title}}",
+      "screen_type": "{{screen.screen_type}}",
+      "purpose": "{{screen.purpose}}",
+      "route": "{{screen.route}}",
+      "user_roles": [],
+      "user_task": "{{screen.user_task}}",
+      "pattern_candidates": [
+        {
+          "status": "gap",
+          "rationale": "Паттерн не определён; требуется анализ и решение разработчика.",
+          "source_refs": []
+        }
+      ],
+      "template_candidates": [
+        {
+          "status": "gap",
+          "rationale": "Шаблон не определён; требуется анализ и решение разработчика.",
+          "source_refs": []
+        }
+      ],
+      "states": [],
+      "transitions": [],
+      "viewport_candidates": [
+        {
+          "viewport_id": "viewport-gap",
+          "status": "gap",
+          "rationale": "Размеры области просмотра не определены; запросить решение разработчика.",
+          "screen_shell_candidates": [
+            {
+              "status": "gap",
+              "reason": "Размеры viewport или подходящая оболочка ещё не подтверждены.",
+              "decision_needed": "Определить профиль viewport и доступную оболочку экрана."
+            }
+          ],
+          "source_refs": []
+        }
+      ],
+      "source_refs": [],
+      "status": "proposed"
+    }
+  ]
+}

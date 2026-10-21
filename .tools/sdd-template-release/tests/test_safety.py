@@ -77,6 +77,7 @@ class SafetyInventoryTests(unittest.TestCase):
                 self.assertEqual(plan["status"], "awaiting_user_confirmation")
                 self.assertTrue(source.exists())
 
+
                 result = cast(
                     dict[str, Any],
                     install_framework.cleanup_source_clone(
@@ -448,6 +449,35 @@ class PostInstallValidationTests(unittest.TestCase):
             result = cast(dict[str, Any], install_framework.post_install_validate(target, "1.9.2", package))
             self.assertEqual(result["status"], "pass")
             self.assertEqual(result["unresolved"], [])
+
+
+class ShellLibraryExportTests(unittest.TestCase):
+    def test_release_stage_includes_generator_and_shell_assets_but_not_tests(self) -> None:
+        root = build_release.repository_root()
+        version = build_release.read_version(root)
+        with tempfile.TemporaryDirectory() as temporary:
+            stage = Path(temporary) / "stage"
+            build_release.build_stage(root, version, stage)
+
+            library = stage / ".tools" / "ui-screen-scaffold" / "shells"
+            manifest = json.loads((library / "shell-library.json").read_text(encoding="utf-8"))
+            self.assertEqual(len(manifest["shells"]), 19)
+            self.assertTrue((library / "shell.css").is_file())
+            self.assertTrue((stage / ".tools" / "ui-screen-scaffold" / "ui_screen_scaffold.py").is_file())
+            self.assertTrue((stage / ".tools" / "ui-screen-scaffold" / "ui-screen-scaffold.bat").is_file())
+            self.assertFalse((stage / ".tools" / "ui-screen-scaffold" / "tests").exists())
+            for shell in manifest["shells"]:
+                shell_page = library / shell["path"]
+                self.assertTrue(shell_page.is_file(), shell["path"])
+                self.assertTrue((shell_page.parent / shell["stylesheet"]).is_file(), shell["stylesheet"])
+
+            registry = json.loads((stage / ".tools" / "registry.json").read_text(encoding="utf-8"))
+            self.assertIn("ui-screen-scaffold", {entry["name"] for entry in registry})
+            release_manifest = json.loads((stage / "release-manifest.json").read_text(encoding="utf-8"))
+            package_paths = {entry["path"] for entry in release_manifest["files"]}
+            self.assertIn(".tools/ui-screen-scaffold/shells/shell-library.json", package_paths)
+            self.assertIn(".tools/ui-screen-scaffold/ui_screen_scaffold.py", package_paths)
+            self.assertNotIn(".tools/ui-screen-scaffold/tests/test_viewport_catalog.py", package_paths)
 
 
 if __name__ == "__main__":

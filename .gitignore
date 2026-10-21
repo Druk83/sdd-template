@@ -18,6 +18,7 @@ tmp/
 .agents/
 .agents/**/.runtime/
 .agents/**/__pycache__/
+.tools/**/__pycache__/
 .agents/**/*.py[cod]
 .agents/**/.env
 .tasks/questions/
@@ -28,3 +29,9 @@ tmp/
 .tasks/A7.md
 .tasks/TD-012.md
 .tasks/A8.md
+.issues/ui-stage-5a-direct-start-test-audit.md
+.tasks/TD-013.md
+.tasks/TD-014.md
+.tasks/TD-015.md
+.tasks/TD-016.md
+.tasks/TD-017.md

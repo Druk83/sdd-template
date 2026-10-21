@@ -23,6 +23,11 @@
   requirements-profile/
     README.md
     requirements_profile.py
+  ui-screen-scaffold/
+    README.md
+    ui_screen_scaffold.py
+    catalog/
+    shells/
   sdd-template-release/
     README.md
     build_release.py
@@ -37,7 +42,15 @@
 * **pdd-scan** — сканирует `@todo` и обновляет реестр задач.
 * **plantuml-render** — рендерит `.plantuml`, `.bpmn` и `.dot` в PNG/SVG через Kroki-compatible API; локальный Docker-стек включает BPMN companion-сервис и SVG-to-PNG rasterizer.
 * **requirements-profile** — выбирает профиль требований этапа [3] и проверяет его результат; см. `.tools/requirements-profile/README.md`.
+* **ui-reference** — проверяет связи и структуру UI-пакетов и безопасно переносит legacy-артефакты.
+* **ui-screen-scaffold** — генерирует автономные HTML/CSS-макеты по выбранным экранам, viewport и оболочкам.
 * **sdd-template-release** — выбирает релиз из `release-registry.json`, собирает и устанавливает его в `.agents/sdd-template-X.Y.Z/`; каталоги `.agents/` и `tmp/` не публикуются.
+
+## Библиотеки ресурсов инструментов
+
+`.tools/ui-screen-scaffold/catalog/` и `.tools/ui-screen-scaffold/shells/` содержат
+профили CSS viewport и готовые оболочки GUI, поставляемые с зарегистрированным
+генератором `ui-screen-scaffold`.
 
 `agent-logic` является обязательной частью поставки SDD Framework. Перед запуском
 проверь `.tools/agent-logic/manifest.json` и следуй

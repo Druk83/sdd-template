@@ -1,5 +1,5 @@
 @startuml SDD-Sequence-Ideal
-    title Последовательность событий SDD\n(актуальная последовательность Framework 1.9.3)
+    title Последовательность событий SDD\n(актуальная последовательность Framework 1.9.4)
 
     actor "Разработчик" as Dev
     participant "Агент" as Agent

@@ -22,7 +22,9 @@ VERSION_NUMBER_PATTERN = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 RELEASE_PATTERN = re.compile(r"^sdd-template-([0-9]+\.[0-9]+\.[0-9]+)$")
 DENIED_NAMES = {".git", ".runtime", "__pycache__"}
 DENIED_SUFFIXES = {".pyc", ".pyo", ".env"}
-PORTABLE_TOOLS = ("check-encoding", "pdd", "plantuml-render", "ui-reference", "requirements-profile")
+PORTABLE_TOOLS = (
+    "check-encoding", "pdd", "plantuml-render", "ui-reference", "ui-screen-scaffold", "requirements-profile"
+)
 DIAGRAM_REFERENCE_FILES = (
     Path("example AL.plantuml"),
     Path("example BL.plantuml"),

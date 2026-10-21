@@ -4,7 +4,7 @@
   "display_name": "SDD Framework",
   "source_repository": "Druk83/sdd-template.git",
   "minimum_supported_version": "1.9.0",
-  "default_version": "1.9.3",
+  "default_version": "1.9.4",
   "releases": [
     {
       "version": "1.9.0",
@@ -48,6 +48,17 @@
       "install_path": ".agents/sdd-template-1.9.3",
       "commit_subject": "1.9.3 Профили требований и выбор стандарта разработки",
       "released_at": "2026-10-16",
+      "status": "supported"
+    },
+    {
+      "version": "1.9.4",
+      "ref": "sdd-template-1.9.4",
+      "ref_type": "tag",
+      "tag": "sdd-template-1.9.4",
+      "commit": null,
+      "install_path": ".agents/sdd-template-1.9.4",
+      "commit_subject": "1.9.4 Экранные оболочки и генератор комплексных планировок пользовательских интерфейсов",
+      "released_at": "2026-10-21",
       "status": "supported"
     }
   ]

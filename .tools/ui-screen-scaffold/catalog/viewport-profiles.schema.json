@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sdd-framework/ui-screen-scaffold/viewport-profiles/1.0",
+  "title": "SDD Framework viewport profile candidate catalog",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "catalog_id",
+    "catalog_revision",
+    "status",
+    "created_at",
+    "external_contract",
+    "shell_contract",
+    "source_policy",
+    "sources",
+    "profiles",
+    "developer_decision"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": "1.0" },
+    "catalog_id": { "const": "sdd-framework-gui-viewport-profiles" },
+    "catalog_revision": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["draft", "review", "confirmed"] },
+    "created_at": { "type": "string", "format": "date" },
+    "description": { "type": "string", "minLength": 1 },
+    "external_contract": {
+      "type": "object",
+      "required": ["url", "version", "revision", "contract_path"],
+      "properties": {
+        "url": { "const": "https://github.com/Druk83/ui-patterns.git" },
+        "version": { "const": "0.3.1" },
+        "revision": { "const": "36e0ce1191a0b53797d4c9f03eb945aae3f29bc7" },
+        "contract_path": { "const": "screen-shell-integration-contract.md" }
+      },
+      "additionalProperties": false
+    },
+    "shell_contract": { "$ref": "#/$defs/shellContract" },
+    "source_policy": {
+      "type": "object",
+      "required": [
+        "traffic_sample_is_not_global_market_share",
+        "physical_screen_and_css_viewport_are_separate",
+        "device_scale_factor_does_not_determine_css_viewport",
+        "mutable_sources_require_retrieval_date_or_pinned_revision",
+        "landscape_variants_are_transposed_presets_not_traffic_measurements"
+      ],
+      "properties": {
+        "traffic_sample_is_not_global_market_share": { "const": true },
+        "physical_screen_and_css_viewport_are_separate": { "const": true },
+        "device_scale_factor_does_not_determine_css_viewport": { "const": true },
+        "mutable_sources_require_retrieval_date_or_pinned_revision": { "const": true },
+        "landscape_variants_are_transposed_presets_not_traffic_measurements": { "const": true }
+      },
+      "additionalProperties": false
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/source" }
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/profile" }
+    },
+    "developer_decision": {
+      "type": "object",
+      "required": ["status", "confirmed_profile_ids", "rejected_profile_ids", "notes"],
+      "properties": {
+        "status": { "enum": ["pending", "recorded"] },
+        "confirmed_profile_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "rejected_profile_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "notes": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "developer_decision": { "properties": { "status": { "const": "pending" } } } } },
+      "then": { "properties": { "status": { "enum": ["draft", "review"] } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "confirmed" } } },
+      "then": { "properties": { "developer_decision": { "properties": { "status": { "const": "recorded" } } } } }
+    }
+  ],
+  "$defs": {
+    "shellContract": {
+      "type": "object",
+      "required": ["viewport_unit", "viewport_source_of_truth", "orientation_policy", "content_policy", "device_frame", "insets", "content_slots"],
+      "properties": {
+        "viewport_unit": { "const": "css-px" },
+        "viewport_source_of_truth": { "const": "profile variant width and height" },
+        "orientation_policy": { "const": "separate-variant-per-orientation" },
+        "content_policy": { "type": "string", "minLength": 1 },
+        "device_frame": {
+          "type": "object",
+          "required": ["status", "constraint"],
+          "properties": {
+            "status": { "enum": ["undecided", "included", "excluded"] },
+            "constraint": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        },
+        "insets": {
+          "type": "object",
+          "required": ["status", "constraint"],
+          "properties": {
+            "status": { "enum": ["unknown-until-sourced", "specified"] },
+            "constraint": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        },
+        "content_slots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["slot_id", "required", "purpose"],
+            "properties": {
+              "slot_id": { "type": "string", "minLength": 1 },
+              "required": { "type": "boolean" },
+              "purpose": { "type": "string", "minLength": 1 }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "source": {
+      "type": "object",
+      "required": ["source_id", "kind", "title", "url", "revision", "retrieved_at", "provides", "limitations"],
+      "properties": {
+        "source_id": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "url": { "type": ["string", "null"], "format": "uri" },
+        "revision": { "type": "string", "minLength": 1 },
+        "retrieved_at": { "type": "string", "format": "date" },
+        "provides": { "type": "string", "minLength": 1 },
+        "limitations": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "profile": {
+      "type": "object",
+      "required": ["profile_id", "category", "status", "reference_target", "rationale", "source_refs", "variants"],
+      "properties": {
+        "profile_id": { "type": "string", "minLength": 1 },
+        "category": { "enum": ["smartphone", "tablet", "foldable-inner-display", "foldable-cover-display", "notebook-desktop", "wide-desktop"] },
+        "status": { "enum": ["proposed", "confirmed", "rejected", "gap"] },
+        "reference_target": { "type": "string", "minLength": 1 },
+        "rationale": { "type": "string", "minLength": 1 },
+        "source_refs": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "variants": { "type": "array", "items": { "$ref": "#/$defs/variant" } },
+        "decision_needed": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "gap" } } },
+          "then": { "required": ["decision_needed"], "properties": { "variants": { "maxItems": 0 } } },
+          "else": { "properties": { "variants": { "minItems": 1 } } }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "variant": {
+      "type": "object",
+      "required": ["viewport_id", "shell_id_candidate", "width", "height", "unit", "orientation", "safe_area_status", "source_refs", "implementation_status"],
+      "properties": {
+        "viewport_id": { "type": "string", "minLength": 1 },
+        "shell_id_candidate": { "type": "string", "minLength": 1 },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "unit": { "const": "css-px" },
+        "orientation": { "enum": ["portrait", "landscape"] },
+        "device_scale_factor": { "type": "number", "exclusiveMinimum": 0 },
+        "physical_screen": {
+          "type": "object",
+          "required": ["width", "height", "unit"],
+          "properties": {
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 },
+            "unit": { "const": "emulated-screen-px" }
+          },
+          "additionalProperties": false
+        },
+        "safe_area_status": { "enum": ["unknown", "specified", "not_applicable"] },
+        "source_refs": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "implementation_status": { "enum": ["not_implemented", "implemented"] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

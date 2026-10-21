@@ -1,0 +1,429 @@
+{
+  "$schema": "./viewport-profiles.schema.json",
+  "schema_version": "1.0",
+  "catalog_id": "sdd-framework-gui-viewport-profiles",
+  "catalog_revision": "confirmed-2026-10-20",
+  "status": "confirmed",
+  "created_at": "2026-10-20",
+  "description": "Подтверждённые профили областей просмотра для стандартных оболочек GUI. Все варианты предложенных профилей включены; wide desktop отложен до определения точного CSS viewport.",
+  "external_contract": {
+    "url": "https://github.com/Druk83/ui-patterns.git",
+    "version": "0.3.1",
+    "revision": "36e0ce1191a0b53797d4c9f03eb945aae3f29bc7",
+    "contract_path": "screen-shell-integration-contract.md"
+  },
+  "shell_contract": {
+    "viewport_unit": "css-px",
+    "viewport_source_of_truth": "profile variant width and height",
+    "orientation_policy": "separate-variant-per-orientation",
+    "content_policy": "shell supplies only neutral geometry and named content slots; product content is supplied by project documentation and selected UI patterns/templates",
+    "device_frame": {
+      "status": "excluded",
+      "constraint": "Render the application viewport edge-to-edge without a decorative device frame; do not scale or redefine its CSS dimensions."
+    },
+    "insets": {
+      "status": "unknown-until-sourced",
+      "constraint": "Do not invent safe-area, cutout, hinge, or system-bar dimensions. Record them only when the selected target has an applicable source; otherwise keep them outside the shell or record a gap."
+    },
+    "content_slots": [
+      {
+        "slot_id": "screen-content",
+        "required": true,
+        "purpose": "Insertion point for project-specific screen composition; it does not define the internal layout."
+      }
+    ]
+  },
+  "source_policy": {
+    "traffic_sample_is_not_global_market_share": true,
+    "physical_screen_and_css_viewport_are_separate": true,
+    "device_scale_factor_does_not_determine_css_viewport": true,
+    "mutable_sources_require_retrieval_date_or_pinned_revision": true,
+    "landscape_variants_are_transposed_presets_not_traffic_measurements": true
+  },
+  "sources": [
+    {
+      "source_id": "android-window-size-classes",
+      "kind": "official-platform-guidance",
+      "title": "Android window size classes",
+      "url": "https://developer.android.com/develop/adaptive-apps/guides/use-window-size-classes",
+      "revision": "page states last updated 2026-08-04",
+      "retrieved_at": "2026-10-20",
+      "provides": "Adaptive width and height categories in dp, including compact, medium, expanded, large, and extra-large.",
+      "limitations": "These are app-window breakpoints in dp, not exact CSS-px viewport presets and not physical device dimensions. They are used only as category guidance."
+    },
+    {
+      "source_id": "playwright-device-descriptors-1-64-1",
+      "kind": "official-browser-emulation-data",
+      "title": "Playwright v1.64.1 device descriptors",
+      "url": "https://raw.githubusercontent.com/microsoft/playwright/v1.64.1/packages/isomorphic/deviceDescriptorsSource.json",
+      "revision": "v1.64.1",
+      "retrieved_at": "2026-10-20",
+      "provides": "Named emulation targets with viewport, optional screen size, device scale factor, and orientation variants.",
+      "limitations": "An emulation catalog is evidence that a viewport can be reproduced, not evidence of market popularity, a universal standard, or a requirement for every project."
+    },
+    {
+      "source_id": "playwright-viewport-emulation-guide",
+      "kind": "official-tool-documentation",
+      "title": "Playwright viewport and device emulation",
+      "url": "https://playwright.dev/docs/codegen",
+      "revision": "documentation page",
+      "retrieved_at": "2026-10-20",
+      "provides": "A browser viewport can be set to an explicit width and height for repeatable emulation.",
+      "limitations": "The guide explains the test mechanism; it does not prescribe a project-wide set of screen sizes."
+    },
+    {
+      "source_id": "deviceatlas-mobile-viewport-study-2026-05",
+      "kind": "traffic-measured-css-viewport-study",
+      "title": "Viewport, Resolution, Diagonal Screen Size, and DPI for the Most Popular Smartphones",
+      "url": "https://deviceatlas.com/blog/viewport-resolution-diagonal-screen-size-and-dpi-most-popular-smartphones",
+      "revision": "Published 2026-05-18; traffic sample from 2026-05",
+      "retrieved_at": "2026-10-20",
+      "provides": "Browser-measured CSS viewport dimensions and traffic distributions for smartphone models and widths, plus folded and unfolded viewport examples.",
+      "limitations": "The measurements represent DeviceAtlas service traffic, not global market share. The article is smartphone-focused and provides no measured landscape, tablet, or desktop profile set. Heights can vary with browser chrome and user display settings."
+    }
+  ],
+  "profiles": [
+    {
+      "profile_id": "gui-mobile-compact-samsung-s24",
+      "category": "smartphone",
+      "status": "confirmed",
+      "reference_target": "Samsung Galaxy S24; DeviceAtlas reports 360×780 CSS px in its May 2026 traffic sample.",
+      "rationale": "The 360 px width is the largest single mobile-width band in the cited sample. Landscape is a transposed visual preset, not a measured traffic viewport.",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "variants": [
+        {
+          "viewport_id": "vp-galaxy-s24-360x780-portrait",
+          "shell_id_candidate": "shell-galaxy-s24-360x780-portrait",
+          "width": 360,
+          "height": 780,
+          "unit": "css-px",
+          "orientation": "portrait",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-galaxy-s24-780x360-landscape",
+          "shell_id_candidate": "shell-galaxy-s24-780x360-landscape",
+          "width": 780,
+          "height": 360,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        }
+      ]
+    },
+    {
+      "profile_id": "gui-mobile-common-samsung-384",
+      "category": "smartphone",
+      "status": "confirmed",
+      "reference_target": "Samsung Galaxy S24/S25 Ultra and Galaxy A-series default viewport class; representative observation 384×832 CSS px.",
+      "rationale": "The 384 px width is the second-largest mobile-width band in the cited sample. Landscape is a transposed visual preset, not a measured traffic viewport.",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "variants": [
+        {
+          "viewport_id": "vp-samsung-384x832-portrait",
+          "shell_id_candidate": "shell-samsung-384x832-portrait",
+          "width": 384,
+          "height": 832,
+          "unit": "css-px",
+          "orientation": "portrait",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-samsung-832x384-landscape",
+          "shell_id_candidate": "shell-samsung-832x384-landscape",
+          "width": 832,
+          "height": 384,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        }
+      ]
+    },
+    {
+      "profile_id": "gui-mobile-common-pixel-412",
+      "category": "smartphone",
+      "status": "confirmed",
+      "reference_target": "Google Pixel 8; DeviceAtlas reports 412×915 CSS px in its May 2026 traffic sample.",
+      "rationale": "The 412 px width is one of the three largest mobile-width bands in the cited sample. The prior 412×914 example is replaced by the source-measured 412×915 portrait viewport. Landscape is a transposed visual preset, not a measured traffic viewport.",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "variants": [
+        {
+          "viewport_id": "vp-pixel-412x915-portrait",
+          "shell_id_candidate": "shell-pixel-412x915-portrait",
+          "width": 412,
+          "height": 915,
+          "unit": "css-px",
+          "orientation": "portrait",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-pixel-915x412-landscape",
+          "shell_id_candidate": "shell-pixel-915x412-landscape",
+          "width": 915,
+          "height": 412,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        }
+      ]
+    },
+    {
+      "profile_id": "gui-mobile-common-iphone-390",
+      "category": "smartphone",
+      "status": "confirmed",
+      "reference_target": "Apple iPhone 12/13/14/16e default viewport class; DeviceAtlas reports 390×844 CSS px.",
+      "rationale": "This is the most common single iPhone viewport in the cited sample. Landscape is a transposed visual preset, not a measured traffic viewport.",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "variants": [
+        {
+          "viewport_id": "vp-iphone-390x844-portrait",
+          "shell_id_candidate": "shell-iphone-390x844-portrait",
+          "width": 390,
+          "height": 844,
+          "unit": "css-px",
+          "orientation": "portrait",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-iphone-844x390-landscape",
+          "shell_id_candidate": "shell-iphone-844x390-landscape",
+          "width": 844,
+          "height": 390,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        }
+      ]
+    },
+    {
+      "profile_id": "gui-mobile-accessibility-320",
+      "category": "smartphone",
+      "status": "confirmed",
+      "reference_target": "320 CSS-px accessibility/display-zoom floor; Galaxy S24 Ultra reports 320×694 at its largest display setting.",
+      "rationale": "DeviceAtlas identifies 320 px as a live accessibility and display-zoom viewport, not merely a legacy screen. Landscape is a transposed visual preset, not a measured traffic viewport.",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "variants": [
+        {
+          "viewport_id": "vp-mobile-320x694-portrait",
+          "shell_id_candidate": "shell-mobile-320x694-portrait",
+          "width": 320,
+          "height": 694,
+          "unit": "css-px",
+          "orientation": "portrait",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-mobile-694x320-landscape",
+          "shell_id_candidate": "shell-mobile-694x320-landscape",
+          "width": 694,
+          "height": 320,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        }
+      ]
+    },
+    {
+      "profile_id": "gui-tablet-ipad-11th-generation",
+      "category": "tablet",
+      "status": "confirmed",
+      "reference_target": "Playwright iPad (gen 11) emulation descriptor; reference only, not a popularity claim.",
+      "rationale": "Candidate tablet viewport pair from a pinned browser-emulation release. Compare with the Android tablet candidate before selecting a cross-platform baseline.",
+      "source_refs": ["playwright-device-descriptors-1-64-1", "android-window-size-classes"],
+      "variants": [
+        {
+          "viewport_id": "vp-ipad-gen11-portrait",
+          "shell_id_candidate": "shell-ipad-gen11-portrait",
+          "width": 656,
+          "height": 944,
+          "unit": "css-px",
+          "orientation": "portrait",
+          "device_scale_factor": 2.5,
+          "safe_area_status": "unknown",
+          "source_refs": ["playwright-device-descriptors-1-64-1"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-ipad-gen11-landscape",
+          "shell_id_candidate": "shell-ipad-gen11-landscape",
+          "width": 944,
+          "height": 656,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "device_scale_factor": 2.5,
+          "safe_area_status": "unknown",
+          "source_refs": ["playwright-device-descriptors-1-64-1"],
+          "implementation_status": "implemented"
+        }
+      ]
+    },
+    {
+      "profile_id": "gui-tablet-galaxy-tab-s9",
+      "category": "tablet",
+      "status": "confirmed",
+      "reference_target": "Playwright Galaxy Tab S9 emulation descriptor; reference only, not a popularity claim.",
+      "rationale": "Candidate Android tablet viewport pair. Its 640 CSS-px portrait width is close to the 600 dp Android medium-width class boundary, but dp and CSS px are not asserted to be interchangeable.",
+      "source_refs": ["playwright-device-descriptors-1-64-1", "android-window-size-classes"],
+      "variants": [
+        {
+          "viewport_id": "vp-galaxy-tab-s9-portrait",
+          "shell_id_candidate": "shell-galaxy-tab-s9-portrait",
+          "width": 640,
+          "height": 1024,
+          "unit": "css-px",
+          "orientation": "portrait",
+          "device_scale_factor": 2.5,
+          "safe_area_status": "unknown",
+          "source_refs": ["playwright-device-descriptors-1-64-1"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-galaxy-tab-s9-landscape",
+          "shell_id_candidate": "shell-galaxy-tab-s9-landscape",
+          "width": 1024,
+          "height": 640,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "device_scale_factor": 2.5,
+          "safe_area_status": "unknown",
+          "source_refs": ["playwright-device-descriptors-1-64-1"],
+          "implementation_status": "implemented"
+        }
+      ]
+    },
+    {
+      "profile_id": "gui-foldable-galaxy-z-fold7-inner",
+      "category": "foldable-inner-display",
+      "status": "confirmed",
+      "reference_target": "Galaxy Z Fold7 unfolded inner viewport; DeviceAtlas reports approximately 750×832 CSS px.",
+      "rationale": "The cited traffic study reports separate folded and unfolded viewports. The landscape variant is a transposed visual preset, not a measured traffic viewport; hinge geometry remains unknown.",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "variants": [
+        {
+          "viewport_id": "vp-galaxy-z-fold7-inner-750x832-portrait",
+          "shell_id_candidate": "shell-galaxy-z-fold7-inner-750x832-portrait",
+          "width": 750,
+          "height": 832,
+          "unit": "css-px",
+          "orientation": "portrait",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-galaxy-z-fold7-inner-832x750-landscape",
+          "shell_id_candidate": "shell-galaxy-z-fold7-inner-832x750-landscape",
+          "width": 832,
+          "height": 750,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        }
+      ]
+    },
+    {
+      "profile_id": "gui-foldable-galaxy-z-fold7-cover",
+      "category": "foldable-cover-display",
+      "status": "confirmed",
+      "reference_target": "Galaxy Z Fold7 folded cover viewport; DeviceAtlas reports approximately 412×960 CSS px.",
+      "rationale": "The cover is a separate viewport from the unfolded inner display. The landscape variant is a transposed visual preset, not a measured traffic viewport.",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "variants": [
+        {
+          "viewport_id": "vp-galaxy-z-fold7-cover-412x960-portrait",
+          "shell_id_candidate": "shell-galaxy-z-fold7-cover-412x960-portrait",
+          "width": 412,
+          "height": 960,
+          "unit": "css-px",
+          "orientation": "portrait",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-galaxy-z-fold7-cover-960x412-landscape",
+          "shell_id_candidate": "shell-galaxy-z-fold7-cover-960x412-landscape",
+          "width": 960,
+          "height": 412,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        }
+      ]
+    },
+    {
+      "profile_id": "gui-desktop-reference-playwright",
+      "category": "notebook-desktop",
+      "status": "confirmed",
+      "reference_target": "Playwright Desktop Chrome descriptor; browser test viewport, not a laptop screen-size standard.",
+      "rationale": "Candidate repeatable desktop application viewport. The descriptor separately reports a 1920×1080 emulated screen and a 1280×720 viewport; only the latter is proposed as the shell canvas.",
+      "source_refs": ["playwright-device-descriptors-1-64-1", "playwright-viewport-emulation-guide", "android-window-size-classes"],
+      "variants": [
+        {
+          "viewport_id": "vp-desktop-1280x720",
+          "shell_id_candidate": "shell-desktop-1280x720",
+          "width": 1280,
+          "height": 720,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "device_scale_factor": 1,
+          "physical_screen": {"width": 1920, "height": 1080, "unit": "emulated-screen-px"},
+          "safe_area_status": "not_applicable",
+          "source_refs": ["playwright-device-descriptors-1-64-1"],
+          "implementation_status": "implemented"
+        }
+      ]
+    },
+    {
+      "profile_id": "gui-wide-desktop-needs-decision",
+      "category": "wide-desktop",
+      "status": "gap",
+      "reference_target": "A wide desktop application window; no exact CSS viewport has been selected.",
+      "rationale": "Android guidance identifies an extra-large app-window width class at 1600 dp and above, but that is not a CSS-px preset. Playwright Desktop Chrome's 1920×1080 value is its emulated screen size, not its 1280×720 viewport. No source-backed exact wide CSS viewport is inferred from either value.",
+      "source_refs": ["android-window-size-classes", "playwright-device-descriptors-1-64-1"],
+      "variants": [],
+      "decision_needed": "Choose an exact CSS viewport for wide-desktop shells, or defer this category."
+    }
+  ],
+  "developer_decision": {
+    "status": "recorded",
+    "confirmed_profile_ids": [
+      "gui-mobile-compact-samsung-s24",
+      "gui-mobile-common-samsung-384",
+      "gui-mobile-common-pixel-412",
+      "gui-mobile-common-iphone-390",
+      "gui-mobile-accessibility-320",
+      "gui-tablet-ipad-11th-generation",
+      "gui-tablet-galaxy-tab-s9",
+      "gui-foldable-galaxy-z-fold7-inner",
+      "gui-foldable-galaxy-z-fold7-cover",
+      "gui-desktop-reference-playwright"
+    ],
+    "rejected_profile_ids": [],
+    "notes": "Developer decision recorded 2026-10-20: include every profile that was proposed at review time and all listed portrait/landscape variants; defer gui-wide-desktop-needs-decision until an exact CSS viewport is selected. DeviceAtlas is the source for smartphone and foldable CSS viewport examples; its values describe its own May 2026 traffic sample, not global market share. Tablet and desktop profiles are reproducible Playwright emulation presets, not popularity claims. Landscape entries are transposed visual presets, not measured traffic viewports. Exclude decorative device frames; show the exact edge-to-edge cropped viewport."
+  }
+}

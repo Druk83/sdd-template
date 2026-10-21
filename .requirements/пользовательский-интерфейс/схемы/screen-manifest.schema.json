@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sdd-template/ui-reference-set-manifest/2",
+  "title": "UI reference-set manifest contract 2",
+  "type": "object",
+  "required": ["schema_version", "contract_version", "reference_set_id", "artifacts"],
+  "properties": {
+    "schema_version": { "const": "2.0" },
+    "contract_version": { "const": "2" },
+    "reference_set_id": { "type": "string", "minLength": 1 },
+    "template_set_version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+    "source_url": { "const": "https://github.com/Druk83/ui-patterns.git" },
+    "revision": { "type": "string", "minLength": 1 },
+    "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "template_set_version": {
+            "pattern": "^(?:[1-9][0-9]*\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)|0\\.(?:3\\.(?:[1-9][0-9]*)|(?:[4-9]|[1-9][0-9]+)\\.(?:0|[1-9][0-9]*)))$"
+          }
+        },
+        "required": ["template_set_version"]
+      },
+      "then": {
+        "required": ["template_set_version", "source_url", "revision"],
+        "properties": {
+          "artifacts": {
+            "items": { "required": ["pattern_refs", "template_refs", "shell_binding"] }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "required": ["artifact_id", "screen_id", "role", "state", "viewport", "path"],
+      "properties": {
+        "artifact_id": { "type": "string", "minLength": 1 },
+        "screen_id": { "type": "string", "minLength": 1 },
+        "role": { "type": "string", "minLength": 1 },
+        "state": { "type": "string", "minLength": 1 },
+        "viewport": { "$ref": "#/$defs/viewport" },
+        "path": { "type": "string", "minLength": 1 },
+        "pattern_refs": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "template_refs": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "target": { "$ref": "#/$defs/target" },
+        "shell_binding": { "$ref": "#/$defs/shellBinding" }
+      },
+      "additionalProperties": false
+    },
+    "viewport": {
+      "type": "object",
+      "required": ["viewport_id", "width", "height", "unit", "orientation"],
+      "properties": {
+        "viewport_id": { "type": "string", "minLength": 1 },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "unit": { "const": "css-px" },
+        "orientation": { "enum": ["portrait", "landscape", "any"] }
+      },
+      "additionalProperties": false
+    },
+    "shellBinding": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["selected", "proposed", "gap", "not_applicable"] },
+        "catalog_url": { "type": "string", "format": "uri", "minLength": 1 },
+        "catalog_revision": { "type": "string", "minLength": 1 },
+        "shell_id": { "type": "string", "minLength": 1 },
+        "shell_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "viewport_id": { "type": "string", "minLength": 1 },
+        "shell_viewport": { "$ref": "#/$defs/shellViewport" },
+        "rationale": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "minLength": 1 },
+        "decision_needed": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "selected" } }, "required": ["status"] },
+          "then": { "required": ["catalog_url", "catalog_revision", "shell_id", "shell_version", "viewport_id", "shell_viewport"] }
+        },
+        {
+          "if": { "properties": { "status": { "const": "proposed" } }, "required": ["status"] },
+          "then": { "required": ["catalog_url", "catalog_revision", "shell_id", "shell_version", "viewport_id", "shell_viewport", "rationale"] }
+        },
+        {
+          "if": { "properties": { "status": { "const": "gap" } }, "required": ["status"] },
+          "then": { "required": ["viewport_id", "reason", "decision_needed"] }
+        },
+        {
+          "if": { "properties": { "status": { "const": "not_applicable" } }, "required": ["status"] },
+          "then": { "required": ["rationale"] }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "shellViewport": {
+      "type": "object",
+      "required": ["width", "height", "unit", "orientation"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "unit": { "const": "css-px" },
+        "orientation": { "enum": ["portrait", "landscape", "any"] }
+      },
+      "additionalProperties": false
+    },
+    "target": {
+      "type": "object",
+      "required": ["kind", "value"],
+      "properties": {
+        "kind": { "enum": ["route", "selector", "anchor", "view-id"] },
+        "value": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sdd-framework/ui-screen-scaffold/shell-library/1.0",
+  "title": "SDD Framework GUI shell library",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "catalog_id",
+  "profile_catalog_revision",
+    "catalog_path",
+    "external_contract",
+    "rendering",
+    "shells"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "catalog_id": {
+      "const": "sdd-framework-gui-viewport-profiles"
+    },
+    "profile_catalog_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "catalog_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "external_contract": {
+      "type": "object",
+      "required": [
+        "url",
+        "version",
+        "revision",
+        "contract_path"
+      ],
+      "properties": {
+        "url": {
+          "const": "https://github.com/Druk83/ui-patterns.git"
+        },
+        "version": {
+          "const": "0.3.1"
+        },
+        "revision": {
+          "const": "36e0ce1191a0b53797d4c9f03eb945aae3f29bc7"
+        },
+        "contract_path": {
+          "const": "screen-shell-integration-contract.md"
+        }
+      },
+      "additionalProperties": false
+    },
+    "rendering": {
+      "type": "object",
+      "required": [
+        "unit",
+        "device_frame",
+        "viewport_policy",
+        "content_slots"
+      ],
+      "properties": {
+        "unit": {
+          "const": "css-px"
+        },
+        "device_frame": {
+          "const": "excluded"
+        },
+        "viewport_policy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "content_slots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "slot_id",
+              "required",
+              "purpose"
+            ],
+            "properties": {
+              "slot_id": {
+                "type": "string"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "purpose": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "shells": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "shell_id",
+          "shell_version",
+          "profile_id",
+          "viewport_id",
+          "width",
+          "height",
+          "unit",
+          "orientation",
+          "safe_area_status",
+          "reference_target",
+          "source_refs",
+          "path",
+          "stylesheet",
+          "content_slots"
+        ],
+        "properties": {
+          "shell_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "shell_version": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "viewport_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "unit": {
+            "const": "css-px"
+          },
+          "orientation": {
+            "enum": [
+              "portrait",
+              "landscape"
+            ]
+          },
+          "safe_area_status": {
+            "enum": [
+              "unknown",
+              "specified",
+              "not_applicable"
+            ]
+          },
+          "reference_target": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "stylesheet": {
+            "type": "string",
+            "minLength": 1
+          },
+          "content_slots": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

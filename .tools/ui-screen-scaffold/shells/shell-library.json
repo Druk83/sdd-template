@@ -1,0 +1,406 @@
+{
+  "schema_version": "1.0",
+  "catalog_id": "sdd-framework-gui-viewport-profiles",
+  "profile_catalog_revision": "confirmed-2026-10-20",
+  "catalog_path": ".tools/ui-screen-scaffold/catalog/viewport-profiles.json",
+  "external_contract": {
+    "url": "https://github.com/Druk83/ui-patterns.git",
+    "version": "0.3.1",
+    "revision": "36e0ce1191a0b53797d4c9f03eb945aae3f29bc7",
+    "contract_path": "screen-shell-integration-contract.md"
+  },
+  "rendering": {
+    "unit": "css-px",
+    "device_frame": "excluded",
+    "viewport_policy": "Точный обрезанный край-в-край холст; альбомные варианты, не измеренные источниками, являются транспонированными макетами.",
+    "content_slots": [
+      {
+        "slot_id": "screen-content",
+        "required": true,
+        "purpose": "Нейтральный слот для проектной композиции интерфейса; заполнитель заменяется при создании макета."
+      }
+    ]
+  },
+  "shells": [
+    {
+      "shell_id": "shell-galaxy-s24-360x780-portrait",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-compact-samsung-s24",
+      "viewport_id": "vp-galaxy-s24-360x780-portrait",
+      "width": 360,
+      "height": 780,
+      "unit": "css-px",
+      "orientation": "portrait",
+      "safe_area_status": "unknown",
+      "reference_target": "Samsung Galaxy S24",
+      "source_refs": [
+        "deviceatlas-mobile-viewport-study-2026-05"
+      ],
+      "path": "shell-galaxy-s24-360x780-portrait/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    },
+    {
+      "shell_id": "shell-galaxy-s24-780x360-landscape",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-compact-samsung-s24",
+      "viewport_id": "vp-galaxy-s24-780x360-landscape",
+      "width": 780,
+      "height": 360,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "unknown",
+      "reference_target": "Samsung Galaxy S24",
+      "source_refs": [
+        "deviceatlas-mobile-viewport-study-2026-05"
+      ],
+      "path": "shell-galaxy-s24-780x360-landscape/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    },
+    {
+      "shell_id": "shell-samsung-384x832-portrait",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-common-samsung-384",
+      "viewport_id": "vp-samsung-384x832-portrait",
+      "width": 384,
+      "height": 832,
+      "unit": "css-px",
+      "orientation": "portrait",
+      "safe_area_status": "unknown",
+      "reference_target": "Samsung representative viewport",
+      "source_refs": [
+        "deviceatlas-mobile-viewport-study-2026-05"
+      ],
+      "path": "shell-samsung-384x832-portrait/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    },
+    {
+      "shell_id": "shell-samsung-832x384-landscape",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-common-samsung-384",
+      "viewport_id": "vp-samsung-832x384-landscape",
+      "width": 832,
+      "height": 384,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "unknown",
+      "reference_target": "Samsung representative viewport",
+      "source_refs": [
+        "deviceatlas-mobile-viewport-study-2026-05"
+      ],
+      "path": "shell-samsung-832x384-landscape/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    },
+    {
+      "shell_id": "shell-pixel-412x915-portrait",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-common-pixel-412",
+      "viewport_id": "vp-pixel-412x915-portrait",
+      "width": 412,
+      "height": 915,
+      "unit": "css-px",
+      "orientation": "portrait",
+      "safe_area_status": "unknown",
+      "reference_target": "Google Pixel 8",
+      "source_refs": [
+        "deviceatlas-mobile-viewport-study-2026-05"
+      ],
+      "path": "shell-pixel-412x915-portrait/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    },
+    {
+      "shell_id": "shell-pixel-915x412-landscape",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-common-pixel-412",
+      "viewport_id": "vp-pixel-915x412-landscape",
+      "width": 915,
+      "height": 412,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "unknown",
+      "reference_target": "Google Pixel 8",
+      "source_refs": [
+        "deviceatlas-mobile-viewport-study-2026-05"
+      ],
+      "path": "shell-pixel-915x412-landscape/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    },
+    {
+      "shell_id": "shell-iphone-390x844-portrait",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-common-iphone-390",
+      "viewport_id": "vp-iphone-390x844-portrait",
+      "width": 390,
+      "height": 844,
+      "unit": "css-px",
+      "orientation": "portrait",
+      "safe_area_status": "unknown",
+      "reference_target": "Apple iPhone reference viewport",
+      "source_refs": [
+        "deviceatlas-mobile-viewport-study-2026-05"
+      ],
+      "path": "shell-iphone-390x844-portrait/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    },
+    {
+      "shell_id": "shell-iphone-844x390-landscape",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-common-iphone-390",
+      "viewport_id": "vp-iphone-844x390-landscape",
+      "width": 844,
+      "height": 390,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "unknown",
+      "reference_target": "Apple iPhone reference viewport",
+      "source_refs": [
+        "deviceatlas-mobile-viewport-study-2026-05"
+      ],
+      "path": "shell-iphone-844x390-landscape/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    },
+    {
+      "shell_id": "shell-mobile-320x694-portrait",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-accessibility-320",
+      "viewport_id": "vp-mobile-320x694-portrait",
+      "width": 320,
+      "height": 694,
+      "unit": "css-px",
+      "orientation": "portrait",
+      "safe_area_status": "unknown",
+      "reference_target": "320 CSS-px accessibility/display-zoom viewport",
+      "source_refs": [
+        "deviceatlas-mobile-viewport-study-2026-05"
+      ],
+      "path": "shell-mobile-320x694-portrait/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    },
+    {
+      "shell_id": "shell-mobile-694x320-landscape",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-accessibility-320",
+      "viewport_id": "vp-mobile-694x320-landscape",
+      "width": 694,
+      "height": 320,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "unknown",
+      "reference_target": "320 CSS-px accessibility/display-zoom viewport",
+      "source_refs": [
+        "deviceatlas-mobile-viewport-study-2026-05"
+      ],
+      "path": "shell-mobile-694x320-landscape/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    },
+    {
+      "shell_id": "shell-ipad-gen11-portrait",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-tablet-ipad-11th-generation",
+      "viewport_id": "vp-ipad-gen11-portrait",
+      "width": 656,
+      "height": 944,
+      "unit": "css-px",
+      "orientation": "portrait",
+      "safe_area_status": "unknown",
+      "reference_target": "Playwright iPad (gen 11) emulation descriptor",
+      "source_refs": [
+        "playwright-device-descriptors-1-64-1"
+      ],
+      "path": "shell-ipad-gen11-portrait/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    },
+    {
+      "shell_id": "shell-ipad-gen11-landscape",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-tablet-ipad-11th-generation",
+      "viewport_id": "vp-ipad-gen11-landscape",
+      "width": 944,
+      "height": 656,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "unknown",
+      "reference_target": "Playwright iPad (gen 11) emulation descriptor",
+      "source_refs": [
+        "playwright-device-descriptors-1-64-1"
+      ],
+      "path": "shell-ipad-gen11-landscape/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    },
+    {
+      "shell_id": "shell-galaxy-tab-s9-portrait",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-tablet-galaxy-tab-s9",
+      "viewport_id": "vp-galaxy-tab-s9-portrait",
+      "width": 640,
+      "height": 1024,
+      "unit": "css-px",
+      "orientation": "portrait",
+      "safe_area_status": "unknown",
+      "reference_target": "Playwright Galaxy Tab S9 emulation descriptor",
+      "source_refs": [
+        "playwright-device-descriptors-1-64-1"
+      ],
+      "path": "shell-galaxy-tab-s9-portrait/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    },
+    {
+      "shell_id": "shell-galaxy-tab-s9-landscape",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-tablet-galaxy-tab-s9",
+      "viewport_id": "vp-galaxy-tab-s9-landscape",
+      "width": 1024,
+      "height": 640,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "unknown",
+      "reference_target": "Playwright Galaxy Tab S9 emulation descriptor",
+      "source_refs": [
+        "playwright-device-descriptors-1-64-1"
+      ],
+      "path": "shell-galaxy-tab-s9-landscape/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    },
+    {
+      "shell_id": "shell-galaxy-z-fold7-inner-750x832-portrait",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-foldable-galaxy-z-fold7-inner",
+      "viewport_id": "vp-galaxy-z-fold7-inner-750x832-portrait",
+      "width": 750,
+      "height": 832,
+      "unit": "css-px",
+      "orientation": "portrait",
+      "safe_area_status": "unknown",
+      "reference_target": "Galaxy Z Fold7 unfolded inner viewport",
+      "source_refs": [
+        "deviceatlas-mobile-viewport-study-2026-05"
+      ],
+      "path": "shell-galaxy-z-fold7-inner-750x832-portrait/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    },
+    {
+      "shell_id": "shell-galaxy-z-fold7-inner-832x750-landscape",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-foldable-galaxy-z-fold7-inner",
+      "viewport_id": "vp-galaxy-z-fold7-inner-832x750-landscape",
+      "width": 832,
+      "height": 750,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "unknown",
+      "reference_target": "Galaxy Z Fold7 unfolded inner viewport",
+      "source_refs": [
+        "deviceatlas-mobile-viewport-study-2026-05"
+      ],
+      "path": "shell-galaxy-z-fold7-inner-832x750-landscape/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    },
+    {
+      "shell_id": "shell-galaxy-z-fold7-cover-412x960-portrait",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-foldable-galaxy-z-fold7-cover",
+      "viewport_id": "vp-galaxy-z-fold7-cover-412x960-portrait",
+      "width": 412,
+      "height": 960,
+      "unit": "css-px",
+      "orientation": "portrait",
+      "safe_area_status": "unknown",
+      "reference_target": "Galaxy Z Fold7 folded cover viewport",
+      "source_refs": [
+        "deviceatlas-mobile-viewport-study-2026-05"
+      ],
+      "path": "shell-galaxy-z-fold7-cover-412x960-portrait/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    },
+    {
+      "shell_id": "shell-galaxy-z-fold7-cover-960x412-landscape",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-foldable-galaxy-z-fold7-cover",
+      "viewport_id": "vp-galaxy-z-fold7-cover-960x412-landscape",
+      "width": 960,
+      "height": 412,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "unknown",
+      "reference_target": "Galaxy Z Fold7 folded cover viewport",
+      "source_refs": [
+        "deviceatlas-mobile-viewport-study-2026-05"
+      ],
+      "path": "shell-galaxy-z-fold7-cover-960x412-landscape/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    },
+    {
+      "shell_id": "shell-desktop-1280x720",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-desktop-reference-playwright",
+      "viewport_id": "vp-desktop-1280x720",
+      "width": 1280,
+      "height": 720,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "not_applicable",
+      "reference_target": "Playwright Desktop Chrome reference viewport",
+      "source_refs": [
+        "playwright-device-descriptors-1-64-1"
+      ],
+      "path": "shell-desktop-1280x720/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": [
+        "screen-content"
+      ]
+    }
+  ]
+}

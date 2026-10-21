@@ -63,13 +63,26 @@
   },
   {
     "name": "ui-reference",
-    "version": "0.2.0",
+    "version": "0.4.0",
     "path": ".tools/ui-reference/ui_reference.py",
     "entry": "python .tools/ui-reference/ui_reference.py validate --package <path>",
     "entry_win": ".tools/ui-reference/ui-reference.bat validate --package <path>",
     "entry_unix": ".tools/ui-reference/ui-reference validate --package <path>",
-    "desc": "Validate UI documentation packages and safely migrate legacy reference artifacts",
+    "desc": "Validate early and track-integrated UI packages with screen traceability, and safely migrate legacy references",
     "tags": ["ui", "validation", "migration", "reference", "safety"],
+    "exec": true,
+    "runtime": "python",
+    "availability": "bundled"
+  },
+  {
+    "name": "ui-screen-scaffold",
+    "version": "0.1.0",
+    "path": ".tools/ui-screen-scaffold/ui_screen_scaffold.py",
+    "entry": "python .tools/ui-screen-scaffold/ui_screen_scaffold.py generate --package <path> --reference-set <id>",
+    "entry_win": ".tools/ui-screen-scaffold/ui-screen-scaffold.bat generate --package <path> --reference-set <id>",
+    "entry_unix": ".tools/ui-screen-scaffold/ui-screen-scaffold generate --package <path> --reference-set <id>",
+    "desc": "Generate independent UI screen layouts from the project UI package and exact Framework shell catalog",
+    "tags": ["ui", "generator", "screen-shell", "prototype"],
     "exec": true,
     "runtime": "python",
     "availability": "bundled"

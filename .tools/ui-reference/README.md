@@ -1,6 +1,6 @@
 # Инструмент UI reference (UI reference tool)
 
-> Версия инструмента: `0.2.0`.
+> Версия инструмента: `0.4.0`.
 
 Инструмент проверяет технические документы пользовательского интерфейса и reference artifacts (эталонные артефакты интерфейса), а также безопасно переносит legacy-наборы макетов. Он работает с указанным каталогом и не ограничен только `.figma`.
 
@@ -47,9 +47,11 @@ python .tools/ui-reference/ui_reference.py inventory --source docs/.figma
 
 - `--pool <path>` — screen pool (пул экранов): JSON с описанием экранов;
 - `--manifest <path>` — manifest спецификации пользовательского интерфейса;
-- `--reference-set <path>` — набор reference artifacts с `screen-manifest.json`, viewport-каталогами и обязательными файлами.
+- `--reference-set <path>` — набор reference artifacts с `screen-manifest.json` и каталогами экранов/viewport.
 - `--package <path>` — полный UI-пакет в canonical-каталоге
   `docs/requirements/пользовательский-интерфейс/`.
+- `--framework-root <path>` — корень установленного Framework для точной проверки
+  локальной библиотеки оболочек; по умолчанию определяется по расположению инструмента.
 
 Пример полной проверки:
 
@@ -64,9 +66,32 @@ python .tools/ui-reference/ui_reference.py validate --package docs/requirements/
 ```
 
 Проверяются структура JSON, обязательные поля, допустимые статусы, связи экранов с
-pool, pattern/template IDs, traceability, существование screen artifacts, viewport
-и обязательных файлов reference-set. Валидация не оценивает визуальное соответствие
-макета и не доказывает готовность production-кода.
+pool, pattern/template IDs в контексте каждого экрана, traceability, существование
+screen artifacts, viewport и обязательных файлов reference-set. Контракт `2` связывает
+каждый визуальный артефакт с `artifact_id`, `screen_id`, ролью, состоянием и viewport;
+если один файл представляет несколько экранов или состояний, для каждой связи нужен
+уникальный `target`. В режиме `early-prototype` допускаются открытые GAP и отсутствие
+трассировки; в `track-integrated` подтверждённый экран должен иметь трассировку и
+визуальный артефакт. Для `ui-patterns` `0.3.1` и новее UI manifest и screen pool
+должны иметь одинаковый `template_set_version`; каждый viewport содержит список
+`screen_shell_candidates`, а каждый reference artifact — соответствующий ему
+`shell_binding`. Проверяются допустимые статусы, не более одного выбранного
+кандидата, совпадение привязки с кандидатом того же viewport, официальный URL и
+точную ревизию репозитория каталога оболочек, обоснование GAP/неприменимости и
+геометрию. Для официального каталога Framework валидатор дополнительно сверяет
+`shell_id`, `shell_version`, viewport и `catalog_revision` с библиотекой и
+`release-manifest.json`. Корневые поля UI-пакета отдельно задают версию и ревизию
+`ui-patterns`; значения в `screen-manifest.json` и ссылки паттернов/шаблонов на уровне
+артефакта должны совпадать с UI manifest.
+Новые артефакты размещаются в
+`screens/<screen-id>/<viewport-id>/` внутри `references/<reference-set>/`; предыдущий
+путь с viewport-каталогом в корне reference-set остаётся допустим для существующих
+пакетов. Пакеты, сохраняющие provenance `0.3.0` и ниже,
+остаются совместимыми без новых полей. Отдельная команда `--reference-set` проверяет
+содержащуюся привязку, но не может определить её обязательность без версии набора;
+для этого используйте `--package`. Контракт `1` принимается как legacy-вход без
+автоматической перезаписи данных. Валидация не оценивает визуальное соответствие макета
+и не доказывает готовность production-кода.
 
 ### `migrate`
 
