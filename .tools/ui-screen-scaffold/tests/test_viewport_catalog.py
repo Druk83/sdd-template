@@ -98,6 +98,12 @@ class ViewportCatalogTests(unittest.TestCase):
                 self.assertTrue(source["url"].startswith("https://"))
 
     def test_physical_screen_is_separate_from_css_viewport(self) -> None:
+        variant_properties = self.schema["$defs"]["variant"]["properties"]
+        self.assertIn("not physical panel resolution", variant_properties["width"]["description"])
+        self.assertIn("not physical panel resolution", variant_properties["height"]["description"])
+        physical_properties = variant_properties["physical_screen"]["properties"]
+        self.assertIn("separate from the CSS viewport", physical_properties["width"]["description"])
+        self.assertIn("separate from the CSS viewport", physical_properties["height"]["description"])
         for profile in self.catalog["profiles"]:
             for variant in profile["variants"]:
                 physical = variant.get("physical_screen")
@@ -120,6 +126,35 @@ class ViewportCatalogTests(unittest.TestCase):
         self.assertEqual(rejected, {key for key, value in profile_statuses.items() if value == "rejected"})
         self.assertEqual(self.catalog["status"], "confirmed")
 
+        expected_profiles = {
+            "gui-tablet-ipad-mini": {
+                "category": "tablet",
+                "pair": (768, 1024),
+                "source": "playwright-device-descriptors-1-64-1",
+            },
+            "gui-foldable-pixel-9-pro-fold-cover": {
+                "category": "foldable-cover-display",
+                "pair": (444, 995),
+                "source": "deviceatlas-mobile-viewport-study-2026-05",
+            },
+            "gui-foldable-pixel-9-pro-fold-inner": {
+                "category": "foldable-inner-display",
+                "pair": (755, 783),
+                "source": "deviceatlas-mobile-viewport-study-2026-05",
+            },
+        }
+        profiles_by_id = {item["profile_id"]: item for item in self.catalog["profiles"]}
+        for profile_id, expected in expected_profiles.items():
+            profile = profiles_by_id[profile_id]
+            self.assertEqual(profile["category"], expected["category"])
+            self.assertEqual(profile["status"], "confirmed")
+            self.assertEqual(profile["source_refs"], [expected["source"]])
+            dimensions = {(item["width"], item["height"]) for item in profile["variants"]}
+            width, height = expected["pair"]
+            self.assertEqual(dimensions, {(width, height), (height, width)})
+            self.assertTrue(all(item["safe_area_status"] == "unknown" for item in profile["variants"]))
+            self.assertTrue(all("physical_screen" not in item for item in profile["variants"]))
+
     def test_deviceatlas_mobile_profiles_keep_measured_and_transposed_sizes_distinct(self) -> None:
         source = next(
             item
@@ -139,16 +174,88 @@ class ViewportCatalogTests(unittest.TestCase):
         self.assertEqual(dimensions, {(412, 915), (915, 412)})
         self.assertIn("412×914", profile["rationale"])
 
+        representatives = next(
+            item
+            for item in self.catalog["profiles"]
+            if item["profile_id"] == "gui-mobile-deviceatlas-width-representatives"
+        )
+        self.assertEqual(representatives["status"], "confirmed")
+        self.assertEqual(representatives["source_refs"], [source["source_id"]])
+        expected_portrait = {(375, 812), (393, 852), (414, 896), (430, 932), (448, 998)}
+        portrait = {
+            (item["width"], item["height"])
+            for item in representatives["variants"]
+            if item["orientation"] == "portrait"
+        }
+        landscape = {
+            (item["width"], item["height"])
+            for item in representatives["variants"]
+            if item["orientation"] == "landscape"
+        }
+        self.assertEqual(portrait, expected_portrait)
+        self.assertEqual(landscape, {(height, width) for width, height in expected_portrait})
+        self.assertTrue(all(item["source_refs"] == [source["source_id"]] for item in representatives["variants"]))
+        self.assertIn("transposed visual test presets", representatives["rationale"])
+
     def test_device_frame_is_excluded(self) -> None:
         self.assertEqual(self.catalog["shell_contract"]["device_frame"]["status"], "excluded")
 
-    def test_wide_desktop_remains_gap_without_an_exact_css_viewport(self) -> None:
-        profile = next(item for item in self.catalog["profiles"] if item["category"] == "wide-desktop")
-        self.assertEqual(profile["status"], "gap")
-        self.assertEqual(profile["variants"], [])
-        self.assertTrue(profile["decision_needed"])
+    def test_desktop_representatives_are_source_backed_and_4k_stays_unmeasured(self) -> None:
+        sources = {item["source_id"]: item for item in self.catalog["sources"]}
+        report = sources["screensize-viewport-reality-report-2026-09"]
+        self.assertIn("1,096 desktop observations", report["limitations"])
+        self.assertIn("not global market share", report["limitations"])
+
+        compact = next(item for item in self.catalog["profiles"] if item["profile_id"] == "gui-desktop-compact-window")
+        self.assertEqual(compact["category"], "notebook-desktop")
+        self.assertEqual(compact["status"], "confirmed")
+        self.assertEqual([(v["width"], v["height"]) for v in compact["variants"]], [(800, 600)])
+        self.assertEqual(compact["source_refs"], [report["source_id"]])
+
+        wide = next(item for item in self.catalog["profiles"] if item["profile_id"] == "gui-wide-desktop-screensize-representatives")
+        self.assertEqual(wide["category"], "wide-desktop")
+        self.assertEqual(wide["status"], "confirmed")
+        dimensions = {(v["width"], v["height"]) for v in wide["variants"]}
+        self.assertEqual(dimensions, {(1520, 700), (1920, 920), (1920, 960), (1920, 1080), (2560, 1280)})
+        self.assertTrue(all(report["source_id"] in v["source_refs"] for v in wide["variants"]))
+        self.assertIn("developer-selected 1920x1080 CSS px reference", wide["rationale"])
+        self.assertIn("select 1920x1080 CSS px as the Framework desktop reference", self.catalog["developer_decision"]["notes"])
+        self.assertGreater(1520 / 700, 2)
+
+        very_large_gap = next(
+            item for item in self.catalog["profiles"]
+            if item["profile_id"] == "gui-4k-8k-css-viewport-unmeasured"
+        )
+        self.assertEqual(very_large_gap["status"], "gap")
+        self.assertEqual(very_large_gap["variants"], [])
+        self.assertTrue(very_large_gap["decision_needed"])
+        all_dimensions = {
+            (variant["width"], variant["height"])
+            for profile in self.catalog["profiles"]
+            for variant in profile["variants"]
+        }
+        self.assertNotIn((3840, 2160), all_dimensions)
+        self.assertNotIn((7680, 4320), all_dimensions)
 
     def test_shell_library_covers_every_confirmed_profile_variant_once(self) -> None:
+        self.assertIn("television", self.schema["$defs"]["profile"]["properties"]["category"]["enum"])
+        television_profiles = {
+            "gui-tv-samsung-tizen-css-viewport-gap": "samsung-tizen-screen-resolution",
+            "gui-tv-lg-webos-css-viewport-gap": "lg-webos-app-resolution",
+            "gui-tv-android-webview-css-viewport-gap": "android-tv-layout-guidance",
+        }
+        profiles_by_id = {profile["profile_id"]: profile for profile in self.catalog["profiles"]}
+        for profile_id, source_id in television_profiles.items():
+            profile = profiles_by_id[profile_id]
+            self.assertEqual(profile["category"], "television")
+            self.assertEqual(profile["status"], "gap")
+            self.assertEqual(profile["variants"], [])
+            self.assertTrue(profile["decision_needed"])
+            self.assertIn(source_id, profile["source_refs"])
+        self.assertIn("960x540 dp", profiles_by_id["gui-tv-android-webview-css-viewport-gap"]["rationale"])
+        tv_profile_ids = set(television_profiles)
+        self.assertFalse(any(shell["profile_id"] in tv_profile_ids for shell in self.shell_library["shells"]))
+
         catalog_variants = {
             variant["shell_id_candidate"]: (profile, variant)
             for profile in self.catalog["profiles"]

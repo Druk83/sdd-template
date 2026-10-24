@@ -246,6 +246,48 @@ class ScreenScaffoldTests(unittest.TestCase):
         self.assertEqual(len(plan["files"]), 4)
         self.assertFalse((self.reference_root / "screens").exists())
 
+    def test_selected_catalog_viewports_resolve_through_shell_binding(self) -> None:
+        source_library_path = SOURCE_ROOT / ".tools" / "ui-screen-scaffold" / "shells" / "shell-library.json"
+        source_library = json.loads(source_library_path.read_text(encoding="utf-8"))
+        selected_ids = {
+            "shell-deviceatlas-mobile-375x812-portrait",
+            "shell-ipad-mini-768x1024-portrait",
+            "shell-pixel-9-pro-fold-cover-444x995-portrait",
+            "shell-pixel-9-pro-fold-inner-755x783-portrait",
+            "shell-desktop-800x600",
+            "shell-desktop-1520x700",
+            "shell-desktop-1920x920",
+            "shell-desktop-1920x960",
+            "shell-desktop-1920x1080",
+            "shell-desktop-2560x1280",
+        }
+        shells_by_id = {item["shell_id"]: item for item in source_library["shells"]}
+        shell_root = self.framework / ".tools" / "ui-screen-scaffold" / "shells"
+        local_library_path = shell_root / "shell-library.json"
+
+        for shell_id in sorted(selected_ids):
+            with self.subTest(shell_id=shell_id):
+                self.shell = shells_by_id[shell_id]
+                shell_page = shell_root / self.shell["path"]
+                shell_page.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source_library_path.parent / self.shell["path"], shell_page)
+                local_library_path.write_text(
+                    json.dumps({"schema_version": "1.0", "shells": [self.shell]}, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+                self._write_package()
+
+                plan = self._build()
+                self.assertEqual(plan["status"], "ready")
+                ui_screen_scaffold.write_plan(plan)
+                result = self._validate_package()
+                self.assertEqual(result.returncode, 0, result.stderr or result.stdout)
+                self.assertEqual(json.loads(result.stdout)["status"], "pass")
+
+                generated = self.reference_root / "screens"
+                if generated.exists():
+                    shutil.rmtree(generated)
+
     def test_write_creates_independent_preview_and_traceability(self) -> None:
         plan = self._build()
         written = ui_screen_scaffold.write_plan(plan)

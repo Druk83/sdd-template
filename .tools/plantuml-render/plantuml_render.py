@@ -3,6 +3,8 @@
 
 import argparse
 import base64
+import os
+import stat
 import sys
 import zlib
 from pathlib import Path
@@ -111,6 +113,60 @@ def get_diagram_type(file_path):
     return FILE_DIAGRAM_TYPES.get(file_path.suffix.lower())
 
 
+# @todo #TD-026-03:1d Закрыть гонку входного и выходного пути PlantUML
+# refs: .tasks/TD-026-03.md
+# scope: .tools/plantuml-render/plantuml_render.py
+# type: debt
+# prio: P1
+# accept: рендеринг не читает и не пишет вне разрешённого дерева при подмене пути
+def path_has_symlink_component(path: Path) -> bool:
+    """Проверить конечный путь и его родителей на symlink и junction."""
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        candidate = Path.cwd() / candidate
+    current = Path(candidate.anchor)
+    for part in candidate.parts[1:]:
+        if part == "..":
+            current = current.parent
+            continue
+        if part == ".":
+            continue
+        current = current / part
+        try:
+            metadata = current.lstat()
+        except (FileNotFoundError, NotADirectoryError):
+            continue
+        except OSError:
+            return True
+        if stat.S_ISLNK(metadata.st_mode):
+            return True
+        reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+        if reparse_flag and getattr(metadata, "st_file_attributes", 0) & reparse_flag:
+            return True
+    return False
+
+
+def write_output(path: Path, content: bytes) -> None:
+    """Записать результат без следования по symlink-компонентам пути."""
+    if path_has_symlink_component(path):
+        raise ValueError(f"Output path must not contain a symbolic link: {path}")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    flags |= getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
+    descriptor = os.open(path, flags, 0o666)
+    with os.fdopen(descriptor, "wb") as output_file:
+        output_file.write(content)
+
+
+def read_input(path: Path) -> str:
+    """Прочитать файл без следования по symlink-компонентам пути."""
+    if path_has_symlink_component(path):
+        raise ValueError(f"Input path must not contain a symbolic link: {path}")
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
+    descriptor = os.open(path, flags)
+    with os.fdopen(descriptor, "r", encoding="utf-8") as input_file:
+        return input_file.read()
+
+
 def render_file(
     file_path,
     diagram_type,
@@ -122,8 +178,13 @@ def render_file(
 ):
     """Рендерит один файл поддерживаемого типа диаграммы."""
     try:
-        with open(file_path, "r", encoding="utf-8") as input_file:
-            source = input_file.read()
+        file_path = Path(file_path)
+        if path_has_symlink_component(file_path):
+            raise ValueError(f"Input path must not contain a symbolic link: {file_path}")
+        output_path = file_path.with_suffix(f".{output_format}")
+        if not dry_run and path_has_symlink_component(output_path):
+            raise ValueError(f"Output path must not contain a symbolic link: {output_path}")
+        source = read_input(file_path)
 
         if dry_run:
             print(
@@ -180,9 +241,7 @@ def render_file(
             with urlopen(rasterizer_request, timeout=timeout) as response:
                 image_data = response.read()
 
-        output_path = file_path.with_suffix(f".{output_format}")
-        with open(output_path, "wb") as output_file:
-            output_file.write(image_data)
+        write_output(output_path, image_data)
 
         print(
             f"[OK] Rendered {diagram_type}: {file_path} -> {output_path}",
@@ -207,10 +266,12 @@ def render_file(
 def find_diagram_files(root_path, requested_type):
     """Ищет поддерживаемые файлы диаграмм рекурсивно."""
     root = Path(root_path)
+    if path_has_symlink_component(root):
+        print(f"[ERROR] Symbolic link input is not supported: {root}", file=sys.stderr)
+        return []
     if not root.exists():
         print(f"[ERROR] Path does not exist: {root_path}", file=sys.stderr)
         return []
-
     if root.is_file():
         diagram_type = get_diagram_type(root)
         if diagram_type and (requested_type == "auto" or diagram_type == requested_type):
@@ -219,7 +280,7 @@ def find_diagram_files(root_path, requested_type):
 
     files = []
     for file_path in root.rglob("*"):
-        if not file_path.is_file():
+        if path_has_symlink_component(file_path) or not file_path.is_file():
             continue
         diagram_type = get_diagram_type(file_path)
         if diagram_type and (requested_type == "auto" or diagram_type == requested_type):

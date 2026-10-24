@@ -1,11 +1,13 @@
 import hashlib
 import io
 import json
+import stat
 import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, cast
 from unittest.mock import patch
 
@@ -24,6 +26,216 @@ def file_record(path: Path, relative: str) -> dict[str, object]:
         "size": len(data),
         "sha256": hashlib.sha256(data).hexdigest(),
     }
+
+
+class SymlinkBoundaryTests(unittest.TestCase):
+    def make_symlink(self, target: Path, link: Path, *, is_directory: bool = False) -> None:
+        try:
+            link.symlink_to(target, target_is_directory=is_directory)
+        except (OSError, NotImplementedError) as error:
+            self.skipTest(f"symbolic links are unavailable: {error}")
+
+    def test_release_copy_rejects_external_symlink_source(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            source = base / "source"
+            source.mkdir()
+            outside = base / "outside.txt"
+            outside.write_text("private data", encoding="utf-8")
+            self.make_symlink(outside, source / "leak.txt")
+            target = base / "package"
+
+            with self.assertRaises(build_release.BuildError):
+                build_release.copy_tree(source, target, source_root=source)
+
+            self.assertFalse((target / "leak.txt").exists())
+            self.assertEqual(outside.read_text(encoding="utf-8"), "private data")
+
+    def test_release_copy_file_rejects_external_symlink_source(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            source = base / "source"
+            source.mkdir()
+            outside = base / "outside.txt"
+            outside.write_text("private data", encoding="utf-8")
+            link = source / "required.txt"
+            self.make_symlink(outside, link)
+
+            with self.assertRaises(build_release.BuildError):
+                build_release.copy_file(link, base / "package" / "required.txt", source_root=source)
+
+            self.assertFalse((base / "package" / "required.txt").exists())
+
+    def test_portable_registry_rejects_symlink_source(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            source = base / "source"
+            (source / ".tools").mkdir(parents=True)
+            outside = base / "registry.json"
+            outside.write_text('[{"name": "external"}]', encoding="utf-8")
+            self.make_symlink(outside, source / ".tools" / "registry.json")
+
+            with self.assertRaises(build_release.BuildError):
+                build_release.portable_registry(source, "1.9.0")
+
+    def test_path_guard_rejects_windows_reparse_point_metadata(self) -> None:
+        path = Path("junction")
+        metadata = SimpleNamespace(st_mode=stat.S_IFDIR, st_file_attributes=0x400)
+        with patch.object(Path, "lstat", return_value=metadata):
+            self.assertTrue(build_release.is_link_or_reparse_point(path))
+
+    def create_resume_stage(self, root: Path, stage: Path) -> str:
+        version = build_release.read_version(root)
+        stage.mkdir(parents=True)
+        (stage / "README.md").write_text("resume stage\n", encoding="utf-8")
+        (stage / "sdd-template.instructions.md").write_text("instructions\n", encoding="utf-8")
+        manifest = {
+            "package_id": build_release.PACKAGE_ID,
+            "version": version,
+            "release_dir": f".agents/{build_release.release_name(version)}",
+            "source_commit": build_release.git_value(root, ["rev-parse", "HEAD"], ""),
+        }
+        (stage / "release-manifest.json").write_text(
+            json.dumps(manifest), encoding="utf-8"
+        )
+        return version
+
+    def test_resume_stage_outside_target_root_is_supported(self) -> None:
+        root = build_release.repository_root()
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            output_root = base / "consumer"
+            output_root.mkdir()
+            stage = base / "source-clone" / "tmp" / "staging"
+            version = self.create_resume_stage(root, stage)
+
+            result = build_release.build_release(
+                root,
+                output_root,
+                write=True,
+                resume_stage=True,
+                stage_root=stage,
+                allow_existing_releases=True,
+                allow_candidate=True,
+            )
+
+            package = output_root / ".agents" / build_release.release_name(version)
+            self.assertEqual(result["status"], "written")
+            self.assertEqual((package / "README.md").read_text(encoding="utf-8"), "resume stage\n")
+
+    def test_resume_stage_rejects_symlink_content_before_copy(self) -> None:
+        root = build_release.repository_root()
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            output_root = base / "consumer"
+            output_root.mkdir()
+            stage = base / "source-clone" / "tmp" / "staging"
+            version = self.create_resume_stage(root, stage)
+            outside = base / "outside.txt"
+            outside.write_text("private data", encoding="utf-8")
+            self.make_symlink(outside, stage / "leak.txt")
+
+            with self.assertRaises(build_release.BuildError):
+                build_release.build_release(
+                    root,
+                    output_root,
+                    write=True,
+                    resume_stage=True,
+                    stage_root=stage,
+                    allow_existing_releases=True,
+                    allow_candidate=True,
+                )
+
+            package = output_root / ".agents" / build_release.release_name(version)
+            self.assertFalse(package.exists())
+            self.assertEqual(outside.read_text(encoding="utf-8"), "private data")
+
+    def test_resume_stage_rejects_symlink_parent_boundary(self) -> None:
+        root = build_release.repository_root()
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            output_root = base / "consumer"
+            output_root.mkdir()
+            outside = base / "outside"
+            stage = outside / "staging"
+            version = self.create_resume_stage(root, stage)
+            source_clone = base / "source-clone"
+            source_clone.mkdir()
+            self.make_symlink(outside, source_clone / "tmp", is_directory=True)
+
+            with self.assertRaises(build_release.BuildError):
+                build_release.build_release(
+                    root,
+                    output_root,
+                    write=True,
+                    resume_stage=True,
+                    stage_root=source_clone / "tmp" / "staging",
+                    allow_existing_releases=True,
+                    allow_candidate=True,
+                )
+
+            package = output_root / ".agents" / build_release.release_name(version)
+            self.assertFalse(package.exists())
+
+    def test_installer_rejects_symlink_agents_destination(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            source = base / "source"
+            target = base / "target"
+            source.mkdir()
+            target.mkdir()
+            (source / "AGENTS.md").write_text("# Framework\n", encoding="utf-8")
+            outside = base / "outside.md"
+            outside.write_text("user data\n", encoding="utf-8")
+            self.make_symlink(outside, target / "AGENTS.md")
+
+            with self.assertRaises(build_release.BuildError):
+                install_framework.ensure_agents_instructions(target, source, "1.9.2")
+
+            self.assertEqual(outside.read_text(encoding="utf-8"), "user data\n")
+
+    def test_installer_rejects_symlink_parent_before_scaffolding(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            source = base / "source"
+            templates = source / ".tools" / "sdd-template-release" / "templates" / "project-root"
+            templates.mkdir(parents=True)
+            (templates / ".gitignore").write_text("tmp/\n", encoding="utf-8")
+            for relative in install_framework.PROJECT_ROOT_TEMPLATES:
+                template = templates / relative
+                template.parent.mkdir(parents=True, exist_ok=True)
+                template.write_text("template\n", encoding="utf-8")
+            target = base / "target"
+            target.mkdir()
+            outside = base / "outside"
+            outside.mkdir()
+            self.make_symlink(outside, target / ".source", is_directory=True)
+
+            with self.assertRaises(build_release.BuildError):
+                install_framework.initialize_project_root(
+                    target, target / ".agents" / "sdd-template-1.9.2", source, "1.9.2"
+                )
+
+            self.assertFalse((outside / "README.md").exists())
+
+
+    def test_cleanup_rejects_symlink_tmp_before_following_it(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            target = base / "target"
+            target.mkdir()
+            outside = base / "user-data"
+            source = outside / "sdd-template-source-1.9.1-12345678"
+            source.mkdir(parents=True)
+            (source / "important.txt").write_text("preserve", encoding="utf-8")
+            self.make_symlink(outside, target / "tmp", is_directory=True)
+
+            with self.assertRaises(build_release.BuildError):
+                install_framework.validate_cleanup_target(
+                    target, target / "tmp" / source.name
+                )
+
+            self.assertEqual((source / "important.txt").read_text(encoding="utf-8"), "preserve")
 
 
 class SafetyInventoryTests(unittest.TestCase):
@@ -461,7 +673,7 @@ class ShellLibraryExportTests(unittest.TestCase):
 
             library = stage / ".tools" / "ui-screen-scaffold" / "shells"
             manifest = json.loads((library / "shell-library.json").read_text(encoding="utf-8"))
-            self.assertEqual(len(manifest["shells"]), 19)
+            self.assertEqual(len(manifest["shells"]), 41)
             self.assertTrue((library / "shell.css").is_file())
             self.assertTrue((stage / ".tools" / "ui-screen-scaffold" / "ui_screen_scaffold.py").is_file())
             self.assertTrue((stage / ".tools" / "ui-screen-scaffold" / "ui-screen-scaffold.bat").is_file())

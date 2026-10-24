@@ -7,6 +7,7 @@ import hashlib
 import json
 import re
 import shutil
+import stat
 import sys
 from pathlib import Path
 from typing import Any
@@ -92,6 +93,43 @@ def safe_roots(source: Path, target: Path) -> None:
         raise UiReferenceError("Источник и target должны быть независимыми каталогами.")
 
 
+# @todo #TD-026-03:1d Закрыть гонку пути назначения UI reference
+# refs: .tasks/TD-026-03.md
+# scope: .tools/ui-reference/ui_reference.py
+# type: debt
+# prio: P1
+# accept: миграция не пишет вне разрешённого дерева при подмене пути
+def safe_destination(target: Path, destination: Path) -> Path:
+    """Проверить путь назначения миграции до обращения к файловой системе."""
+    target_path = target.absolute()
+    resolved_target = target.resolve()
+    try:
+        relative = destination.absolute().relative_to(target_path)
+    except ValueError as error:
+        raise UiReferenceError(f"Путь назначения выходит за target: {destination}") from error
+
+    current = resolved_target
+    for part in relative.parts:
+        current = current / part
+        try:
+            metadata = current.lstat()
+        except (FileNotFoundError, NotADirectoryError):
+            metadata = None
+        if metadata is not None:
+            reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+            if stat.S_ISLNK(metadata.st_mode) or (
+                reparse_flag and getattr(metadata, "st_file_attributes", 0) & reparse_flag
+            ):
+                raise UiReferenceError(f"Путь назначения содержит символическую ссылку: {current}")
+        try:
+            resolved = current.resolve(strict=False)
+        except OSError as error:
+            raise UiReferenceError(f"Невозможно проверить путь назначения: {current}") from error
+        if not resolved.is_relative_to(resolved_target):
+            raise UiReferenceError(f"Путь назначения выходит за target: {current}")
+    return current
+
+
 def migrate(source: Path, target: Path, write: bool) -> dict[str, Any]:
     safe_roots(source, target)
     source_inventory = inventory(source)
@@ -101,7 +139,11 @@ def migrate(source: Path, target: Path, write: bool) -> dict[str, Any]:
 
     for entry in source_inventory["entries"]:
         relative = Path(str(entry["path"]))
-        destination = target / relative
+        try:
+            destination = safe_destination(target, target / relative)
+        except UiReferenceError:
+            conflicts.append(relative.as_posix())
+            continue
         if destination.exists():
             if not destination.is_file() or sha256_file(destination) != entry["sha256"]:
                 conflicts.append(relative.as_posix())
@@ -110,8 +152,14 @@ def migrate(source: Path, target: Path, write: bool) -> dict[str, Any]:
             continue
         copied.append(relative.as_posix())
         if write:
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source / relative, destination)
+            try:
+                destination = safe_destination(target, destination)
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination = safe_destination(target, destination)
+                shutil.copy2(source / relative, destination)
+            except (OSError, UiReferenceError):
+                copied.pop()
+                conflicts.append(relative.as_posix())
 
     return {
         "operation": "migrate",

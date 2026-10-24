@@ -119,6 +119,7 @@ def validate_package(package: Path, version: str, allow_candidate: bool = False)
         "sdd-template.instructions.md",
         "release-registry.json",
         ".project-structure.json",
+        ".manifest/gitmanifest.md",
         ".tools/registry.json",
         ".tools/pdd/manifest-validator.py",
     )

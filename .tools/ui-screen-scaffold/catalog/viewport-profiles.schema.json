@@ -150,7 +150,7 @@
       "required": ["profile_id", "category", "status", "reference_target", "rationale", "source_refs", "variants"],
       "properties": {
         "profile_id": { "type": "string", "minLength": 1 },
-        "category": { "enum": ["smartphone", "tablet", "foldable-inner-display", "foldable-cover-display", "notebook-desktop", "wide-desktop"] },
+        "category": { "enum": ["smartphone", "tablet", "foldable-inner-display", "foldable-cover-display", "notebook-desktop", "wide-desktop", "television"] },
         "status": { "enum": ["proposed", "confirmed", "rejected", "gap"] },
         "reference_target": { "type": "string", "minLength": 1 },
         "rationale": { "type": "string", "minLength": 1 },
@@ -173,8 +173,8 @@
       "properties": {
         "viewport_id": { "type": "string", "minLength": 1 },
         "shell_id_candidate": { "type": "string", "minLength": 1 },
-        "width": { "type": "integer", "minimum": 1 },
-        "height": { "type": "integer", "minimum": 1 },
+        "width": { "type": "integer", "minimum": 1, "description": "Browser viewport width in CSS px, not physical panel resolution." },
+        "height": { "type": "integer", "minimum": 1, "description": "Browser viewport height in CSS px, not physical panel resolution." },
         "unit": { "const": "css-px" },
         "orientation": { "enum": ["portrait", "landscape"] },
         "device_scale_factor": { "type": "number", "exclusiveMinimum": 0 },
@@ -182,8 +182,8 @@
           "type": "object",
           "required": ["width", "height", "unit"],
           "properties": {
-            "width": { "type": "integer", "minimum": 1 },
-            "height": { "type": "integer", "minimum": 1 },
+            "width": { "type": "integer", "minimum": 1, "description": "Emulated screen width in emulated-screen-px; keep it separate from the CSS viewport." },
+            "height": { "type": "integer", "minimum": 1, "description": "Emulated screen height in emulated-screen-px; keep it separate from the CSS viewport." },
             "unit": { "const": "emulated-screen-px" }
           },
           "additionalProperties": false

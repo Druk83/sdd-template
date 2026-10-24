@@ -4,7 +4,10 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from .errors import InputError
 from .ingestion import SourceDocument
+
+MAX_EXPRESSION_DEPTH = 64
 
 _HEADING_RE = re.compile(r'^\s{0,3}(?P<marks>#{1,6})\s+(?P<heading>.+?)\s*#*\s*$')
 _LIST_RE = re.compile(r'^\s*(?:[-*+]\s+|\d+[.)]\s+)(?P<text>.+?)\s*$')
@@ -97,6 +100,7 @@ class _Analyzer:
         self.document_index = document_index
         self.expression_index = 0
         self.proposition_index = 0
+        self.expression_depth = 0
         self.expressions: list[dict] = []
         self.is_normative_manifest = '.manifest' in {part.casefold() for part in self.document.path.parts}
 
@@ -153,7 +157,15 @@ class _Analyzer:
         return expression_id
 
     def _operand(self, text: str, line: int, section_path: list[str]) -> dict:
-        nested = self._parse_expression(text, line, section_path)
+        self.expression_depth += 1
+        try:
+            if self.expression_depth > MAX_EXPRESSION_DEPTH:
+                raise InputError(
+                    f"logical expression depth limit exceeded: {MAX_EXPRESSION_DEPTH}"
+                )
+            nested = self._parse_expression(text, line, section_path)
+        finally:
+            self.expression_depth -= 1
         if nested is not None:
             ref = self._ref(line, text.strip(), section_path)
             return {'kind': 'expression', 'expression_id': nested, 'source_ref': ref, 'evidence': [ref]}

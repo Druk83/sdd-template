@@ -8,6 +8,7 @@ import hashlib
 import json
 import re
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -38,6 +39,61 @@ PACKAGE_PATH_PATTERN = re.compile(
 
 class BuildError(RuntimeError):
     """Ошибка проверки или сборки релиза."""
+
+
+def is_link_or_reparse_point(path: Path) -> bool:
+    """Detect symlinks and Windows reparse points, including junctions."""
+    try:
+        metadata = path.lstat()
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+    except OSError as error:
+        raise BuildError(f"Cannot inspect path type: {path}: {error}") from error
+    if stat.S_ISLNK(metadata.st_mode):
+        return True
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    return bool(reparse_flag and getattr(metadata, "st_file_attributes", 0) & reparse_flag)
+
+
+# @todo #TD-026-01:1d Выбрать безопасные файловые операции для Windows и POSIX
+# refs: .tasks/TD-026-01.md
+# scope: .tools/sdd-template-release .tools/ui-reference .tools/plantuml-render
+# type: debt
+# prio: P1
+# accept: выбранный способ удерживает границу каталога при конкурентной подмене
+# @todo #TD-026-02:1d Закрыть гонку путей при сборке релиза
+# refs: .tasks/TD-026-02.md
+# scope: .tools/sdd-template-release/build_release.py
+# type: debt
+# prio: P1
+# accept: сборка не читает и не пишет вне разрешённого дерева при подмене пути
+def ensure_path_without_symlinks(root: Path, path: Path, purpose: str) -> Path:
+    """Проверить путь относительно корня и запретить symlink-компоненты."""
+    root_path = root.absolute()
+    current = Path(root_path.anchor)
+    for part in root_path.parts[1:]:
+        current = current / part
+        if is_link_or_reparse_point(current):
+            raise BuildError(f"Путь корня {purpose} содержит symlink или junction: {current}")
+    resolved_root = root.resolve()
+    candidate = path.absolute()
+    try:
+        relative = candidate.relative_to(root_path)
+    except ValueError as error:
+        raise BuildError(f"Путь {purpose} выходит за разрешённый корень: {path}") from error
+
+    current = resolved_root
+    for part in relative.parts:
+        current = current / part
+        if is_link_or_reparse_point(current):
+            raise BuildError(f"Путь {purpose} содержит символическую ссылку: {current}")
+        try:
+            resolved = current.resolve(strict=False)
+        except OSError as error:
+            raise BuildError(f"Невозможно проверить путь {purpose}: {current}") from error
+        if not resolved.is_relative_to(resolved_root):
+            raise BuildError(f"Путь {purpose} выходит за разрешённый корень: {current}")
+    return current
 
 
 def parse_args() -> argparse.Namespace:
@@ -193,21 +249,25 @@ def release_name(version: str) -> str:
 def direct_release_dirs(agents_dir: Path) -> list[Path]:
     if not agents_dir.is_dir():
         return []
-    return sorted(
-        child
-        for child in agents_dir.iterdir()
-        if child.is_dir() and RELEASE_PATTERN.fullmatch(child.name)
-    )
+    releases = []
+    for child in agents_dir.iterdir():
+        if child.is_symlink():
+            raise BuildError(f"Каталог релиза не должен быть символической ссылкой: {child}")
+        if child.is_dir() and RELEASE_PATTERN.fullmatch(child.name):
+            releases.append(child)
+    return sorted(releases)
 
 
 def conflicting_dirs(agents_dir: Path, expected_name: str) -> list[Path]:
     if not agents_dir.is_dir():
         return []
-    return sorted(
-        child
-        for child in agents_dir.iterdir()
-        if child.is_dir() and child.name.startswith("sdd") and child.name != expected_name
-    )
+    conflicts = []
+    for child in agents_dir.iterdir():
+        if child.is_symlink() and child.name.startswith("sdd"):
+            raise BuildError(f"Каталог Framework не должен быть символической ссылкой: {child}")
+        if child.is_dir() and child.name.startswith("sdd") and child.name != expected_name:
+            conflicts.append(child)
+    return sorted(conflicts)
 
 
 def ensure_source_state(
@@ -216,6 +276,7 @@ def ensure_source_state(
     allow_existing_releases: bool = False,
 ) -> tuple[Path, list[Path]]:
     agents_dir = root / ".agents"
+    ensure_path_without_symlinks(root, agents_dir, "каталог релизов")
     expected = agents_dir / release_name(version)
     existing = direct_release_dirs(agents_dir)
     conflicts = conflicting_dirs(agents_dir, expected.name)
@@ -248,13 +309,21 @@ def is_denied(relative_path: Path, deny_tests: bool = False) -> bool:
     return relative_path.suffix in DENIED_SUFFIXES
 
 
-def copy_tree(source: Path, target: Path, deny_tests: bool = False) -> None:
+def copy_tree(
+    source: Path,
+    target: Path,
+    deny_tests: bool = False,
+    source_root: Path | None = None,
+) -> None:
+    source_root = source_root or source.resolve()
+    ensure_path_without_symlinks(source_root, source, "исходный каталог релиза")
     if not source.is_dir():
         raise BuildError(f"Не найден обязательный каталог: {source}")
     for item in sorted(source.rglob("*")):
         relative = item.relative_to(source)
         if is_denied(relative, deny_tests):
             continue
+        ensure_path_without_symlinks(source_root, item, "исходный файл релиза")
         destination = target / relative
         if item.is_dir():
             destination.mkdir(parents=True, exist_ok=True)
@@ -263,14 +332,23 @@ def copy_tree(source: Path, target: Path, deny_tests: bool = False) -> None:
             shutil.copy2(item, destination)
 
 
-def copy_file(source: Path, target: Path) -> None:
+def copy_file(source: Path, target: Path, source_root: Path | None = None) -> None:
+    source_root = source_root or source.parent.resolve()
+    ensure_path_without_symlinks(source_root, source, "исходный файл релиза")
     if not source.is_file():
         raise BuildError(f"Не найден обязательный файл: {source}")
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, target)
 
 
-def render_template(source: Path, target: Path, values: dict[str, str]) -> None:
+def render_template(
+    source: Path,
+    target: Path,
+    values: dict[str, str],
+    source_root: Path | None = None,
+) -> None:
+    source_root = source_root or source.parent.resolve()
+    ensure_path_without_symlinks(source_root, source, "шаблон релиза")
     content = source.read_text(encoding="utf-8")
     for key, value in values.items():
         content = content.replace("{{" + key + "}}", value)
@@ -350,6 +428,7 @@ def source_metadata(root: Path, source_ref: str | None = None) -> dict[str, obje
 
 def portable_registry(root: Path, version: str) -> list[dict[str, object]]:
     registry_path = root / ".tools" / "registry.json"
+    ensure_path_without_symlinks(root, registry_path, "registry инструментов")
     try:
         registry = json.loads(registry_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
@@ -434,15 +513,17 @@ def build_stage(root: Path, version: str, stage: Path, source_ref: str | None = 
         templates / "README.md",
         stage / "README.md",
         {"VERSION": version, "RELEASE_DIR": release_name(version)},
+        source_root=root,
     )
-    copy_file(templates / "package.gitignore", stage / ".gitignore")
-    copy_file(root / RELEASE_REGISTRY_NAME, stage / RELEASE_REGISTRY_NAME)
+    copy_file(templates / "package.gitignore", stage / ".gitignore", source_root=root)
+    copy_file(root / RELEASE_REGISTRY_NAME, stage / RELEASE_REGISTRY_NAME, source_root=root)
     render_template(
         templates / "project-structure.json",
         stage / ".project-structure.json",
         {"VERSION": version, "RELEASE_DIR": release_name(version)},
+        source_root=root,
     )
-    copy_file(templates / "chatlog.gitkeep", stage / ".chatlog" / ".gitkeep")
+    copy_file(templates / "chatlog.gitkeep", stage / ".chatlog" / ".gitkeep", source_root=root)
     render_template(
         templates / "sdd-template.instructions.md",
         stage / "sdd-template.instructions.md",
@@ -450,15 +531,17 @@ def build_stage(root: Path, version: str, stage: Path, source_ref: str | None = 
             "VERSION": version,
             "MIN_SUPPORTED_VERSION": ".".join(str(part) for part in MIN_SUPPORTED_VERSION),
         },
+        source_root=root,
     )
     for directory in (".manifest", ".requirements", ".approach"):
-        copy_tree(root / directory, stage / directory)
+        copy_tree(root / directory, stage / directory, source_root=root)
     for relative in DIAGRAM_REFERENCE_FILES:
-        copy_file(root / ".diagrams" / relative, stage / ".diagrams" / relative)
+        copy_file(root / ".diagrams" / relative, stage / ".diagrams" / relative, source_root=root)
     render_template(
         templates / "tools-README.md",
         stage / ".tools" / "README.md",
         {"VERSION": version, "RELEASE_DIR": release_name(version)},
+        source_root=root,
     )
     (stage / ".tools" / "registry.json").write_text(
         json.dumps(portable_registry(root, version), ensure_ascii=False, indent=2) + "\n",
@@ -466,9 +549,9 @@ def build_stage(root: Path, version: str, stage: Path, source_ref: str | None = 
         newline="\n",
     )
     for tool_name in PORTABLE_TOOLS:
-        copy_tree(root / ".tools" / tool_name, stage / ".tools" / tool_name, deny_tests=True)
+        copy_tree(root / ".tools" / tool_name, stage / ".tools" / tool_name, deny_tests=True, source_root=root)
     agent_logic_source = root / ".tools" / "agent-logic"
-    copy_tree(agent_logic_source, stage / ".tools" / "agent-logic", deny_tests=True)
+    copy_tree(agent_logic_source, stage / ".tools" / "agent-logic", deny_tests=True, source_root=root)
     qualify_package_markdown_paths(stage, release_name(version))
     refresh_agent_logic_manifest(stage)
     manifest = {
@@ -525,7 +608,11 @@ def build_release(
         version,
         allow_existing_releases=allow_existing_releases,
     )
-    stage = (stage_root or output_root / "tmp" / f"sdd-template-build-{version}").resolve()
+    stage_candidate = stage_root or output_root / "tmp" / f"sdd-template-build-{version}"
+    stage_boundary = output_root if stage_root is None else stage_candidate.parent
+    if write:
+        ensure_path_without_symlinks(stage_boundary, stage_candidate, "staging релиза")
+    stage = stage_candidate.resolve()
     if stage.exists() and not resume_stage:
         raise BuildError(
             f"Временная папка уже существует и не будет перезаписана: {stage}. "
@@ -533,9 +620,13 @@ def build_release(
         )
     if write:
         if resume_stage:
+            ensure_path_without_symlinks(stage_boundary, stage, "staging релиза")
+            for item in stage.rglob("*"):
+                ensure_path_without_symlinks(stage, item, "содержимое staging релиза")
             validate_stage(stage, version, source_root=root, source_ref=source_ref)
         else:
             build_stage(root, version, stage, source_ref)
+        ensure_path_without_symlinks(output_root, target, "каталог устанавливаемого релиза")
         target.parent.mkdir(parents=True, exist_ok=True)
         try:
             shutil.copytree(stage, target)

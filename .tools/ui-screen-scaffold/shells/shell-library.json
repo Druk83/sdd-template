@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "catalog_id": "sdd-framework-gui-viewport-profiles",
-  "profile_catalog_revision": "confirmed-2026-10-20",
+  "profile_catalog_revision": "confirmed-2026-10-23",
   "catalog_path": ".tools/ui-screen-scaffold/catalog/viewport-profiles.json",
   "external_contract": {
     "url": "https://github.com/Druk83/ui-patterns.git",
@@ -33,14 +33,10 @@
       "orientation": "portrait",
       "safe_area_status": "unknown",
       "reference_target": "Samsung Galaxy S24",
-      "source_refs": [
-        "deviceatlas-mobile-viewport-study-2026-05"
-      ],
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
       "path": "shell-galaxy-s24-360x780-portrait/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
     },
     {
       "shell_id": "shell-galaxy-s24-780x360-landscape",
@@ -53,14 +49,10 @@
       "orientation": "landscape",
       "safe_area_status": "unknown",
       "reference_target": "Samsung Galaxy S24",
-      "source_refs": [
-        "deviceatlas-mobile-viewport-study-2026-05"
-      ],
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
       "path": "shell-galaxy-s24-780x360-landscape/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
     },
     {
       "shell_id": "shell-samsung-384x832-portrait",
@@ -73,14 +65,10 @@
       "orientation": "portrait",
       "safe_area_status": "unknown",
       "reference_target": "Samsung representative viewport",
-      "source_refs": [
-        "deviceatlas-mobile-viewport-study-2026-05"
-      ],
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
       "path": "shell-samsung-384x832-portrait/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
     },
     {
       "shell_id": "shell-samsung-832x384-landscape",
@@ -93,14 +81,10 @@
       "orientation": "landscape",
       "safe_area_status": "unknown",
       "reference_target": "Samsung representative viewport",
-      "source_refs": [
-        "deviceatlas-mobile-viewport-study-2026-05"
-      ],
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
       "path": "shell-samsung-832x384-landscape/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
     },
     {
       "shell_id": "shell-pixel-412x915-portrait",
@@ -113,14 +97,10 @@
       "orientation": "portrait",
       "safe_area_status": "unknown",
       "reference_target": "Google Pixel 8",
-      "source_refs": [
-        "deviceatlas-mobile-viewport-study-2026-05"
-      ],
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
       "path": "shell-pixel-412x915-portrait/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
     },
     {
       "shell_id": "shell-pixel-915x412-landscape",
@@ -133,14 +113,10 @@
       "orientation": "landscape",
       "safe_area_status": "unknown",
       "reference_target": "Google Pixel 8",
-      "source_refs": [
-        "deviceatlas-mobile-viewport-study-2026-05"
-      ],
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
       "path": "shell-pixel-915x412-landscape/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
     },
     {
       "shell_id": "shell-iphone-390x844-portrait",
@@ -153,14 +129,10 @@
       "orientation": "portrait",
       "safe_area_status": "unknown",
       "reference_target": "Apple iPhone reference viewport",
-      "source_refs": [
-        "deviceatlas-mobile-viewport-study-2026-05"
-      ],
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
       "path": "shell-iphone-390x844-portrait/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
     },
     {
       "shell_id": "shell-iphone-844x390-landscape",
@@ -173,14 +145,10 @@
       "orientation": "landscape",
       "safe_area_status": "unknown",
       "reference_target": "Apple iPhone reference viewport",
-      "source_refs": [
-        "deviceatlas-mobile-viewport-study-2026-05"
-      ],
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
       "path": "shell-iphone-844x390-landscape/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
     },
     {
       "shell_id": "shell-mobile-320x694-portrait",
@@ -193,14 +161,10 @@
       "orientation": "portrait",
       "safe_area_status": "unknown",
       "reference_target": "320 CSS-px accessibility/display-zoom viewport",
-      "source_refs": [
-        "deviceatlas-mobile-viewport-study-2026-05"
-      ],
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
       "path": "shell-mobile-320x694-portrait/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
     },
     {
       "shell_id": "shell-mobile-694x320-landscape",
@@ -213,14 +177,10 @@
       "orientation": "landscape",
       "safe_area_status": "unknown",
       "reference_target": "320 CSS-px accessibility/display-zoom viewport",
-      "source_refs": [
-        "deviceatlas-mobile-viewport-study-2026-05"
-      ],
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
       "path": "shell-mobile-694x320-landscape/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
     },
     {
       "shell_id": "shell-ipad-gen11-portrait",
@@ -233,14 +193,10 @@
       "orientation": "portrait",
       "safe_area_status": "unknown",
       "reference_target": "Playwright iPad (gen 11) emulation descriptor",
-      "source_refs": [
-        "playwright-device-descriptors-1-64-1"
-      ],
+      "source_refs": ["playwright-device-descriptors-1-64-1"],
       "path": "shell-ipad-gen11-portrait/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
     },
     {
       "shell_id": "shell-ipad-gen11-landscape",
@@ -253,14 +209,10 @@
       "orientation": "landscape",
       "safe_area_status": "unknown",
       "reference_target": "Playwright iPad (gen 11) emulation descriptor",
-      "source_refs": [
-        "playwright-device-descriptors-1-64-1"
-      ],
+      "source_refs": ["playwright-device-descriptors-1-64-1"],
       "path": "shell-ipad-gen11-landscape/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
     },
     {
       "shell_id": "shell-galaxy-tab-s9-portrait",
@@ -273,14 +225,10 @@
       "orientation": "portrait",
       "safe_area_status": "unknown",
       "reference_target": "Playwright Galaxy Tab S9 emulation descriptor",
-      "source_refs": [
-        "playwright-device-descriptors-1-64-1"
-      ],
+      "source_refs": ["playwright-device-descriptors-1-64-1"],
       "path": "shell-galaxy-tab-s9-portrait/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
     },
     {
       "shell_id": "shell-galaxy-tab-s9-landscape",
@@ -293,14 +241,10 @@
       "orientation": "landscape",
       "safe_area_status": "unknown",
       "reference_target": "Playwright Galaxy Tab S9 emulation descriptor",
-      "source_refs": [
-        "playwright-device-descriptors-1-64-1"
-      ],
+      "source_refs": ["playwright-device-descriptors-1-64-1"],
       "path": "shell-galaxy-tab-s9-landscape/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
     },
     {
       "shell_id": "shell-galaxy-z-fold7-inner-750x832-portrait",
@@ -313,14 +257,10 @@
       "orientation": "portrait",
       "safe_area_status": "unknown",
       "reference_target": "Galaxy Z Fold7 unfolded inner viewport",
-      "source_refs": [
-        "deviceatlas-mobile-viewport-study-2026-05"
-      ],
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
       "path": "shell-galaxy-z-fold7-inner-750x832-portrait/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
     },
     {
       "shell_id": "shell-galaxy-z-fold7-inner-832x750-landscape",
@@ -333,14 +273,10 @@
       "orientation": "landscape",
       "safe_area_status": "unknown",
       "reference_target": "Galaxy Z Fold7 unfolded inner viewport",
-      "source_refs": [
-        "deviceatlas-mobile-viewport-study-2026-05"
-      ],
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
       "path": "shell-galaxy-z-fold7-inner-832x750-landscape/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
     },
     {
       "shell_id": "shell-galaxy-z-fold7-cover-412x960-portrait",
@@ -353,14 +289,10 @@
       "orientation": "portrait",
       "safe_area_status": "unknown",
       "reference_target": "Galaxy Z Fold7 folded cover viewport",
-      "source_refs": [
-        "deviceatlas-mobile-viewport-study-2026-05"
-      ],
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
       "path": "shell-galaxy-z-fold7-cover-412x960-portrait/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
     },
     {
       "shell_id": "shell-galaxy-z-fold7-cover-960x412-landscape",
@@ -373,14 +305,10 @@
       "orientation": "landscape",
       "safe_area_status": "unknown",
       "reference_target": "Galaxy Z Fold7 folded cover viewport",
-      "source_refs": [
-        "deviceatlas-mobile-viewport-study-2026-05"
-      ],
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
       "path": "shell-galaxy-z-fold7-cover-960x412-landscape/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
     },
     {
       "shell_id": "shell-desktop-1280x720",
@@ -393,14 +321,362 @@
       "orientation": "landscape",
       "safe_area_status": "not_applicable",
       "reference_target": "Playwright Desktop Chrome reference viewport",
-      "source_refs": [
-        "playwright-device-descriptors-1-64-1"
-      ],
+      "source_refs": ["playwright-device-descriptors-1-64-1"],
       "path": "shell-desktop-1280x720/index.html",
       "stylesheet": "../shell.css",
-      "content_slots": [
-        "screen-content"
-      ]
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-deviceatlas-mobile-375x812-portrait",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-deviceatlas-width-representatives",
+      "viewport_id": "vp-deviceatlas-mobile-375x812-portrait",
+      "width": 375,
+      "height": 812,
+      "unit": "css-px",
+      "orientation": "portrait",
+      "safe_area_status": "unknown",
+      "reference_target": "DeviceAtlas measured smartphone viewport representatives (May 2026 sample)",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "path": "shell-deviceatlas-mobile-375x812-portrait/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-deviceatlas-mobile-812x375-landscape",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-deviceatlas-width-representatives",
+      "viewport_id": "vp-deviceatlas-mobile-812x375-landscape",
+      "width": 812,
+      "height": 375,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "unknown",
+      "reference_target": "DeviceAtlas measured smartphone viewport representatives (May 2026 sample)",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "path": "shell-deviceatlas-mobile-812x375-landscape/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-deviceatlas-mobile-393x852-portrait",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-deviceatlas-width-representatives",
+      "viewport_id": "vp-deviceatlas-mobile-393x852-portrait",
+      "width": 393,
+      "height": 852,
+      "unit": "css-px",
+      "orientation": "portrait",
+      "safe_area_status": "unknown",
+      "reference_target": "DeviceAtlas measured smartphone viewport representatives (May 2026 sample)",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "path": "shell-deviceatlas-mobile-393x852-portrait/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-deviceatlas-mobile-852x393-landscape",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-deviceatlas-width-representatives",
+      "viewport_id": "vp-deviceatlas-mobile-852x393-landscape",
+      "width": 852,
+      "height": 393,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "unknown",
+      "reference_target": "DeviceAtlas measured smartphone viewport representatives (May 2026 sample)",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "path": "shell-deviceatlas-mobile-852x393-landscape/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-deviceatlas-mobile-414x896-portrait",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-deviceatlas-width-representatives",
+      "viewport_id": "vp-deviceatlas-mobile-414x896-portrait",
+      "width": 414,
+      "height": 896,
+      "unit": "css-px",
+      "orientation": "portrait",
+      "safe_area_status": "unknown",
+      "reference_target": "DeviceAtlas measured smartphone viewport representatives (May 2026 sample)",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "path": "shell-deviceatlas-mobile-414x896-portrait/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-deviceatlas-mobile-896x414-landscape",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-deviceatlas-width-representatives",
+      "viewport_id": "vp-deviceatlas-mobile-896x414-landscape",
+      "width": 896,
+      "height": 414,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "unknown",
+      "reference_target": "DeviceAtlas measured smartphone viewport representatives (May 2026 sample)",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "path": "shell-deviceatlas-mobile-896x414-landscape/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-deviceatlas-mobile-430x932-portrait",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-deviceatlas-width-representatives",
+      "viewport_id": "vp-deviceatlas-mobile-430x932-portrait",
+      "width": 430,
+      "height": 932,
+      "unit": "css-px",
+      "orientation": "portrait",
+      "safe_area_status": "unknown",
+      "reference_target": "DeviceAtlas measured smartphone viewport representatives (May 2026 sample)",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "path": "shell-deviceatlas-mobile-430x932-portrait/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-deviceatlas-mobile-932x430-landscape",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-deviceatlas-width-representatives",
+      "viewport_id": "vp-deviceatlas-mobile-932x430-landscape",
+      "width": 932,
+      "height": 430,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "unknown",
+      "reference_target": "DeviceAtlas measured smartphone viewport representatives (May 2026 sample)",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "path": "shell-deviceatlas-mobile-932x430-landscape/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-deviceatlas-mobile-448x998-portrait",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-deviceatlas-width-representatives",
+      "viewport_id": "vp-deviceatlas-mobile-448x998-portrait",
+      "width": 448,
+      "height": 998,
+      "unit": "css-px",
+      "orientation": "portrait",
+      "safe_area_status": "unknown",
+      "reference_target": "DeviceAtlas measured smartphone viewport representatives (May 2026 sample)",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "path": "shell-deviceatlas-mobile-448x998-portrait/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-deviceatlas-mobile-998x448-landscape",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-mobile-deviceatlas-width-representatives",
+      "viewport_id": "vp-deviceatlas-mobile-998x448-landscape",
+      "width": 998,
+      "height": 448,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "unknown",
+      "reference_target": "DeviceAtlas measured smartphone viewport representatives (May 2026 sample)",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "path": "shell-deviceatlas-mobile-998x448-landscape/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-ipad-mini-768x1024-portrait",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-tablet-ipad-mini",
+      "viewport_id": "vp-ipad-mini-768x1024-portrait",
+      "width": 768,
+      "height": 1024,
+      "unit": "css-px",
+      "orientation": "portrait",
+      "safe_area_status": "unknown",
+      "reference_target": "Playwright iPad Mini emulation descriptor v1.64.1",
+      "source_refs": ["playwright-device-descriptors-1-64-1"],
+      "path": "shell-ipad-mini-768x1024-portrait/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-ipad-mini-1024x768-landscape",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-tablet-ipad-mini",
+      "viewport_id": "vp-ipad-mini-1024x768-landscape",
+      "width": 1024,
+      "height": 768,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "unknown",
+      "reference_target": "Playwright iPad Mini emulation descriptor v1.64.1",
+      "source_refs": ["playwright-device-descriptors-1-64-1"],
+      "path": "shell-ipad-mini-1024x768-landscape/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-pixel-9-pro-fold-cover-444x995-portrait",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-foldable-pixel-9-pro-fold-cover",
+      "viewport_id": "vp-pixel-9-pro-fold-cover-444x995-portrait",
+      "width": 444,
+      "height": 995,
+      "unit": "css-px",
+      "orientation": "portrait",
+      "safe_area_status": "unknown",
+      "reference_target": "Google Pixel 9 Pro Fold cover viewport; DeviceAtlas May 2026 sample",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "path": "shell-pixel-9-pro-fold-cover-444x995-portrait/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-pixel-9-pro-fold-cover-995x444-landscape",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-foldable-pixel-9-pro-fold-cover",
+      "viewport_id": "vp-pixel-9-pro-fold-cover-995x444-landscape",
+      "width": 995,
+      "height": 444,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "unknown",
+      "reference_target": "Google Pixel 9 Pro Fold cover viewport; DeviceAtlas May 2026 sample",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "path": "shell-pixel-9-pro-fold-cover-995x444-landscape/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-pixel-9-pro-fold-inner-755x783-portrait",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-foldable-pixel-9-pro-fold-inner",
+      "viewport_id": "vp-pixel-9-pro-fold-inner-755x783-portrait",
+      "width": 755,
+      "height": 783,
+      "unit": "css-px",
+      "orientation": "portrait",
+      "safe_area_status": "unknown",
+      "reference_target": "Google Pixel 9 Pro Fold inner viewport; DeviceAtlas May 2026 sample",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "path": "shell-pixel-9-pro-fold-inner-755x783-portrait/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-pixel-9-pro-fold-inner-783x755-landscape",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-foldable-pixel-9-pro-fold-inner",
+      "viewport_id": "vp-pixel-9-pro-fold-inner-783x755-landscape",
+      "width": 783,
+      "height": 755,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "unknown",
+      "reference_target": "Google Pixel 9 Pro Fold inner viewport; DeviceAtlas May 2026 sample",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "path": "shell-pixel-9-pro-fold-inner-783x755-landscape/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-desktop-800x600",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-desktop-compact-window",
+      "viewport_id": "vp-desktop-compact-800x600",
+      "width": 800,
+      "height": 600,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "not_applicable",
+      "reference_target": "ScreenSize.net observed compact desktop window viewport; June-September 2026 sample",
+      "source_refs": ["screensize-viewport-reality-report-2026-09"],
+      "path": "shell-desktop-800x600/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-desktop-1920x920",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-wide-desktop-screensize-representatives",
+      "viewport_id": "vp-desktop-wide-1920x920",
+      "width": 1920,
+      "height": 920,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "not_applicable",
+      "reference_target": "ScreenSize.net observed desktop viewport representatives; June-September 2026 sample",
+      "source_refs": ["screensize-viewport-reality-report-2026-09"],
+      "path": "shell-desktop-1920x920/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-desktop-1920x960",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-wide-desktop-screensize-representatives",
+      "viewport_id": "vp-desktop-wide-1920x960",
+      "width": 1920,
+      "height": 960,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "not_applicable",
+      "reference_target": "ScreenSize.net observed desktop viewport representatives; June-September 2026 sample",
+      "source_refs": ["screensize-viewport-reality-report-2026-09"],
+      "path": "shell-desktop-1920x960/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-desktop-1920x1080",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-wide-desktop-screensize-representatives",
+      "viewport_id": "vp-desktop-wide-1920x1080",
+      "width": 1920,
+      "height": 1080,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "not_applicable",
+      "reference_target": "ScreenSize.net observed desktop viewport representatives; June-September 2026 sample",
+      "source_refs": ["screensize-viewport-reality-report-2026-09"],
+      "path": "shell-desktop-1920x1080/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-desktop-2560x1280",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-wide-desktop-screensize-representatives",
+      "viewport_id": "vp-desktop-wide-2560x1280",
+      "width": 2560,
+      "height": 1280,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "not_applicable",
+      "reference_target": "ScreenSize.net observed desktop viewport representatives; June-September 2026 sample",
+      "source_refs": ["screensize-viewport-reality-report-2026-09"],
+      "path": "shell-desktop-2560x1280/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
+    },
+    {
+      "shell_id": "shell-desktop-1520x700",
+      "shell_version": "1.0.0",
+      "profile_id": "gui-wide-desktop-screensize-representatives",
+      "viewport_id": "vp-desktop-wide-1520x700",
+      "width": 1520,
+      "height": 700,
+      "unit": "css-px",
+      "orientation": "landscape",
+      "safe_area_status": "not_applicable",
+      "reference_target": "ScreenSize.net observed desktop viewport representatives; June-September 2026 sample",
+      "source_refs": ["screensize-viewport-reality-report-2026-09"],
+      "path": "shell-desktop-1520x700/index.html",
+      "stylesheet": "../shell.css",
+      "content_slots": ["screen-content"]
     }
   ]
 }

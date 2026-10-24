@@ -141,9 +141,15 @@ def parse_file(path: str):
 
 def scan(root: str):
     out = []
+    scan_root = os.path.abspath(root)
     for dirpath, dirnames, filenames in os.walk(root):
-        # skip hidden dirs like .git
-        dirnames[:] = [d for d in dirnames if not d.startswith(('.', '__'))]
+        # Include only the repository-root .tools catalog among hidden directories.
+        current_dir = os.path.abspath(dirpath)
+        dirnames[:] = [
+            name for name in dirnames
+            if not name.startswith(('__', '.'))
+            or (name == '.tools' and current_dir == scan_root)
+        ]
         for fn in filenames:
             if fn.startswith('.'):
                 continue

@@ -2,10 +2,10 @@
   "$schema": "./viewport-profiles.schema.json",
   "schema_version": "1.0",
   "catalog_id": "sdd-framework-gui-viewport-profiles",
-  "catalog_revision": "confirmed-2026-10-20",
+  "catalog_revision": "confirmed-2026-10-23",
   "status": "confirmed",
   "created_at": "2026-10-20",
-  "description": "Подтверждённые профили областей просмотра для стандартных оболочек GUI. Все варианты предложенных профилей включены; wide desktop отложен до определения точного CSS viewport.",
+  "description": "Подтверждённые мобильные, планшетные, складные и desktop viewport; для неизмеренной браузерной CSS-геометрии 4K/8K и телевизионных web runtime сохранены GAP.",
   "external_contract": {
     "url": "https://github.com/Druk83/ui-patterns.git",
     "version": "0.3.1",
@@ -80,6 +80,56 @@
       "retrieved_at": "2026-10-20",
       "provides": "Browser-measured CSS viewport dimensions and traffic distributions for smartphone models and widths, plus folded and unfolded viewport examples.",
       "limitations": "The measurements represent DeviceAtlas service traffic, not global market share. The article is smartphone-focused and provides no measured landscape, tablet, or desktop profile set. Heights can vary with browser chrome and user display settings."
+    },
+    {
+      "source_id": "screensize-viewport-reality-report-2026-09",
+      "kind": "traffic-measured-css-viewport-study",
+      "title": "ScreenSize.net Viewport Reality Report",
+      "url": "https://screensize.net/reports/viewport-stats",
+      "revision": "Data through 2026-09-30; report generated 2026-10-23",
+      "retrieved_at": "2026-10-23",
+      "provides": "Qualified anonymous browser viewport observations for June-September 2026, including desktop viewport pairs, area percentiles, and marginal width/height quantiles.",
+      "limitations": "The report has 1,295 qualified observations total and 1,096 desktop observations; it is not global market share. The 800x600 bucket is retained in an anomaly audit and may include automation, remote desktop sessions, fixed-size windows, or real users. Marginal width and height quantiles do not form guaranteed pairs; 1520x700 is specifically an observed pair at p25 by viewport area. CSS viewports wider than 6,000 px or taller than 4,000 px are excluded from published distributions."
+    },
+    {
+      "source_id": "w3c-cssom-view-1",
+      "kind": "official-standard",
+      "title": "W3C CSSOM View Module",
+      "url": "https://www.w3.org/TR/cssom-view-1/",
+      "revision": "W3C Working Draft, 2025-09-16",
+      "retrieved_at": "2026-10-23",
+      "provides": "Defines browser APIs for inspecting CSS viewport dimensions and web-exposed screen information, including window.innerWidth and window.innerHeight.",
+      "limitations": "The draft defines measurement APIs; it does not prescribe desktop viewport sizes or establish a mapping from physical panel resolution to CSS viewport."
+    },
+    {
+      "source_id": "samsung-tizen-screen-resolution",
+      "kind": "official-platform-guidance",
+      "title": "Samsung Tizen TV: Managing Screen Resolution",
+      "url": "https://developer.samsung.com/smarttv/develop/guides/fundamentals/managing-screen-resolution.html",
+      "revision": "Samsung Developer guide accessed 2026-10-23",
+      "retrieved_at": "2026-10-23",
+      "provides": "Standard application screen resolutions by Samsung TV model group, app scaling guidance, and instructions for defining a viewport resolution with the meta viewport element.",
+      "limitations": "The guide lists 1920x1080 for UHD and 1280x720 for FHD application screens, but the Framework has not measured window.innerWidth and window.innerHeight in a selected target Tizen runtime or model group. Screen API values must not be substituted for the app viewport."
+    },
+    {
+      "source_id": "lg-webos-app-resolution",
+      "kind": "official-platform-guidance",
+      "title": "LG webOS TV: Supported App Resolution",
+      "url": "https://webostv.developer.lge.com/develop/specifications/app-resolution",
+      "revision": "webOS TV specification page accessed 2026-10-23",
+      "retrieved_at": "2026-10-23",
+      "provides": "Graphics app resolutions of 1280x720 for FHD models and 1920x1080 for UHD models; the page directs web apps to window.innerWidth and window.innerHeight for graphics resolution.",
+      "limitations": "The Framework has not measured the named webOS app runtime or model. Video playback resolution exposed through deviceInfo is a separate value and is not the CSS viewport."
+    },
+    {
+      "source_id": "android-tv-layout-guidance",
+      "kind": "official-platform-guidance",
+      "title": "Android Developers: TV Layouts",
+      "url": "https://developer.android.com/design/ui/tv/guides/styles/layouts",
+      "revision": "Android Developers guide accessed 2026-10-23",
+      "retrieved_at": "2026-10-23",
+      "provides": "Native Android TV layout guidance including a 960x540 dp design coordinate size, overscan margins, and remote-control navigation considerations.",
+      "limitations": "The guidance describes native Android UI in dp and does not establish the CSS viewport of an Android TV WebView. A target runtime measurement is required."
     }
   ],
   "profiles": [
@@ -244,6 +294,126 @@
       ]
     },
     {
+      "profile_id": "gui-mobile-deviceatlas-width-representatives",
+      "category": "smartphone",
+      "status": "confirmed",
+      "reference_target": "DeviceAtlas measured smartphone viewport representatives (May 2026 sample)",
+      "rationale": "The portrait pairs are measured DeviceAtlas examples from its May 2026 traffic sample. Landscape variants are transposed visual test presets, not traffic measurements. Other listed models and alternate heights are not separate shells; choose an exact profile only when its source pair matches the target, otherwise use responsive coverage or record a gap.",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "variants": [
+        {
+          "viewport_id": "vp-deviceatlas-mobile-375x812-portrait",
+          "shell_id_candidate": "shell-deviceatlas-mobile-375x812-portrait",
+          "width": 375,
+          "height": 812,
+          "unit": "css-px",
+          "orientation": "portrait",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-deviceatlas-mobile-812x375-landscape",
+          "shell_id_candidate": "shell-deviceatlas-mobile-812x375-landscape",
+          "width": 812,
+          "height": 375,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-deviceatlas-mobile-393x852-portrait",
+          "shell_id_candidate": "shell-deviceatlas-mobile-393x852-portrait",
+          "width": 393,
+          "height": 852,
+          "unit": "css-px",
+          "orientation": "portrait",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-deviceatlas-mobile-852x393-landscape",
+          "shell_id_candidate": "shell-deviceatlas-mobile-852x393-landscape",
+          "width": 852,
+          "height": 393,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-deviceatlas-mobile-414x896-portrait",
+          "shell_id_candidate": "shell-deviceatlas-mobile-414x896-portrait",
+          "width": 414,
+          "height": 896,
+          "unit": "css-px",
+          "orientation": "portrait",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-deviceatlas-mobile-896x414-landscape",
+          "shell_id_candidate": "shell-deviceatlas-mobile-896x414-landscape",
+          "width": 896,
+          "height": 414,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-deviceatlas-mobile-430x932-portrait",
+          "shell_id_candidate": "shell-deviceatlas-mobile-430x932-portrait",
+          "width": 430,
+          "height": 932,
+          "unit": "css-px",
+          "orientation": "portrait",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-deviceatlas-mobile-932x430-landscape",
+          "shell_id_candidate": "shell-deviceatlas-mobile-932x430-landscape",
+          "width": 932,
+          "height": 430,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-deviceatlas-mobile-448x998-portrait",
+          "shell_id_candidate": "shell-deviceatlas-mobile-448x998-portrait",
+          "width": 448,
+          "height": 998,
+          "unit": "css-px",
+          "orientation": "portrait",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-deviceatlas-mobile-998x448-landscape",
+          "shell_id_candidate": "shell-deviceatlas-mobile-998x448-landscape",
+          "width": 998,
+          "height": 448,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        }
+      ]
+    },
+    {
       "profile_id": "gui-tablet-ipad-11th-generation",
       "category": "tablet",
       "status": "confirmed",
@@ -271,6 +441,38 @@
           "unit": "css-px",
           "orientation": "landscape",
           "device_scale_factor": 2.5,
+          "safe_area_status": "unknown",
+          "source_refs": ["playwright-device-descriptors-1-64-1"],
+          "implementation_status": "implemented"
+        }
+      ]
+    },
+    {
+      "profile_id": "gui-tablet-ipad-mini",
+      "category": "tablet",
+      "status": "confirmed",
+      "reference_target": "Playwright iPad Mini emulation descriptor v1.64.1",
+      "rationale": "A reproducible compact-tablet emulation profile from the pinned Playwright v1.64.1 descriptor set. It is test geometry, not evidence of device popularity. Landscape is a transposed visual test preset.",
+      "source_refs": ["playwright-device-descriptors-1-64-1"],
+      "variants": [
+        {
+          "viewport_id": "vp-ipad-mini-768x1024-portrait",
+          "shell_id_candidate": "shell-ipad-mini-768x1024-portrait",
+          "width": 768,
+          "height": 1024,
+          "unit": "css-px",
+          "orientation": "portrait",
+          "safe_area_status": "unknown",
+          "source_refs": ["playwright-device-descriptors-1-64-1"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-ipad-mini-1024x768-landscape",
+          "shell_id_candidate": "shell-ipad-mini-1024x768-landscape",
+          "width": 1024,
+          "height": 768,
+          "unit": "css-px",
+          "orientation": "landscape",
           "safe_area_status": "unknown",
           "source_refs": ["playwright-device-descriptors-1-64-1"],
           "implementation_status": "implemented"
@@ -376,6 +578,70 @@
       ]
     },
     {
+      "profile_id": "gui-foldable-pixel-9-pro-fold-cover",
+      "category": "foldable-cover-display",
+      "status": "confirmed",
+      "reference_target": "Google Pixel 9 Pro Fold cover viewport; DeviceAtlas May 2026 sample",
+      "rationale": "The portrait viewport is a DeviceAtlas example from its May 2026 traffic sample. Landscape is a transposed visual test preset. The source does not provide hinge, segment, inset, or safe-area geometry.",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "variants": [
+        {
+          "viewport_id": "vp-pixel-9-pro-fold-cover-444x995-portrait",
+          "shell_id_candidate": "shell-pixel-9-pro-fold-cover-444x995-portrait",
+          "width": 444,
+          "height": 995,
+          "unit": "css-px",
+          "orientation": "portrait",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-pixel-9-pro-fold-cover-995x444-landscape",
+          "shell_id_candidate": "shell-pixel-9-pro-fold-cover-995x444-landscape",
+          "width": 995,
+          "height": 444,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        }
+      ]
+    },
+    {
+      "profile_id": "gui-foldable-pixel-9-pro-fold-inner",
+      "category": "foldable-inner-display",
+      "status": "confirmed",
+      "reference_target": "Google Pixel 9 Pro Fold inner viewport; DeviceAtlas May 2026 sample",
+      "rationale": "The portrait viewport is a DeviceAtlas example from its May 2026 traffic sample. Landscape is a transposed visual test preset. The source does not provide hinge, segment, inset, or safe-area geometry.",
+      "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+      "variants": [
+        {
+          "viewport_id": "vp-pixel-9-pro-fold-inner-755x783-portrait",
+          "shell_id_candidate": "shell-pixel-9-pro-fold-inner-755x783-portrait",
+          "width": 755,
+          "height": 783,
+          "unit": "css-px",
+          "orientation": "portrait",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-pixel-9-pro-fold-inner-783x755-landscape",
+          "shell_id_candidate": "shell-pixel-9-pro-fold-inner-783x755-landscape",
+          "width": 783,
+          "height": 755,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "unknown",
+          "source_refs": ["deviceatlas-mobile-viewport-study-2026-05"],
+          "implementation_status": "implemented"
+        }
+      ]
+    },
+    {
       "profile_id": "gui-desktop-reference-playwright",
       "category": "notebook-desktop",
       "status": "confirmed",
@@ -391,7 +657,11 @@
           "unit": "css-px",
           "orientation": "landscape",
           "device_scale_factor": 1,
-          "physical_screen": {"width": 1920, "height": 1080, "unit": "emulated-screen-px"},
+          "physical_screen": {
+            "width": 1920,
+            "height": 1080,
+            "unit": "emulated-screen-px"
+          },
           "safe_area_status": "not_applicable",
           "source_refs": ["playwright-device-descriptors-1-64-1"],
           "implementation_status": "implemented"
@@ -399,14 +669,130 @@
       ]
     },
     {
-      "profile_id": "gui-wide-desktop-needs-decision",
+      "profile_id": "gui-desktop-compact-window",
+      "category": "notebook-desktop",
+      "status": "confirmed",
+      "reference_target": "ScreenSize.net observed compact desktop window viewport; June-September 2026 sample",
+      "rationale": "The 800x600 CSS px pair represents a compact desktop window and short available height in the cited sample. ScreenSize retains this bucket in an anomaly audit; it may include automation, remote desktop sessions, fixed-size windows, and real users, so it is a robustness test rather than a market-share claim.",
+      "source_refs": ["screensize-viewport-reality-report-2026-09"],
+      "variants": [
+        {
+          "viewport_id": "vp-desktop-compact-800x600",
+          "shell_id_candidate": "shell-desktop-800x600",
+          "width": 800,
+          "height": 600,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "not_applicable",
+          "source_refs": ["screensize-viewport-reality-report-2026-09"],
+          "implementation_status": "implemented"
+        }
+      ]
+    },
+    {
+      "profile_id": "gui-wide-desktop-screensize-representatives",
+      "category": "wide-desktop",
+      "status": "confirmed",
+      "reference_target": "ScreenSize.net observed desktop viewport representatives; June-September 2026 sample",
+      "rationale": "The 1920x920, 1920x960, 2560x1280, and 1520x700 CSS px pairs are selected from the report as representatives of common, height-sensitive, large, and wider-than-2:1 desktop viewports. The developer-selected 1920x1080 CSS px reference is also present in the report but remains a project decision, not a universal standard. The source sample is not global market share.",
+      "source_refs": ["screensize-viewport-reality-report-2026-09"],
+      "variants": [
+        {
+          "viewport_id": "vp-desktop-wide-1920x920",
+          "shell_id_candidate": "shell-desktop-1920x920",
+          "width": 1920,
+          "height": 920,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "not_applicable",
+          "source_refs": ["screensize-viewport-reality-report-2026-09"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-desktop-wide-1920x960",
+          "shell_id_candidate": "shell-desktop-1920x960",
+          "width": 1920,
+          "height": 960,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "not_applicable",
+          "source_refs": ["screensize-viewport-reality-report-2026-09"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-desktop-wide-1920x1080",
+          "shell_id_candidate": "shell-desktop-1920x1080",
+          "width": 1920,
+          "height": 1080,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "not_applicable",
+          "source_refs": ["screensize-viewport-reality-report-2026-09"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-desktop-wide-2560x1280",
+          "shell_id_candidate": "shell-desktop-2560x1280",
+          "width": 2560,
+          "height": 1280,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "not_applicable",
+          "source_refs": ["screensize-viewport-reality-report-2026-09"],
+          "implementation_status": "implemented"
+        },
+        {
+          "viewport_id": "vp-desktop-wide-1520x700",
+          "shell_id_candidate": "shell-desktop-1520x700",
+          "width": 1520,
+          "height": 700,
+          "unit": "css-px",
+          "orientation": "landscape",
+          "safe_area_status": "not_applicable",
+          "source_refs": ["screensize-viewport-reality-report-2026-09"],
+          "implementation_status": "implemented"
+        }
+      ]
+    },
+    {
+      "profile_id": "gui-4k-8k-css-viewport-unmeasured",
       "category": "wide-desktop",
       "status": "gap",
-      "reference_target": "A wide desktop application window; no exact CSS viewport has been selected.",
-      "rationale": "Android guidance identifies an extra-large app-window width class at 1600 dp and above, but that is not a CSS-px preset. Playwright Desktop Chrome's 1920×1080 value is its emulated screen size, not its 1280×720 viewport. No source-backed exact wide CSS viewport is inferred from either value.",
-      "source_refs": ["android-window-size-classes", "playwright-device-descriptors-1-64-1"],
+      "reference_target": "4K/8K physical displays with unmeasured browser CSS viewport",
+      "rationale": "A physical 4K or 8K panel does not determine the browser CSS viewport. No exact target-runtime measurement is available for this catalog.",
+      "source_refs": ["w3c-cssom-view-1"],
       "variants": [],
-      "decision_needed": "Choose an exact CSS viewport for wide-desktop shells, or defer this category."
+      "decision_needed": "Measure window.innerWidth and window.innerHeight in the target runtime, or record an explicit project-test-preset decision before creating a shell."
+    },
+    {
+      "profile_id": "gui-tv-samsung-tizen-css-viewport-gap",
+      "category": "television",
+      "status": "gap",
+      "reference_target": "Samsung Tizen TV web app runtime; target model group not selected",
+      "rationale": "Samsung guidance lists standard application resolutions of 1920x1080 for UHD and 1280x720 for FHD model groups, and describes scaling between them. The Framework has not measured window.innerWidth and window.innerHeight in a selected Tizen runtime, so these app resolution values are not registered as CSS viewport variants.",
+      "source_refs": ["samsung-tizen-screen-resolution", "w3c-cssom-view-1"],
+      "variants": [],
+      "decision_needed": "Run a viewport probe in the named Samsung Tizen emulator or TV model; record runtime version, model group, window.innerWidth, window.innerHeight, and screen.width/screen.height before confirming a CSS viewport and shell."
+    },
+    {
+      "profile_id": "gui-tv-lg-webos-css-viewport-gap",
+      "category": "television",
+      "status": "gap",
+      "reference_target": "LG webOS TV web app runtime; target model not selected",
+      "rationale": "LG guidance lists graphics app resolutions of 1280x720 for FHD models and 1920x1080 for UHD models, and explicitly directs web apps to window.innerWidth and window.innerHeight for the graphics app resolution. No target runtime measurement is available in the Framework, so no shell is registered yet.",
+      "source_refs": ["lg-webos-app-resolution", "w3c-cssom-view-1"],
+      "variants": [],
+      "decision_needed": "Run a viewport probe on the named LG webOS emulator or TV model; record webOS/runtime version, app resolution setting, window.innerWidth, and window.innerHeight before confirming a CSS viewport and shell. Keep video playback resolution separate."
+    },
+    {
+      "profile_id": "gui-tv-android-webview-css-viewport-gap",
+      "category": "television",
+      "status": "gap",
+      "reference_target": "Android TV WebView runtime; target device and WebView version not selected",
+      "rationale": "Android TV layout guidance uses 960x540 dp for native app composition and discusses overscan and remote navigation. Those dp values do not establish an Android TV WebView CSS viewport and are not converted into CSS px.",
+      "source_refs": ["android-tv-layout-guidance", "w3c-cssom-view-1"],
+      "variants": [],
+      "decision_needed": "Run a viewport probe in the named Android TV device or WebView runtime; record Android, WebView, window.innerWidth, and window.innerHeight. Do not map 960x540 dp or 4K/8K panel resolution directly to CSS px."
     }
   ],
   "developer_decision": {
@@ -417,13 +803,19 @@
       "gui-mobile-common-pixel-412",
       "gui-mobile-common-iphone-390",
       "gui-mobile-accessibility-320",
+      "gui-mobile-deviceatlas-width-representatives",
       "gui-tablet-ipad-11th-generation",
       "gui-tablet-galaxy-tab-s9",
       "gui-foldable-galaxy-z-fold7-inner",
       "gui-foldable-galaxy-z-fold7-cover",
-      "gui-desktop-reference-playwright"
+      "gui-desktop-reference-playwright",
+      "gui-tablet-ipad-mini",
+      "gui-foldable-pixel-9-pro-fold-cover",
+      "gui-foldable-pixel-9-pro-fold-inner",
+      "gui-desktop-compact-window",
+      "gui-wide-desktop-screensize-representatives"
     ],
     "rejected_profile_ids": [],
-    "notes": "Developer decision recorded 2026-10-20: include every profile that was proposed at review time and all listed portrait/landscape variants; defer gui-wide-desktop-needs-decision until an exact CSS viewport is selected. DeviceAtlas is the source for smartphone and foldable CSS viewport examples; its values describe its own May 2026 traffic sample, not global market share. Tablet and desktop profiles are reproducible Playwright emulation presets, not popularity claims. Landscape entries are transposed visual presets, not measured traffic viewports. Exclude decorative device frames; show the exact edge-to-edge cropped viewport."
+    "notes": "Developer decisions recorded 2026-10-23: add five DeviceAtlas mobile portrait representatives (375x812, 393x852, 414x896, 430x932, 448x998 CSS px), the pinned Playwright iPad Mini descriptor (768x1024), and DeviceAtlas Pixel 9 Pro Fold cover (444x995) and inner (755x783) viewport examples. Add ScreenSize.net desktop observations 800x600, 1520x700, 1920x920, 1920x960, and 2560x1280 CSS px; select 1920x1080 CSS px as the Framework desktop reference. Traffic observations are limited to their reported samples, not global market share. Unmeasured landscape variants are transposed test presets. Hinge, viewport-segment, inset, and safe-area dimensions remain unknown. Keep 4K/8K CSS viewport geometry as GAP until target-runtime measurement or an explicit project stress-preset decision exists. Exclude decorative device frames. Record Samsung Tizen and LG webOS platform app-resolution guidance and Android TV native dp guidance as TV CSS viewport GAPs until target-runtime window.innerWidth/window.innerHeight are measured. Do not create a TV shell from app, video, panel, or dp values alone."
   }
 }

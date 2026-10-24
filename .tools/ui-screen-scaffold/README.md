@@ -44,6 +44,16 @@ references/<reference-set-id>/screens/<screen-id>/<viewport-id>/
 
 Каждый `index.html` можно открыть отдельно в браузере. Страница показывает только экран: холст начинается в точке `(0, 0)`, а его размер совпадает с CSS viewport; заголовок и поля каталожного предпросмотра скрыты. Сохраняется нейтральный слот `screen-content`, рамки устройства нет. Метаданные остаются в `reference-manifest.json` и `README.md`. Агент заполняет слот содержимым по спецификации экрана и только явно выбранными ссылками на UI-паттерны/шаблоны. Продуктовые тексты и поведение генератор не создаёт.
 
+## Каталог размеров viewport
+
+Точные CSS-размеры и привязки оболочек хранятся в `.tools/ui-screen-scaffold/catalog/viewport-profiles.json` и `.tools/ui-screen-scaffold/shells/shell-library.json`. Размеры физической панели, CSS viewport приложения и платформенные единицы `dp` являются разными величинами.
+
+- [CSS Values and Units](https://www.w3.org/TR/css-values-4/) определяет единицу CSS `px`, а [CSSOM View](https://www.w3.org/TR/cssom-view-1/) — браузерные API для чтения viewport. Эти стандарты не задают типовые размеры экранов устройств.
+- [DeviceAtlas](https://deviceatlas.com/blog/viewport-resolution-diagonal-screen-size-and-dpi-most-popular-smartphones) и [ScreenSize.net Viewport Reality Report](https://screensize.net/reports/viewport-stats) дают эмпирические наблюдения своих выборок, а не глобальную долю рынка. Для переноса размеров в каталог указаны дата получения и ограничения выборки. Перестановка ширины и высоты для второй ориентации является тестовым preset, если источник отдельно не измерил такую пару.
+- Samsung Tizen и LG webOS публикуют рекомендации по графическому разрешению приложения. Для нового подтверждённого профиля проверяйте `window.innerWidth` и `window.innerHeight` в целевом runtime. Android TV guidance задаёт координаты нативного интерфейса в `dp`; не преобразуйте `960×540 dp` в CSS px без измерения WebView.
+- Для неизмеренных TV runtime и браузерного CSS viewport на панелях 4K/8K каталог содержит `status: gap` и процедуру получения данных. GAP не имеет shell и не может быть выбран как подтверждённая оболочка. После измерения запишите модель/runtime, версию, `window.innerWidth`, `window.innerHeight` и релевантные screen API, добавьте источник и только затем создавайте shell.
+- `1920×1080 CSS px` — выбранный разработчиком эталон desktop-проверки; он сосуществует с наблюдаемыми desktop-размерами в каталоге и не описывается как требование стандарта.
+
 ## Проверки и безопасность
 
 - Без `--write` инструмент только проверяет и печатает план.

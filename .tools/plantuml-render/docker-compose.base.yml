@@ -24,10 +24,13 @@ services:
     restart: unless-stopped
     entrypoint: ["node"]
     command: ["/usr/local/kroki/bpmn-png-server.mjs"]
+    mem_limit: ${KROKI_BPMN_PNG_MEMORY_LIMIT:-512m}
+    cpus: ${KROKI_BPMN_PNG_CPU_LIMIT:-1.0}
     volumes:
       - ./bpmn-png-server.mjs:/usr/local/kroki/bpmn-png-server.mjs:ro
+      - ./bpmn-png-handler.mjs:/usr/local/kroki/bpmn-png-handler.mjs:ro
     ports:
-      - "${KROKI_BPMN_PNG_PORT}:8001"
+      - "127.0.0.1:${KROKI_BPMN_PNG_PORT}:8001"
     networks:
       - kroki-internal
 

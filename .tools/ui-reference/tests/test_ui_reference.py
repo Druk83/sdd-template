@@ -515,6 +515,46 @@ class UiReferenceTests(unittest.TestCase):
             self.assertEqual((target / "conflict.txt").read_text(encoding="utf-8"), "target\n")
             self.assertTrue(source.exists())
 
+    def test_migration_does_not_follow_dangling_destination_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            source = base / "source"
+            target = base / "target"
+            source.mkdir()
+            target.mkdir()
+            (source / "leak.txt").write_text("source\n", encoding="utf-8")
+            outside = base / "outside.txt"
+            try:
+                (target / "leak.txt").symlink_to(outside)
+            except (OSError, NotImplementedError) as error:
+                self.skipTest(f"symbolic links are unavailable: {error}")
+
+            report = ui_reference.migrate(source, target, write=True)
+
+            self.assertEqual(report["status"], "conflicts")
+            self.assertEqual(report["conflicts"], ["leak.txt"])
+            self.assertFalse(outside.exists())
+
+    def test_migration_does_not_follow_symlink_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            source = base / "source"
+            target = base / "target"
+            (source / "nested").mkdir(parents=True)
+            target.mkdir()
+            (source / "nested" / "created.txt").write_text("source\n", encoding="utf-8")
+            outside = base / "outside"
+            try:
+                (target / "nested").symlink_to(outside, target_is_directory=True)
+            except (OSError, NotImplementedError) as error:
+                self.skipTest(f"symbolic links are unavailable: {error}")
+
+            report = ui_reference.migrate(source, target, write=True)
+
+            self.assertEqual(report["status"], "conflicts")
+            self.assertEqual(report["conflicts"], ["nested/created.txt"])
+            self.assertFalse(outside.exists())
+
     def test_validate_full_package_and_traceability(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary) / "ui-package"

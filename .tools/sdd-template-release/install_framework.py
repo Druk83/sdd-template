@@ -70,6 +70,7 @@ def version_key(version: str) -> tuple[int, int, int]:
 
 def installed_release(target_root: Path) -> tuple[str | None, Path | None]:
     agents_dir = target_root / ".agents"
+    build_release.ensure_path_without_symlinks(target_root, agents_dir, "каталог релизов")
     if not agents_dir.is_dir():
         return None, None
     releases = build_release.direct_release_dirs(agents_dir)
@@ -106,6 +107,7 @@ def choose_version(registry: dict[str, object], action: str, requested: str | No
 
 def free_backup_path(target_root: Path, version: str) -> Path:
     tmp_dir = target_root / "tmp"
+    build_release.ensure_path_without_symlinks(target_root, tmp_dir, "каталог резервных копий")
     candidate = tmp_dir / f"sdd-template-old-{version}"
     number = 2
     while candidate.exists():
@@ -347,7 +349,9 @@ def agents_path_references(content: str, version: str) -> list[dict[str, object]
 def inspect_agents_instructions(target_root: Path, source_root: Path, version: str) -> dict[str, object]:
     """Проверить AGENTS.md до записи и сформировать объяснение расхождений."""
     expected_block = agents_managed_block(source_root)
-    destination = target_root / "AGENTS.md"
+    destination = build_release.ensure_path_without_symlinks(
+        target_root, target_root / "AGENTS.md", "путь AGENTS.md"
+    )
     if not destination.exists():
         return {
             "status": "absent",
@@ -489,7 +493,9 @@ def ensure_agents_instructions(
 ) -> dict[str, object]:
     """Добавить управляемый раздел только после разрешения расхождений."""
     review = inspect_agents_instructions(target_root, source_root, version)
-    destination = target_root / "AGENTS.md"
+    destination = build_release.ensure_path_without_symlinks(
+        target_root, target_root / "AGENTS.md", "путь AGENTS.md"
+    )
     conflicts = review.get("conflicts")
     if not isinstance(conflicts, list):
         conflicts = []
@@ -527,18 +533,27 @@ def ensure_agents_instructions(
                         prefix = ""
                     if is_legacy_framework_only(suffix):
                         suffix = ""
+                    destination = build_release.ensure_path_without_symlinks(
+                        target_root, destination, "путь AGENTS.md"
+                    )
                     destination.write_text(
                         prefix + expected_block.rstrip("\n") + suffix,
                         encoding="utf-8",
                         newline="\n",
                     )
                 else:
+                    destination = build_release.ensure_path_without_symlinks(
+                        target_root, destination, "путь AGENTS.md"
+                    )
                     destination.write_text(expected_block, encoding="utf-8", newline="\n")
             else:
                 content = destination.read_text(encoding="utf-8")
                 begin = content.index(AGENTS_MANAGED_BEGIN)
                 end = content.index(AGENTS_MANAGED_END, begin)
                 new_content = content[:begin] + expected_block.rstrip("\n") + content[end + len(AGENTS_MANAGED_END) :]
+                destination = build_release.ensure_path_without_symlinks(
+                    target_root, destination, "путь AGENTS.md"
+                )
                 destination.write_text(new_content, encoding="utf-8", newline="\n")
         except (OSError, ValueError) as error:
             raise build_release.BuildError(f"Невозможно разрешить расхождение AGENTS.md: {error}") from error
@@ -546,6 +561,9 @@ def ensure_agents_instructions(
 
     if review.get("status") == "absent":
         try:
+            destination = build_release.ensure_path_without_symlinks(
+                target_root, destination, "путь AGENTS.md"
+            )
             destination.write_text(agents_managed_block(source_root), encoding="utf-8", newline="\n")
         except OSError as error:
             raise build_release.BuildError(f"Невозможно создать AGENTS.md: {error}") from error
@@ -558,6 +576,9 @@ def ensure_agents_instructions(
     if AGENTS_MANAGED_BEGIN not in content:
         separator = "" if not content or content.endswith(("\n", "\r")) else "\n"
         try:
+            destination = build_release.ensure_path_without_symlinks(
+                target_root, destination, "путь AGENTS.md"
+            )
             destination.write_text(
                 content + separator + "\n" + agents_managed_block(source_root),
                 encoding="utf-8",
@@ -572,10 +593,16 @@ def ensure_agents_instructions(
 def ensure_project_gitignore(target_root: Path, source_root: Path) -> str:
     project_templates = source_root / ".tools" / "sdd-template-release" / "templates" / "project-root"
     source = project_templates / ".gitignore"
-    destination = target_root / ".gitignore"
+    destination = build_release.ensure_path_without_symlinks(
+        target_root, target_root / ".gitignore", "путь .gitignore"
+    )
     if not destination.exists():
         if not source.is_file():
             raise build_release.BuildError(f"В чистом источнике отсутствует шаблон .gitignore: {source}")
+        build_release.ensure_path_without_symlinks(source_root, source, "шаблон .gitignore")
+        destination = build_release.ensure_path_without_symlinks(
+            target_root, destination, "путь .gitignore"
+        )
         shutil.copy2(source, destination)
         return "created"
 
@@ -594,6 +621,9 @@ def ensure_project_gitignore(target_root: Path, source_root: Path) -> str:
         + "\n"
     )
     try:
+        destination = build_release.ensure_path_without_symlinks(
+            target_root, destination, "путь .gitignore"
+        )
         destination.write_text(content + managed_block, encoding="utf-8", newline="\n")
     except OSError as error:
         raise build_release.BuildError(f"Невозможно дополнить существующий .gitignore: {error}") from error
@@ -792,7 +822,9 @@ def migrate_project_structure(
 
 def inspect_project_structure(target_root: Path, source_root: Path, version: str) -> dict[str, object]:
     """Проверить структуру потребителя и подготовить точечную миграцию путей."""
-    destination = target_root / ".project-structure.json"
+    destination = build_release.ensure_path_without_symlinks(
+        target_root, target_root / ".project-structure.json", "путь .project-structure.json"
+    )
     if not destination.exists():
         return {"status": "absent", "path": ".project-structure.json", "conflicts": [], "differences": [], "can_replace": False}
     if not destination.is_file():
@@ -867,8 +899,10 @@ def ensure_project_structure(
     version: str,
     project_structure_action: str = "ask",
 ) -> dict[str, object]:
+    destination = build_release.ensure_path_without_symlinks(
+        target_root, target_root / ".project-structure.json", "путь .project-structure.json"
+    )
     review = inspect_project_structure(target_root, source_root, version)
-    destination = target_root / ".project-structure.json"
     conflicts = review.get("conflicts")
     if not isinstance(conflicts, list):
         conflicts = []
@@ -890,6 +924,9 @@ def ensure_project_structure(
             if not isinstance(migrated, dict):
                 raise build_release.BuildError("Миграция .project-structure.json не вернула JSON-объект.")
             try:
+                destination = build_release.ensure_path_without_symlinks(
+                    target_root, destination, "путь .project-structure.json"
+                )
                 destination.write_text(
                     json.dumps(migrated, ensure_ascii=False, indent=2) + "\n",
                     encoding="utf-8",
@@ -905,6 +942,9 @@ def ensure_project_structure(
             )
     if review.get("status") == "absent" or project_structure_action == "replace":
         try:
+            destination = build_release.ensure_path_without_symlinks(
+                target_root, destination, "путь .project-structure.json"
+            )
             destination.write_text(
                 json.dumps(consumer_project_structure(version), ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8",
@@ -932,7 +972,9 @@ def initialize_project_root(
     project_templates = source_root / ".tools" / "sdd-template-release" / "templates" / "project-root"
     for relative in PROJECT_ROOT_TEMPLATES:
         source = project_templates / relative
-        destination = target_root / relative
+        destination = build_release.ensure_path_without_symlinks(
+            target_root, target_root / relative, f"путь {relative.as_posix()}"
+        )
         if destination.exists():
             if not destination.is_file():
                 raise build_release.BuildError(f"Ожидался файл, но найден другой объект: {destination}")
@@ -940,12 +982,18 @@ def initialize_project_root(
             continue
         if not source.is_file():
             raise build_release.BuildError(f"В чистом источнике отсутствует шаблон корня проекта: {source}")
+        build_release.ensure_path_without_symlinks(source_root, source, "шаблон корня проекта")
+        destination = build_release.ensure_path_without_symlinks(
+            target_root, destination, f"путь {relative.as_posix()}"
+        )
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
         scaffold[relative.as_posix()] = "created"
 
     docs_dir = target_root / "docs"
     requirements_dir = target_root / "docs" / "requirements"
+    build_release.ensure_path_without_symlinks(target_root, docs_dir, "каталог docs")
+    build_release.ensure_path_without_symlinks(target_root, requirements_dir, "каталог docs/requirements")
     if requirements_dir.exists():
         if not requirements_dir.is_dir():
             raise build_release.BuildError(f"Путь docs/requirements существует, но не является каталогом: {requirements_dir}")
@@ -954,7 +1002,10 @@ def initialize_project_root(
         if docs_dir.exists() and not docs_dir.is_dir():
             raise build_release.BuildError(f"Путь docs существует, но не является каталогом: {docs_dir}")
         requirements_dir.mkdir(parents=True)
-        (requirements_dir / ".gitkeep").write_text("", encoding="utf-8", newline="\n")
+        gitkeep = build_release.ensure_path_without_symlinks(
+            target_root, requirements_dir / ".gitkeep", "путь docs/requirements/.gitkeep"
+        )
+        gitkeep.write_text("", encoding="utf-8", newline="\n")
         result["docs_requirements"] = "created"
 
     files: dict[str, Path | None] = {
@@ -968,12 +1019,21 @@ def initialize_project_root(
         "README.md": "",
     }
     for name, default_source in files.items():
-        destination = target_root / name
+        destination = build_release.ensure_path_without_symlinks(
+            target_root, target_root / name, f"путь {name}"
+        )
         if destination.exists():
             continue
         if default_source is not None:
+            build_release.ensure_path_without_symlinks(source_root, default_source, f"шаблон {name}")
+            destination = build_release.ensure_path_without_symlinks(
+                target_root, destination, f"путь {name}"
+            )
             shutil.copy2(default_source, destination)
         else:
+            destination = build_release.ensure_path_without_symlinks(
+                target_root, destination, f"путь {name}"
+            )
             destination.write_text(defaults[name], encoding="utf-8", newline="\n")
     return result
 
@@ -1553,11 +1613,25 @@ def inventory_message(inventory: dict[str, object], title: str) -> str:
     return "\n".join(lines)
 
 
+# @todo #TD-026-02:1d Закрыть гонку путей при установке и очистке
+# refs: .tasks/TD-026-02.md
+# scope: .tools/sdd-template-release/install_framework.py
+# type: debt
+# prio: P1
+# accept: установка и очистка не затрагивают внешние файлы при подмене пути
 def validate_cleanup_target(target_root: Path, source_root: Path) -> tuple[Path, str]:
     """Проверить, что cleanup target — непосредственный source clone в tmp/."""
     if source_root.is_symlink():
         raise build_release.BuildError(f"Каталог клона не должен быть символьной ссылкой: {source_root}")
-    tmp_root = (target_root / "tmp").resolve()
+    resolved_target_root = target_root.resolve()
+    tmp_candidate = resolved_target_root / "tmp"
+    build_release.ensure_path_without_symlinks(
+        resolved_target_root, tmp_candidate, "каталог временных файлов проекта"
+    )
+    tmp_root = tmp_candidate.resolve()
+    build_release.ensure_path_without_symlinks(
+        tmp_root, source_root, "каталог удаляемого клона"
+    )
     source_root = source_root.resolve()
     if source_root.parent != tmp_root or not source_root.name.startswith("sdd-template-source-"):
         raise build_release.BuildError(
@@ -1785,6 +1859,9 @@ def main() -> int:
     old_inventory: dict[str, object] | None = None
     replacing_old_release = current_path is not None and current_version != version
     if replacing_old_release and current_path is not None:
+        current_path = build_release.ensure_path_without_symlinks(
+            target_root, current_path, "путь старого релиза"
+        )
         old_inventory = inventory_release(current_path)
     agents_review = inspect_agents_instructions(target_root, source_root, version)
     project_structure_review = inspect_project_structure(target_root, source_root, version)
@@ -1992,10 +2069,19 @@ def main() -> int:
     post_install_blocked = post_install_review.get("status") != "pass"
     if not post_install_blocked and current_path is not None and args.old_action == "move":
         backup = free_backup_path(target_root, current_version or "unknown")
+        current_path = build_release.ensure_path_without_symlinks(
+            target_root, current_path, "путь старого релиза"
+        )
+        backup = build_release.ensure_path_without_symlinks(
+            target_root, backup, "путь резервной копии релиза"
+        )
         backup.parent.mkdir(parents=True, exist_ok=True)
         shutil.move(str(current_path), str(backup))
         plan["old_path"] = backup.relative_to(target_root).as_posix()
     elif not post_install_blocked and current_path is not None and args.old_action == "delete":
+        current_path = build_release.ensure_path_without_symlinks(
+            target_root, current_path, "путь старого релиза"
+        )
         shutil.rmtree(current_path)
     plan.update(result)
     plan["status"] = "installed_pending_review" if post_install_blocked else "installed_pending_cleanup"

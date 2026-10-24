@@ -1,6 +1,6 @@
 {
   "name": "agent-logic",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "entry": "agent-logic.py",
   "runtime": "python",
   "files_sha256": {
@@ -44,9 +44,9 @@
     "agent_logic/schema/solver_request.schema.json": "ee9ff511fe93bdd47d49916edc4d5d8bba60af24ac0e857a9513f5c3b2009d00",
     "agent_logic/schema/solver_response.schema.json": "e54407c7e5c2005aa3fa3604b7b57a60b4b6ba5ece5296a45b21a8a48b922c81",
     "agent_logic/solver_adapter.py": "6affb76d4dd5644d9bafcf45ce531c697a77977b1bf59e617b4cc213aa3f484a",
-    "agent_logic/structural_analysis.py": "9668bd4fdb7601fc1caac965f1705273aa9a29cc6a264f9d0e951f0b8a90caa4",
+    "agent_logic/structural_analysis.py": "51bfc27e2bb0bb54fa06ec32da9376b93767af9251c824782b069785b0ae14c3",
     "agent_logic/validation.py": "dc22d4a2f4083c00e3f694bcf52e4d31eb3513f40dfd6394aa5f573f380e5bd8",
-    "README.md": "cb963c6f28b313fe5de9ed151f8781dd92a191d4d33328289e9726d05f2b0894",
-    "registry-entry.json": "40942a1bcb028032ab5ebd387b2ef19041e96b37fa7830754bb4aba149754e78"
+    "README.md": "2f8e57411c28508e80504881f36e8ea5b3b840ffa090ce7b4e1e1a5ecf35640d",
+    "registry-entry.json": "50c146b0a4ea3a78e3ef047e2f6f80724a7d1a408a7b0a7266cfeebdfd70de18"
   }
 }
