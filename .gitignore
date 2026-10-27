@@ -17,12 +17,12 @@ tmp/
 .issues/done/*
 .tasks/done/*
 .agents/
+.vscode/
 .agents/**/.runtime/
 .agents/**/__pycache__/
 .tools/**/__pycache__/
 .agents/**/*.py[cod]
 .agents/**/.env
-.tasks/questions/
 .source/*
 .tasks/A3.md
 .tasks/A5.md
@@ -30,8 +30,5 @@ tmp/
 .tasks/A7.md
 .tasks/A8.md
 .tasks/TD-025.md
-.tasks/TD-026.md
-.tasks/TD-026-01.md
-.tasks/TD-026-02.md
-.tasks/TD-026-03.md
 .tasks/A9.md
+.tasks/IMPL-029.md

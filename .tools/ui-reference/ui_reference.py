@@ -6,12 +6,14 @@ import argparse
 import hashlib
 import json
 import re
-import shutil
 import stat
 import sys
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from sdd_runtime import fs_boundary  # noqa: E402
 
 
 SOURCE_URL = "https://github.com/Druk83/ui-patterns.git"
@@ -44,9 +46,25 @@ class UiReferenceError(RuntimeError):
     """Ошибка контракта UI или безопасной миграции."""
 
 
+def _is_regular(path: Path) -> bool:
+    try:
+        with fs_boundary.open_regular(path):
+            return True
+    except OSError:
+        return False
+
+
+def _is_directory(path: Path) -> bool:
+    try:
+        with fs_boundary.locked_directory(path):
+            return True
+    except OSError:
+        return False
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
-    with path.open("rb") as stream:
+    with fs_boundary.open_regular(path) as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
@@ -54,27 +72,34 @@ def sha256_file(path: Path) -> str:
 
 def read_json(path: Path) -> Any:
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
+        return json.loads(fs_boundary.read_bytes(path).decode("utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise UiReferenceError(f"Невозможно прочитать JSON {path}: {error}") from error
 
 
 def relative_files(root: Path) -> list[Path]:
-    if not root.is_dir():
-        raise UiReferenceError(f"Каталог не найден: {root}")
-    return sorted(path for path in root.rglob("*") if path.is_file() and not path.is_symlink())
+    try:
+        return fs_boundary.list_files(root)
+    except OSError as error:
+        raise UiReferenceError(f"Невозможно прочитать каталог {root}: {error}") from error
 
 
 def inventory(root: Path) -> dict[str, Any]:
     entries = []
     for path in relative_files(root):
         relative = path.relative_to(root).as_posix()
+        with fs_boundary.open_regular(path) as stream:
+            digest = hashlib.sha256()
+            size = 0
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                size += len(chunk)
+                digest.update(chunk)
         entries.append(
             {
                 "path": relative,
                 "type": "file",
-                "size": path.stat().st_size,
-                "sha256": sha256_file(path),
+                "size": size,
+                "sha256": digest.hexdigest(),
             }
         )
     fingerprint_data = json.dumps(entries, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -93,12 +118,6 @@ def safe_roots(source: Path, target: Path) -> None:
         raise UiReferenceError("Источник и target должны быть независимыми каталогами.")
 
 
-# @todo #TD-026-03:1d Закрыть гонку пути назначения UI reference
-# refs: .tasks/TD-026-03.md
-# scope: .tools/ui-reference/ui_reference.py
-# type: debt
-# prio: P1
-# accept: миграция не пишет вне разрешённого дерева при подмене пути
 def safe_destination(target: Path, destination: Path) -> Path:
     """Проверить путь назначения миграции до обращения к файловой системе."""
     target_path = target.absolute()
@@ -108,7 +127,7 @@ def safe_destination(target: Path, destination: Path) -> Path:
     except ValueError as error:
         raise UiReferenceError(f"Путь назначения выходит за target: {destination}") from error
 
-    current = resolved_target
+    current = target_path
     for part in relative.parts:
         current = current / part
         try:
@@ -145,7 +164,7 @@ def migrate(source: Path, target: Path, write: bool) -> dict[str, Any]:
             conflicts.append(relative.as_posix())
             continue
         if destination.exists():
-            if not destination.is_file() or sha256_file(destination) != entry["sha256"]:
+            if not _is_regular(destination) or sha256_file(destination) != entry["sha256"]:
                 conflicts.append(relative.as_posix())
             else:
                 skipped.append(relative.as_posix())
@@ -153,10 +172,11 @@ def migrate(source: Path, target: Path, write: bool) -> dict[str, Any]:
         copied.append(relative.as_posix())
         if write:
             try:
-                destination = safe_destination(target, destination)
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                destination = safe_destination(target, destination)
-                shutil.copy2(source / relative, destination)
+                data = fs_boundary.read_bytes(source / relative)
+                if hashlib.sha256(data).hexdigest() != entry["sha256"]:
+                    raise UiReferenceError(f"Источник изменился после inventory: {relative}")
+                fs_boundary.mkdirs(destination.parent)
+                fs_boundary.write_bytes(destination, data, create_only=True)
             except (OSError, UiReferenceError):
                 copied.pop()
                 conflicts.append(relative.as_posix())
@@ -229,15 +249,15 @@ def _validate_local_shell(
 ) -> None:
     if value.get("catalog_url") != FRAMEWORK_URL:
         return
-    root = (framework_root or _framework_root()).resolve()
+    root = (framework_root or _framework_root()).absolute()
     release_path = root / "release-manifest.json"
     library_path = root / ".tools" / "ui-screen-scaffold" / "shells" / "shell-library.json"
-    if not release_path.is_file() or not library_path.is_file():
+    if not _is_regular(release_path) or not _is_regular(library_path):
         errors.append(f"{prefix}: локальная библиотека оболочек или release-manifest.json Framework отсутствует")
         return
     try:
-        release = json.loads(release_path.read_text(encoding="utf-8"))
-        library = json.loads(library_path.read_text(encoding="utf-8"))
+        release = read_json(release_path)
+        library = read_json(library_path)
     except (OSError, json.JSONDecodeError) as error:
         errors.append(f"{prefix}: не удалось прочитать каталог Framework: {error}")
         return
@@ -743,7 +763,7 @@ def validate_reference_set(
     ui_manifest: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     manifest_path = root / "screen-manifest.json"
-    if not manifest_path.is_file():
+    if not _is_regular(manifest_path):
         errors.append("В reference-set отсутствует screen-manifest.json")
         return []
     manifest = read_json(manifest_path)
@@ -764,8 +784,8 @@ def validate_reference_set(
             if not isinstance(file_value, str) or not file_value:
                 errors.append(f"screen-manifest.screens[{index}].file отсутствует")
                 continue
-            file_path = (root / file_value).resolve()
-            if root_resolved not in file_path.parents or not file_path.is_file():
+            file_path = (root / file_value).absolute()
+            if root_resolved not in file_path.resolve().parents or not _is_regular(file_path):
                 errors.append(f"Отсутствует screen artifact: {file_value}")
             viewport = screen.get("viewport")
             if (
@@ -860,7 +880,7 @@ def validate_reference_set(
         if relative is None:
             continue
         file_path = _path_inside(root, relative)
-        if file_path is None or not file_path.is_file():
+        if file_path is None or not _is_regular(file_path):
             errors.append(f"Отсутствует или небезопасен screen artifact: {relative.as_posix()}")
         if viewport and isinstance(viewport.get("viewport_id"), str):
             if relative.parts[:1] == ("screens",):
@@ -904,7 +924,7 @@ def _validate_viewport_directories(
     errors: list[str],
     artifacts: list[dict[str, Any]] | None = None,
 ) -> None:
-    if not root.is_dir():
+    if not _is_directory(root):
         return
 
     if artifacts is not None:
@@ -924,18 +944,22 @@ def _validate_viewport_directories(
                 continue
             checked.add(directory)
             for required in ("index.html", "reference-manifest.json", "README.md"):
-                if not (directory / required).is_file():
+                if not _is_regular(directory / required):
                     errors.append(f"{directory.relative_to(root).as_posix()}: отсутствует {required}")
         if not checked:
             errors.append("reference-set не содержит viewport/orientation каталогов")
         return
 
-    viewport_dirs = [path for path in root.iterdir() if path.is_dir()]
+    try:
+        viewport_dirs = [path for path in fs_boundary.list_tree(root)[0] if path.parent == root]
+    except OSError as error:
+        errors.append(f"Невозможно проверить каталоги reference-set: {error}")
+        return
     if not viewport_dirs:
         errors.append("reference-set не содержит viewport/orientation каталогов")
     for viewport_dir in viewport_dirs:
         for required in ("index.html", "reference-manifest.json", "README.md"):
-            if not (viewport_dir / required).is_file():
+            if not _is_regular(viewport_dir / required):
                 errors.append(f"{viewport_dir.name}: отсутствует {required}")
 
 
@@ -951,9 +975,10 @@ def _safe_relative_path(value: Any, field: str, errors: list[str]) -> Path | Non
 
 
 def _path_inside(root: Path, relative: Path) -> Path | None:
-    target = (root / relative).resolve()
+    target = (root / relative).absolute()
     root_resolved = root.resolve()
-    if target != root_resolved and root_resolved not in target.parents:
+    target_resolved = target.resolve()
+    if target_resolved != root_resolved and root_resolved not in target_resolved.parents:
         return None
     return target
 
@@ -1281,18 +1306,18 @@ def validate_package(
     framework_root: Path | None = None,
 ) -> dict[str, Any]:
     """Проверить полный UI-пакет и его cross-artifact traceability."""
-    if not root.is_dir() or root.is_symlink():
+    if not _is_directory(root) or root.is_symlink():
         errors.append(f"UI-пакет не найден или является ссылкой: {root}")
         return {"package": str(root), "status": "fail"}
     for required_file in PACKAGE_REQUIRED_FILES:
-        if not (root / required_file).is_file():
+        if not _is_regular(root / required_file):
             errors.append(f"В UI-пакете отсутствует обязательный файл: {required_file}")
     for required_directory in PACKAGE_REQUIRED_DIRECTORIES:
-        if not (root / required_directory).is_dir() or (root / required_directory).is_symlink():
+        if not _is_directory(root / required_directory) or (root / required_directory).is_symlink():
             errors.append(f"В UI-пакете отсутствует обязательный каталог: {required_directory}")
     manifest_path = root / "манифест-спецификации-интерфейса.json"
     pool_path = root / "пул-экранов.json"
-    if not manifest_path.is_file() or not pool_path.is_file():
+    if not _is_regular(manifest_path) or not _is_regular(pool_path):
         return {"package": str(root), "status": "fail"}
     manifest = read_json(manifest_path)
     pool = read_json(pool_path)
@@ -1366,7 +1391,7 @@ def validate_package(
         if specification_path is not None:
             if specification_path.parts[:1] != ("screens",):
                 errors.append(f"{prefix}.specification должен находиться в screens/")
-            elif _path_inside(root, specification_path) is None or not (root / specification_path).is_file():
+            elif _path_inside(root, specification_path) is None or not _is_regular(root / specification_path):
                 errors.append(f"Отсутствует screen specification: {specification_path.as_posix()}")
         if not _is_one_of(screen.get("status"), VALID_STATUSES):
             errors.append(f"{prefix}.status имеет недопустимое значение: {screen.get('status')}")
@@ -1388,7 +1413,7 @@ def validate_package(
                 artifact_path = artifact.get("path") if isinstance(artifact, dict) else artifact
                 artifact_relative = _safe_relative_path(artifact_path, f"{prefix}.reference_artifacts[{artifact_index}]", errors)
                 if artifact_relative is not None:
-                    if artifact_relative.parts[:1] != ("references",) or _path_inside(root, artifact_relative) is None or not (root / artifact_relative).is_file():
+                    if artifact_relative.parts[:1] != ("references",) or _path_inside(root, artifact_relative) is None or not _is_regular(root / artifact_relative):
                         errors.append(f"Некорректный или отсутствующий reference artifact: {artifact_relative.as_posix()}")
     if manifest.get("screen_pool") != "пул-экранов.json":
         errors.append("UI manifest должен ссылаться на пул-экранов.json")
@@ -1445,7 +1470,7 @@ def validate_package(
             if reference_set_path.as_posix() in reference_set_paths:
                 errors.append(f"Повторный reference-set path: {reference_set_path.as_posix()}")
             reference_set_paths.add(reference_set_path.as_posix())
-            if reference_set_path.parts[:1] != ("references",) or _path_inside(root, reference_set_path) is None or not (root / reference_set_path).is_dir():
+            if reference_set_path.parts[:1] != ("references",) or _path_inside(root, reference_set_path) is None or not _is_directory(root / reference_set_path):
                 errors.append(f"Некорректный reference set: {reference_set_path.as_posix()}")
             else:
                 reference_artifacts.extend(
@@ -1476,26 +1501,26 @@ def validate_package(
 
 def validate(args: argparse.Namespace) -> dict[str, Any]:
     errors: list[str] = []
-    framework_root = args.framework_root.resolve() if args.framework_root else _framework_root()
+    framework_root = args.framework_root.absolute() if args.framework_root else _framework_root()
     package_report: dict[str, Any] | None = None
     if args.package:
-        package_report = validate_package(args.package.resolve(), errors, framework_root)
+        package_report = validate_package(args.package.absolute(), errors, framework_root)
     if args.pool:
-        pool_data = read_json(args.pool.resolve())
+        pool_data = read_json(args.pool.absolute())
         pool_contract = pool_data.get("contract_version") if isinstance(pool_data, dict) else None
         validate_pool(
-            args.pool.resolve(),
+            args.pool.absolute(),
             errors,
             pool_contract if isinstance(pool_contract, str) else None,
             framework_root=framework_root,
         )
     if args.manifest:
-        validate_manifest(args.manifest.resolve(), errors)
+        validate_manifest(args.manifest.absolute(), errors)
     if args.reference_set:
-        reference_root = args.reference_set.resolve()
+        reference_root = args.reference_set.absolute()
         package_manifest: dict[str, Any] | None = None
         reference_manifest_path = reference_root / "screen-manifest.json"
-        reference_manifest = read_json(reference_manifest_path) if reference_manifest_path.is_file() else {}
+        reference_manifest = read_json(reference_manifest_path) if _is_regular(reference_manifest_path) else {}
         reference_contract = (
             reference_manifest.get("contract_version") if isinstance(reference_manifest, dict) else None
         )
@@ -1504,7 +1529,7 @@ def validate(args: argparse.Namespace) -> dict[str, Any]:
         )
         require_shell_binding = False
         if args.manifest:
-            package_manifest = read_json(args.manifest.resolve())
+            package_manifest = read_json(args.manifest.absolute())
             if isinstance(package_manifest, dict):
                 require_shell_binding = _requires_shell_integration(
                     package_manifest.get("template_set_version")
@@ -1552,12 +1577,16 @@ def parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = parser().parse_args()
     if args.command == "inventory":
-        result = inventory(args.source.resolve())
+        result = inventory(args.source.absolute())
     elif args.command == "migrate":
-        result = migrate(args.source.resolve(), args.target.resolve(), args.write)
+        result = migrate(args.source.absolute(), args.target.absolute(), args.write)
         if args.report:
-            args.report.parent.mkdir(parents=True, exist_ok=True)
-            args.report.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            fs_boundary.mkdirs(args.report.parent)
+            report_bytes = (json.dumps(result, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+            try:
+                fs_boundary.write_bytes(args.report, report_bytes)
+            except FileNotFoundError:
+                fs_boundary.write_bytes(args.report, report_bytes, create_only=True)
     else:
         result = validate(args)
     print(json.dumps(result, ensure_ascii=False, indent=2))
@@ -1567,6 +1596,6 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except UiReferenceError as error:
+    except (UiReferenceError, OSError, UnicodeError) as error:
         print(f"Ошибка: {error}", file=sys.stderr)
         raise SystemExit(1)

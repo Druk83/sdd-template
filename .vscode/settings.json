@@ -1,5 +1,6 @@
 {
   "python.analysis.extraPaths": [
+    "./.tools",
     "./.tools/agent-logic"
   ],
   "liveServer.settings.port": 5501

@@ -1,9 +1,7 @@
-// @todo #TD-025:1d Проверить и настроить устойчивость растеризатора под нагрузкой
+// @todo #TD-025:1d Расширить проверки обработки диаграмм
 // refs: .tasks/TD-025.md
 // scope: .tools/plantuml-render
 // type: test
-// prio: P2
-// accept: допустимая нагрузка не вызывает OOM и перезапуск контейнера
 export const MAX_BODY_BYTES = 2 * 1024 * 1024
 export const MAX_DIMENSION = 8192
 export const MAX_PIXELS = 16_777_216

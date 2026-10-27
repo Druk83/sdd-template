@@ -3,9 +3,7 @@
   "description": "Canonical structure for a project using SDD Framework.",
   "framework": {
     "package_id": "sdd-template",
-    "release_dir": ".agents/{{RELEASE_DIR}}",
-    "tools_registry": ".agents/{{RELEASE_DIR}}/.tools/registry.json",
-    "chatlog_dir": ".agents/{{RELEASE_DIR}}/.chatlog"
+    "release_dir": ".agents/{{RELEASE_DIR}}"
   },
   "folders": [
     {

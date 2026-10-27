@@ -8,6 +8,10 @@
 .tools/
   README.md
   registry.json
+  fs_boundary.py
+  sdd_runtime/
+    __init__.py
+    fs_boundary.py
   agent-logic/
   check-encoding/
   pdd/
@@ -47,6 +51,12 @@
 * **sdd-template-release** — выбирает релиз из `release-registry.json`, собирает и устанавливает его в `.agents/sdd-template-X.Y.Z/`; каталоги `.agents/` и `tmp/` не публикуются.
 
 ## Библиотеки ресурсов инструментов
+
+`.tools/fs_boundary.py` — source-only расширение файловых операций для сборщика,
+установщика и проверки релиза. Оно не публикуется в пользовательском пакете.
+`.tools/sdd_runtime/fs_boundary.py` содержит только операции, необходимые
+runtime-инструментам `ui-reference` и `plantuml-render`, и входит в consumer
+package как их runtime-зависимость.
 
 `.tools/ui-screen-scaffold/catalog/` и `.tools/ui-screen-scaffold/shells/` содержат
 профили CSS viewport и готовые оболочки GUI, поставляемые с зарегистрированным

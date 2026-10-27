@@ -6,12 +6,16 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
-import shutil
 import stat
 import subprocess
 import sys
+from collections.abc import Set as AbstractSet
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import fs_boundary  # noqa: E402
 
 
 PACKAGE_ID = "sdd-template"
@@ -32,9 +36,43 @@ DIAGRAM_REFERENCE_FILES = (
     Path("example TL.plantuml"),
     Path("последовательность событий.plantuml"),
 )
+SOURCE_ONLY_MANIFESTS = frozenset({
+    "README.md",
+    "exportmanifest.md",
+    "versionmanifest.md",
+})
+CONSUMER_MANIFESTS = frozenset({
+    "chatlogmanifest.md",
+    "dependenciesmanifest.md",
+    "diagramsmanifest.md",
+    "dockermanifest.md",
+    "gapmanifest.md",
+    "gapresolutionmanifest.md",
+    "gitmanifest.md",
+    "hierarchymanifest.md",
+    "issuesmanifest.md",
+    "normativeordermanifest.md",
+    "patterncatalogmanifest.md",
+    "pddmanifest.md",
+    "readmemanifest.md",
+    "requirementsprofilemanifest.md",
+    "sddmanifest.md",
+    "systemdesignmanifest.md",
+    "taskmanifest.md",
+    "tddmanifest.md",
+    "toolsmanifest.md",
+    "uimanifest.md",
+})
+SOURCE_ONLY_AUDIENCE = "**Аудитория:** только мета-репозиторий SDD Framework; **Экспорт:** исключён"
+CONSUMER_AUDIENCE = "**Аудитория:** проект-потребитель SDD Framework; **Экспорт:** включён"
 PACKAGE_PATH_PATTERN = re.compile(
     r"(?<![A-Za-z0-9_./\\-])\.(tools|manifest|requirements|approach)([/\\])"
 )
+PDD_TODO_COMMENT_PATTERN = re.compile(r"^(?P<indent>[ \t]*)(?P<marker>//+|#)[ \t]*@todo[ \t]+#")
+PDD_METADATA_COMMENT_PATTERN = re.compile(
+    r"^(?P<indent>[ \t]*)(?P<marker>//+|#)[ \t]*(?:refs|scope|type|prio|owner|accept|defer):"
+)
+PORTABLE_SOURCE_SUFFIXES = {".py", ".js", ".mjs", ".ts", ".tsx", ".sh", ".ps1"}
 
 
 class BuildError(RuntimeError):
@@ -55,18 +93,6 @@ def is_link_or_reparse_point(path: Path) -> bool:
     return bool(reparse_flag and getattr(metadata, "st_file_attributes", 0) & reparse_flag)
 
 
-# @todo #TD-026-01:1d Выбрать безопасные файловые операции для Windows и POSIX
-# refs: .tasks/TD-026-01.md
-# scope: .tools/sdd-template-release .tools/ui-reference .tools/plantuml-render
-# type: debt
-# prio: P1
-# accept: выбранный способ удерживает границу каталога при конкурентной подмене
-# @todo #TD-026-02:1d Закрыть гонку путей при сборке релиза
-# refs: .tasks/TD-026-02.md
-# scope: .tools/sdd-template-release/build_release.py
-# type: debt
-# prio: P1
-# accept: сборка не читает и не пишет вне разрешённого дерева при подмене пути
 def ensure_path_without_symlinks(root: Path, path: Path, purpose: str) -> Path:
     """Проверить путь относительно корня и запретить symlink-компоненты."""
     root_path = root.absolute()
@@ -130,7 +156,7 @@ def read_version(root: Path) -> str:
     readme = root / "README.md"
     if not readme.is_file():
         raise BuildError(f"Не найден корневой README: {readme}")
-    matches = VERSION_PATTERN.findall(readme.read_text(encoding="utf-8"))
+    matches = VERSION_PATTERN.findall(fs_boundary.read_bytes(readme).decode("utf-8"))
     if len(matches) != 1:
         raise BuildError("В корневом README должна быть ровно одна строка версии.")
     version = matches[0]
@@ -144,7 +170,7 @@ def read_release_registry(root: Path) -> dict[str, object]:
     if not registry_path.is_file():
         raise BuildError(f"Не найден официальный реестр релизов: {registry_path}")
     try:
-        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        registry = json.loads(fs_boundary.read_bytes(registry_path).decode("utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise BuildError(f"Невозможно прочитать реестр релизов: {error}") from error
     if not isinstance(registry, dict) or registry.get("package_id") != PACKAGE_ID:
@@ -246,26 +272,30 @@ def release_name(version: str) -> str:
     return f"{PACKAGE_ID}-{version}"
 
 
-def direct_release_dirs(agents_dir: Path) -> list[Path]:
+def direct_release_dirs(agents_dir: Path, *, allow_alias: bool = False) -> list[Path]:
     if not agents_dir.is_dir():
         return []
     releases = []
-    for child in agents_dir.iterdir():
-        if child.is_symlink():
-            raise BuildError(f"Каталог релиза не должен быть символической ссылкой: {child}")
-        if child.is_dir() and RELEASE_PATTERN.fullmatch(child.name):
+    for child, kind in fs_boundary.list_children(agents_dir):
+        if allow_alias and child.name == "sdd-template-current" and kind == "link":
+            continue
+        if kind == "link":
+            raise BuildError(f"Каталог релиза не должен быть ссылкой или reparse point: {child}")
+        if kind == "directory" and RELEASE_PATTERN.fullmatch(child.name):
             releases.append(child)
     return sorted(releases)
 
 
-def conflicting_dirs(agents_dir: Path, expected_name: str) -> list[Path]:
+def conflicting_dirs(agents_dir: Path, expected_name: str, *, allow_alias: bool = False) -> list[Path]:
     if not agents_dir.is_dir():
         return []
     conflicts = []
-    for child in agents_dir.iterdir():
-        if child.is_symlink() and child.name.startswith("sdd"):
+    for child, kind in fs_boundary.list_children(agents_dir):
+        if allow_alias and child.name == "sdd-template-current" and kind == "link":
+            continue
+        if kind == "link" and child.name.startswith("sdd"):
             raise BuildError(f"Каталог Framework не должен быть символической ссылкой: {child}")
-        if child.is_dir() and child.name.startswith("sdd") and child.name != expected_name:
+        if kind == "directory" and child.name.startswith("sdd") and child.name != expected_name:
             conflicts.append(child)
     return sorted(conflicts)
 
@@ -278,14 +308,14 @@ def ensure_source_state(
     agents_dir = root / ".agents"
     ensure_path_without_symlinks(root, agents_dir, "каталог релизов")
     expected = agents_dir / release_name(version)
-    existing = direct_release_dirs(agents_dir)
-    conflicts = conflicting_dirs(agents_dir, expected.name)
+    existing = direct_release_dirs(agents_dir, allow_alias=allow_existing_releases)
+    conflicts = conflicting_dirs(agents_dir, expected.name, allow_alias=allow_existing_releases)
     if conflicts:
         unknown = [path for path in conflicts if not RELEASE_PATTERN.fullmatch(path.name)]
         if unknown or not allow_existing_releases:
             names = ", ".join(path.name for path in conflicts)
             raise BuildError(f"В .agents обнаружены старые или неизвестные каталоги: {names}")
-    if len(existing) > 1:
+    if len(existing) > 1 and not allow_existing_releases:
         names = ", ".join(path.name for path in existing)
         raise BuildError(f"В .agents должно быть не более одной папки SDD Framework: {names}")
     if existing and existing[0] != expected and not allow_existing_releases:
@@ -314,31 +344,98 @@ def copy_tree(
     target: Path,
     deny_tests: bool = False,
     source_root: Path | None = None,
+    excluded_paths: AbstractSet[str] | None = None,
 ) -> None:
-    source_root = source_root or source.resolve()
+    source_root = source_root or Path(os.path.abspath(source))
     ensure_path_without_symlinks(source_root, source, "исходный каталог релиза")
     if not source.is_dir():
         raise BuildError(f"Не найден обязательный каталог: {source}")
-    for item in sorted(source.rglob("*")):
+    try:
+        directories, files = fs_boundary.list_tree(source, boundary_root=source_root)
+    except OSError as error:
+        raise BuildError(str(error)) from error
+    for item in [*directories, *files]:
         relative = item.relative_to(source)
+        if excluded_paths is not None and relative.as_posix() in excluded_paths:
+            continue
         if is_denied(relative, deny_tests):
             continue
         ensure_path_without_symlinks(source_root, item, "исходный файл релиза")
         destination = target / relative
-        if item.is_dir():
-            destination.mkdir(parents=True, exist_ok=True)
-        elif item.is_file():
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(item, destination)
+        if item in directories:
+            fs_boundary.mkdirs(destination)
+        else:
+            fs_boundary.copy_file(item, destination, source_root=source_root)
+
+
+def validate_manifest_export_profile(root: Path) -> None:
+    """Проверить классификацию каждого манифеста до сборки пакета."""
+    manifest_root = root / ".manifest"
+    try:
+        directories, files = fs_boundary.list_tree(manifest_root, boundary_root=root)
+    except OSError as error:
+        raise BuildError(f"Невозможно проверить профиль экспорта манифестов: {error}") from error
+    if directories:
+        raise BuildError("В .manifest/ обнаружен вложенный каталог без профиля экспорта.")
+    names = {path.name for path in files}
+    classified = SOURCE_ONLY_MANIFESTS | CONSUMER_MANIFESTS
+    if names != classified:
+        unclassified = sorted(names - classified)
+        missing = sorted(classified - names)
+        raise BuildError(
+            "Профиль экспорта .manifest/ не совпадает с файлами: "
+            f"unclassified={unclassified}, missing={missing}."
+        )
+    for name, expected_marker in [
+        *((name, SOURCE_ONLY_AUDIENCE) for name in SOURCE_ONLY_MANIFESTS),
+        *((name, CONSUMER_AUDIENCE) for name in CONSUMER_MANIFESTS),
+    ]:
+        content = fs_boundary.read_bytes(manifest_root / name).decode("utf-8")
+        if expected_marker not in content:
+            raise BuildError(f"У манифеста .manifest/{name} отсутствует метка аудитории/экспорта.")
+
+
+def strip_portable_task_annotations(stage: Path) -> None:
+    """Удалить внутренние PDD-ссылки из исходников поставляемых инструментов."""
+    for tool_name in (*PORTABLE_TOOLS, "agent-logic"):
+        tool_root = stage / ".tools" / tool_name
+        if not tool_root.is_dir():
+            continue
+        for path in fs_boundary.list_files(tool_root):
+            if path.suffix.lower() not in PORTABLE_SOURCE_SUFFIXES:
+                continue
+            try:
+                original = fs_boundary.read_bytes(path).decode("utf-8")
+            except UnicodeDecodeError as error:
+                raise BuildError(f"Исходник инструмента не является UTF-8: {path}") from error
+            lines = original.splitlines(keepends=True)
+            output: list[str] = []
+            index = 0
+            changed = False
+            while index < len(lines):
+                match = PDD_TODO_COMMENT_PATTERN.match(lines[index])
+                if match is None:
+                    output.append(lines[index])
+                    index += 1
+                    continue
+                changed = True
+                marker = match.group("marker")
+                index += 1
+                while index < len(lines):
+                    metadata = PDD_METADATA_COMMENT_PATTERN.match(lines[index])
+                    if metadata is None or metadata.group("marker") != marker:
+                        break
+                    index += 1
+            if changed:
+                fs_boundary.write_bytes(path, "".join(output).encode("utf-8"))
 
 
 def copy_file(source: Path, target: Path, source_root: Path | None = None) -> None:
-    source_root = source_root or source.parent.resolve()
+    source_root = source_root or Path(os.path.abspath(source.parent))
     ensure_path_without_symlinks(source_root, source, "исходный файл релиза")
     if not source.is_file():
         raise BuildError(f"Не найден обязательный файл: {source}")
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, target)
+    fs_boundary.copy_file(source, target, source_root=source_root)
 
 
 def render_template(
@@ -347,13 +444,13 @@ def render_template(
     values: dict[str, str],
     source_root: Path | None = None,
 ) -> None:
-    source_root = source_root or source.parent.resolve()
+    source_root = source_root or Path(os.path.abspath(source.parent))
     ensure_path_without_symlinks(source_root, source, "шаблон релиза")
-    content = source.read_text(encoding="utf-8")
+    content = fs_boundary.read_bytes(source).decode("utf-8")
     for key, value in values.items():
         content = content.replace("{{" + key + "}}", value)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(content, encoding="utf-8", newline="\n")
+    fs_boundary.mkdirs(target.parent)
+    fs_boundary.write_bytes(target, content.encode("utf-8"), create_only=True)
 
 
 def qualify_package_paths(content: str, release_dir: str) -> str:
@@ -373,9 +470,11 @@ def qualify_package_paths(content: str, release_dir: str) -> str:
 
 
 def qualify_package_markdown_paths(stage: Path, release_dir: str) -> None:
-    for path in stage.rglob("*.md"):
-        content = path.read_text(encoding="utf-8")
-        path.write_text(qualify_package_paths(content, release_dir), encoding="utf-8", newline="\n")
+    for path in fs_boundary.list_files(stage):
+        if path.suffix != ".md":
+            continue
+        content = fs_boundary.read_bytes(path).decode("utf-8")
+        fs_boundary.write_bytes(path, qualify_package_paths(content, release_dir).encode("utf-8"))
 
 
 def refresh_agent_logic_manifest(stage: Path) -> None:
@@ -383,7 +482,7 @@ def refresh_agent_logic_manifest(stage: Path) -> None:
     tool_dir = stage / ".tools" / "agent-logic"
     manifest_path = tool_dir / "manifest.json"
     try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest = json.loads(fs_boundary.read_bytes(manifest_path).decode("utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise BuildError(f"Невозможно прочитать manifest agent-logic: {error}") from error
     files = manifest.get("files_sha256")
@@ -393,11 +492,9 @@ def refresh_agent_logic_manifest(stage: Path) -> None:
         path = tool_dir / Path(relative)
         if not path.is_file():
             raise BuildError(f"Файл из manifest agent-logic отсутствует в пакете: {relative}")
-        files[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
-    manifest_path.write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-        newline="\n",
+        files[relative] = hashlib.sha256(fs_boundary.read_bytes(path)).hexdigest()
+    fs_boundary.write_bytes(
+        manifest_path, (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     )
 
 
@@ -430,7 +527,7 @@ def portable_registry(root: Path, version: str) -> list[dict[str, object]]:
     registry_path = root / ".tools" / "registry.json"
     ensure_path_without_symlinks(root, registry_path, "registry инструментов")
     try:
-        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        registry = json.loads(fs_boundary.read_bytes(registry_path).decode("utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise BuildError(f"Невозможно прочитать registry инструментов: {error}") from error
     if not isinstance(registry, list):
@@ -461,11 +558,11 @@ def portable_registry(root: Path, version: str) -> list[dict[str, object]]:
 
 def file_records(stage: Path) -> list[dict[str, object]]:
     records = []
-    for path in sorted(item for item in stage.rglob("*") if item.is_file()):
+    for path in sorted(fs_boundary.list_files(stage)):
         relative = path.relative_to(stage).as_posix()
         if relative == "release-manifest.json":
             continue
-        data = path.read_bytes()
+        data = fs_boundary.read_bytes(path)
         records.append(
             {
                 "path": relative,
@@ -482,11 +579,21 @@ def validate_stage(
     source_root: Path | None = None,
     source_ref: str | None = None,
 ) -> None:
+    leaked_manifests = [
+        f".manifest/{name}"
+        for name in SOURCE_ONLY_MANIFESTS
+        if (stage / ".manifest" / name).exists()
+    ]
+    if leaked_manifests:
+        raise BuildError(
+            "В consumer-пакет попали source-only манифесты: "
+            + ", ".join(sorted(leaked_manifests))
+        )
     manifest_path = stage / "release-manifest.json"
     if not manifest_path.is_file():
         raise BuildError(f"В staging отсутствует release-manifest.json: {stage}")
     try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest = json.loads(fs_boundary.read_bytes(manifest_path).decode("utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise BuildError(f"Невозможно прочитать release-manifest.json: {error}") from error
     if manifest.get("package_id") != PACKAGE_ID or manifest.get("version") != version:
@@ -508,7 +615,9 @@ def validate_stage(
 
 def build_stage(root: Path, version: str, stage: Path, source_ref: str | None = None) -> None:
     templates = root / ".tools" / "sdd-template-release" / "templates"
-    stage.mkdir(parents=True, exist_ok=False)
+    validate_manifest_export_profile(root)
+    fs_boundary.mkdirs(stage.parent)
+    fs_boundary.mkdir_new(stage)
     render_template(
         templates / "README.md",
         stage / "README.md",
@@ -533,7 +642,13 @@ def build_stage(root: Path, version: str, stage: Path, source_ref: str | None = 
         },
         source_root=root,
     )
-    for directory in (".manifest", ".requirements", ".approach"):
+    copy_tree(
+        root / ".manifest",
+        stage / ".manifest",
+        source_root=root,
+        excluded_paths=SOURCE_ONLY_MANIFESTS,
+    )
+    for directory in (".requirements", ".approach"):
         copy_tree(root / directory, stage / directory, source_root=root)
     for relative in DIAGRAM_REFERENCE_FILES:
         copy_file(root / ".diagrams" / relative, stage / ".diagrams" / relative, source_root=root)
@@ -543,15 +658,17 @@ def build_stage(root: Path, version: str, stage: Path, source_ref: str | None = 
         {"VERSION": version, "RELEASE_DIR": release_name(version)},
         source_root=root,
     )
-    (stage / ".tools" / "registry.json").write_text(
-        json.dumps(portable_registry(root, version), ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-        newline="\n",
+    fs_boundary.write_bytes(
+        stage / ".tools" / "registry.json",
+        (json.dumps(portable_registry(root, version), ensure_ascii=False, indent=2) + "\n").encode("utf-8"),
+        create_only=True,
     )
     for tool_name in PORTABLE_TOOLS:
         copy_tree(root / ".tools" / tool_name, stage / ".tools" / tool_name, deny_tests=True, source_root=root)
+    copy_tree(root / ".tools" / "sdd_runtime", stage / ".tools" / "sdd_runtime", deny_tests=True, source_root=root)
     agent_logic_source = root / ".tools" / "agent-logic"
     copy_tree(agent_logic_source, stage / ".tools" / "agent-logic", deny_tests=True, source_root=root)
+    strip_portable_task_annotations(stage)
     qualify_package_markdown_paths(stage, release_name(version))
     refresh_agent_logic_manifest(stage)
     manifest = {
@@ -565,10 +682,10 @@ def build_stage(root: Path, version: str, stage: Path, source_ref: str | None = 
         "readme": "README.md",
         "files": file_records(stage),
     }
-    (stage / "release-manifest.json").write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-        newline="\n",
+    fs_boundary.write_bytes(
+        stage / "release-manifest.json",
+        (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode("utf-8"),
+        create_only=True,
     )
 
 
@@ -598,8 +715,8 @@ def build_release(
     allow_existing_releases: bool = False,
     allow_candidate: bool = False,
 ) -> dict[str, object]:
-    root = root.resolve()
-    output_root = output_root.resolve()
+    root = Path(os.path.abspath(root))
+    output_root = Path(os.path.abspath(output_root))
     registry = read_release_registry(root)
     version = read_version(root)
     ensure_version_registered(registry, version, allow_candidate=allow_candidate)
@@ -612,7 +729,7 @@ def build_release(
     stage_boundary = output_root if stage_root is None else stage_candidate.parent
     if write:
         ensure_path_without_symlinks(stage_boundary, stage_candidate, "staging релиза")
-    stage = stage_candidate.resolve()
+    stage = Path(os.path.abspath(stage_candidate))
     if stage.exists() and not resume_stage:
         raise BuildError(
             f"Временная папка уже существует и не будет перезаписана: {stage}. "
@@ -621,26 +738,30 @@ def build_release(
     if write:
         if resume_stage:
             ensure_path_without_symlinks(stage_boundary, stage, "staging релиза")
-            for item in stage.rglob("*"):
+            try:
+                directories, files = fs_boundary.list_tree(stage)
+            except fs_boundary.BoundaryError as error:
+                raise BuildError(str(error)) from error
+            for item in [*directories, *files]:
                 ensure_path_without_symlinks(stage, item, "содержимое staging релиза")
             validate_stage(stage, version, source_root=root, source_ref=source_ref)
         else:
             build_stage(root, version, stage, source_ref)
         ensure_path_without_symlinks(output_root, target, "каталог устанавливаемого релиза")
-        target.parent.mkdir(parents=True, exist_ok=True)
+        fs_boundary.mkdirs(target.parent)
         try:
-            shutil.copytree(stage, target)
+            fs_boundary.copy_tree(stage, target)
         except OSError as error:
             if target.is_dir() and not target.is_symlink():
-                shutil.rmtree(target)
+                fs_boundary.remove_tree(target)
             raise BuildError(f"Невозможно записать релизный пакет в {target}: {error}") from error
     return report(output_root, version, target, stage, write)
 
 
 def main() -> int:
     args = parse_args()
-    root = (args.root or repository_root()).resolve()
-    output_root = (args.target_root or root).resolve()
+    root = Path(os.path.abspath(args.root or repository_root()))
+    output_root = Path(os.path.abspath(args.target_root or root))
     result = build_release(
         root,
         output_root,
@@ -656,6 +777,6 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except BuildError as error:
+    except (BuildError, OSError) as error:
         print(f"Ошибка: {error}", file=sys.stderr)
         raise SystemExit(1)

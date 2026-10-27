@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 import sys
@@ -21,6 +22,7 @@ from build_release import (
     repository_root,
     validate_stage,
 )
+import fs_boundary
 
 
 def parse_args() -> argparse.Namespace:
@@ -54,6 +56,35 @@ def read_json(path: Path) -> object:
 
 def validate_package(package: Path, version: str, allow_candidate: bool = False) -> int:
     validate_stage(package, version)
+    for source_only in (
+        package / ".tools" / "fs_boundary.py",
+        package / ".tools" / "sdd-template-release",
+        package / ".manifest" / "README.md",
+        package / ".manifest" / "exportmanifest.md",
+        package / ".manifest" / "versionmanifest.md",
+    ):
+        if source_only.exists():
+            raise BuildError(f"В consumer-пакет попал source-only инструмент: {source_only.relative_to(package).as_posix()}")
+    runtime_boundary = package / ".tools" / "sdd_runtime" / "fs_boundary.py"
+    if not runtime_boundary.is_file():
+        raise BuildError("В consumer-пакете отсутствует файловая защита runtime-инструментов.")
+    for source_file in (package / ".tools").rglob("*.py"):
+        try:
+            tree = ast.parse(source_file.read_text(encoding="utf-8"), filename=str(source_file))
+        except (OSError, UnicodeError, SyntaxError) as error:
+            raise BuildError(f"Не удалось проверить импорты {source_file}: {error}") from error
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Import)
+                and any(alias.name == "fs_boundary" for alias in node.names)
+            ) or (
+                isinstance(node, ast.ImportFrom)
+                and node.module == "fs_boundary"
+            ):
+                raise BuildError(
+                    f"Runtime-инструмент импортирует source-only .tools/fs_boundary.py: "
+                    f"{source_file.relative_to(package).as_posix()}"
+                )
     manifest = read_json(package / "release-manifest.json")
     if not isinstance(manifest, dict):
         raise BuildError("release-manifest.json должен содержать JSON-объект.")
@@ -179,7 +210,9 @@ def main() -> int:
     if args.published:
         validate_published_registry(root, registry, version)
 
-    with tempfile.TemporaryDirectory(prefix="sdd-template-release-verify-") as temporary:
+    temporary_root = root / "tmp"
+    fs_boundary.mkdirs(temporary_root)
+    with tempfile.TemporaryDirectory(prefix="sdd-template-release-verify-", dir=temporary_root) as temporary:
         workspace = Path(temporary)
         output_root = workspace / "output"
         result = build_release(

@@ -4,7 +4,7 @@
   "display_name": "SDD Framework",
   "source_repository": "Druk83/sdd-template.git",
   "minimum_supported_version": "1.9.0",
-  "default_version": "1.9.5",
+  "default_version": "1.9.6",
   "releases": [
     {
       "version": "1.9.0",
@@ -70,6 +70,17 @@
       "install_path": ".agents/sdd-template-1.9.5",
       "commit_subject": "1.9.5 Расширение каталога экранов, защита инструментов и контроль публикации",
       "released_at": "2026-10-24",
+      "status": "supported"
+    },
+    {
+      "version": "1.9.6",
+      "ref": "sdd-template-1.9.6",
+      "ref_type": "tag",
+      "tag": "sdd-template-1.9.6",
+      "commit": null,
+      "install_path": ".agents/sdd-template-1.9.6",
+      "commit_subject": "1.9.6 Ускорение обновления и единый указатель Framework",
+      "released_at": "2026-10-27",
       "status": "supported"
     }
   ]

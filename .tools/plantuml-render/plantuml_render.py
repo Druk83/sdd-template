@@ -12,6 +12,9 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from sdd_runtime import fs_boundary  # noqa: E402
+
 DEFAULT_TIMEOUT = 30
 RUNTIME_ENV_FILE = Path(__file__).with_name(".env")
 RUNTIME_ENV_KEYS = (
@@ -34,28 +37,29 @@ FILE_DIAGRAM_TYPES = {
 
 def load_runtime_env():
     """Load and validate the production configuration next to this script."""
-    if not RUNTIME_ENV_FILE.is_file():
+    try:
+        content = fs_boundary.read_bytes(RUNTIME_ENV_FILE).decode("utf-8")
+    except FileNotFoundError:
         raise ValueError(
             f"Production configuration is missing: {RUNTIME_ENV_FILE}. "
             "Create it from .env.example."
         )
 
     values = {}
-    with RUNTIME_ENV_FILE.open("r", encoding="utf-8") as env_file:
-        for line_number, raw_line in enumerate(env_file, start=1):
-            line = raw_line.strip()
-            if not line or line.startswith("#"):
-                continue
-            if line.startswith("export "):
-                line = line[7:].lstrip()
-            key, separator, value = line.partition("=")
-            key = key.strip()
-            if not separator or not key:
-                raise ValueError(
-                    f"Invalid production configuration line {line_number}. "
-                    "Expected KEY=VALUE."
-                )
-            values[key] = value.strip().strip('"').strip("'")
+    for line_number, raw_line in enumerate(content.splitlines(), start=1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[7:].lstrip()
+        key, separator, value = line.partition("=")
+        key = key.strip()
+        if not separator or not key:
+            raise ValueError(
+                f"Invalid production configuration line {line_number}. "
+                "Expected KEY=VALUE."
+            )
+        values[key] = value.strip().strip('"').strip("'")
 
     missing_keys = [key for key in RUNTIME_ENV_KEYS if not values.get(key)]
     if missing_keys:
@@ -113,12 +117,6 @@ def get_diagram_type(file_path):
     return FILE_DIAGRAM_TYPES.get(file_path.suffix.lower())
 
 
-# @todo #TD-026-03:1d Закрыть гонку входного и выходного пути PlantUML
-# refs: .tasks/TD-026-03.md
-# scope: .tools/plantuml-render/plantuml_render.py
-# type: debt
-# prio: P1
-# accept: рендеринг не читает и не пишет вне разрешённого дерева при подмене пути
 def path_has_symlink_component(path: Path) -> bool:
     """Проверить конечный путь и его родителей на symlink и junction."""
     candidate = Path(path)
@@ -150,21 +148,17 @@ def write_output(path: Path, content: bytes) -> None:
     """Записать результат без следования по symlink-компонентам пути."""
     if path_has_symlink_component(path):
         raise ValueError(f"Output path must not contain a symbolic link: {path}")
-    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
-    flags |= getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
-    descriptor = os.open(path, flags, 0o666)
-    with os.fdopen(descriptor, "wb") as output_file:
-        output_file.write(content)
+    try:
+        fs_boundary.write_bytes(path, content)
+    except FileNotFoundError:
+        fs_boundary.write_bytes(path, content, create_only=True)
 
 
 def read_input(path: Path) -> str:
     """Прочитать файл без следования по symlink-компонентам пути."""
     if path_has_symlink_component(path):
         raise ValueError(f"Input path must not contain a symbolic link: {path}")
-    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0)
-    descriptor = os.open(path, flags)
-    with os.fdopen(descriptor, "r", encoding="utf-8") as input_file:
-        return input_file.read()
+    return fs_boundary.read_bytes(path).decode("utf-8")
 
 
 def render_file(
@@ -279,9 +273,12 @@ def find_diagram_files(root_path, requested_type):
         return []
 
     files = []
-    for file_path in root.rglob("*"):
-        if path_has_symlink_component(file_path) or not file_path.is_file():
-            continue
+    try:
+        candidates = fs_boundary.list_files(root)
+    except OSError as error:
+        print(f"[ERROR] Cannot inspect diagram directory {root}: {error}", file=sys.stderr)
+        return []
+    for file_path in candidates:
         diagram_type = get_diagram_type(file_path)
         if diagram_type and (requested_type == "auto" or diagram_type == requested_type):
             files.append(file_path)

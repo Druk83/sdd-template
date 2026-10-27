@@ -5,15 +5,50 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 TOOL_DIR = Path(__file__).resolve().parents[1]
+TEST_TMP = TOOL_DIR.parents[1] / "tmp"
 sys.path.insert(0, str(TOOL_DIR))
 
 import ui_reference  # noqa: E402
 
 
 class UiReferenceTests(unittest.TestCase):
+    def test_migration_rejects_parent_swap_before_write(self) -> None:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            source.mkdir()
+            (source / "asset.txt").write_bytes(b"source")
+            target = root / "target"
+            target.mkdir()
+            outside = root / "outside"
+            outside.mkdir()
+            marker = outside / "asset.txt"
+            marker.write_bytes(b"preserve")
+            destination = target / "asset.txt"
+            original_write = ui_reference.fs_boundary.write_bytes
+            swapped = False
+
+            def write_after_swap(path: Path, content: bytes, *, create_only: bool = False) -> None:
+                nonlocal swapped
+                if path == destination and not swapped:
+                    swapped = True
+                    target.rename(root / "moved")
+                    try:
+                        target.symlink_to(outside, target_is_directory=True)
+                    except (OSError, NotImplementedError) as error:
+                        self.skipTest(f"Directory symlinks unavailable: {error}")
+                original_write(path, content, create_only=create_only)
+
+            with patch.object(ui_reference.fs_boundary, "write_bytes", side_effect=write_after_swap):
+                result = ui_reference.migrate(source, target, True)
+            self.assertTrue(swapped)
+            self.assertEqual(result["status"], "conflicts")
+            self.assertEqual(marker.read_bytes(), b"preserve")
+
     def test_tool_version_matches_registry(self) -> None:
         readme = (TOOL_DIR / "README.md").read_text(encoding="utf-8")
         registry = json.loads((TOOL_DIR.parent / "registry.json").read_text(encoding="utf-8"))
@@ -344,7 +379,7 @@ class UiReferenceTests(unittest.TestCase):
         pool_path.write_text(json.dumps(pool), encoding="utf-8")
 
     def test_validate_reference_set(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "reference-set"
             viewport = root / "412x914px"
             viewport.mkdir(parents=True)
@@ -373,7 +408,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertEqual(errors, [])
 
     def test_v2_accepts_nested_screen_viewport_layout(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_v2_package(root)
@@ -394,7 +429,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertEqual(report["status"], "pass", errors)
 
     def test_local_framework_shell_checks_id_version_geometry_and_commit(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             framework = Path(temporary)
             library_path = framework / ".tools" / "ui-screen-scaffold" / "shells" / "shell-library.json"
             library_path.parent.mkdir(parents=True)
@@ -447,7 +482,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertTrue(any("shell_viewport.width" in error for error in errors), errors)
 
     def test_validate_v2_reference_set_and_contract_schemas(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_v2_package(root)
@@ -497,7 +532,7 @@ class UiReferenceTests(unittest.TestCase):
         )
 
     def test_migration_does_not_overwrite_or_delete(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             base = Path(temporary)
             source = base / "source"
             target = base / "target"
@@ -516,7 +551,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertTrue(source.exists())
 
     def test_migration_does_not_follow_dangling_destination_symlink(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             base = Path(temporary)
             source = base / "source"
             target = base / "target"
@@ -536,7 +571,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertFalse(outside.exists())
 
     def test_migration_does_not_follow_symlink_parent(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             base = Path(temporary)
             source = base / "source"
             target = base / "target"
@@ -556,7 +591,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertFalse(outside.exists())
 
     def test_validate_full_package_and_traceability(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_valid_package(root)
@@ -568,7 +603,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertEqual(errors, [])
 
     def test_v2_allows_shared_pattern_and_template_ids_across_screens(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_v2_package(root)
@@ -580,7 +615,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertEqual(errors, [])
 
     def test_v2_rejects_duplicate_candidate_within_one_screen(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_v2_package(root)
@@ -598,7 +633,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertTrue(any("повторный pattern_id внутри одного экрана" in error for error in errors))
 
     def test_v2_rejects_candidate_reference_from_another_screen(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_v2_package(root)
@@ -614,7 +649,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertTrue(any("не заявленный для экрана screen-b" in error for error in errors))
 
     def test_v2_track_integrated_requires_selected_candidates(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_v2_package(root)
@@ -636,7 +671,7 @@ class UiReferenceTests(unittest.TestCase):
             ("screen_id", "screen-unknown", "неизвестный экран"),
         )
         for field, value, expected_error in mutations:
-            with self.subTest(field=field), tempfile.TemporaryDirectory() as temporary:
+            with self.subTest(field=field), tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
                 root = Path(temporary) / "ui-package"
                 root.mkdir()
                 self._write_v2_package(root)
@@ -652,7 +687,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertTrue(any(expected_error in error for error in errors), errors)
 
     def test_v2_requires_shell_binding_for_ui_patterns_0_3_1_and_preserves_0_3_0(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "legacy-package"
             root.mkdir()
             self._write_v2_package(root)
@@ -668,7 +703,7 @@ class UiReferenceTests(unittest.TestCase):
             report = ui_reference.validate_package(root, errors)
             self.assertEqual(report["status"], "pass", errors)
 
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "new-package"
             root.mkdir()
             self._write_v2_package(
@@ -688,7 +723,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertEqual(report["status"], "pass", errors)
 
     def test_v2_requires_shell_candidates_and_matching_pool_provenance(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_v2_package(
@@ -769,7 +804,7 @@ class UiReferenceTests(unittest.TestCase):
         self.assertTrue(any("не более одной оболочки со статусом selected" in error for error in errors), errors)
 
     def test_v2_rejects_shell_binding_that_does_not_match_pool_candidate(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_v2_package(
@@ -794,7 +829,7 @@ class UiReferenceTests(unittest.TestCase):
             ("viewport", "shell_viewport.width не совпадает"),
             ("revision", "catalog_revision должен быть закреплённой ревизией"),
         ):
-            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temporary:
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
                 root = Path(temporary) / "ui-package"
                 root.mkdir()
                 self._write_v2_package(
@@ -818,7 +853,7 @@ class UiReferenceTests(unittest.TestCase):
                 self.assertTrue(any(expected_error in error for error in errors), errors)
 
     def test_v2_confirmed_track_integrated_screen_requires_resolved_shell_status(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_v2_package(
@@ -975,7 +1010,7 @@ class UiReferenceTests(unittest.TestCase):
             ("path", "../outside.html", "границы UI-пакета"),
         )
         for mutation, value, expected_error in mutations:
-            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temporary:
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
                 root = Path(temporary) / "ui-package"
                 root.mkdir()
                 self._write_v2_package(root)
@@ -997,7 +1032,7 @@ class UiReferenceTests(unittest.TestCase):
                 self.assertTrue(any(expected_error in error for error in errors), errors)
 
     def test_v2_requires_traceability_for_confirmed_track_integrated_screen(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_v2_package(root)
@@ -1013,7 +1048,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertTrue(any("отсутствует запись traceability" in error for error in errors))
 
     def test_v2_rejects_status_drift_between_package_and_pool(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_v2_package(root)
@@ -1034,7 +1069,7 @@ class UiReferenceTests(unittest.TestCase):
             ("duplicate-reference", "повторный identifier"),
         )
         for mutation, expected_error in mutations:
-            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as temporary:
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
                 root = Path(temporary) / "ui-package"
                 root.mkdir()
                 self._write_v2_package(root)
@@ -1053,7 +1088,7 @@ class UiReferenceTests(unittest.TestCase):
                 self.assertTrue(any(expected_error in error for error in errors), errors)
 
     def test_v2_rejects_mismatched_viewport_dimensions(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_v2_package(root)
@@ -1069,7 +1104,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertTrue(any("viewport.width не совпадает" in error for error in errors))
 
     def test_v2_track_integrated_rejects_unconfirmed_viewport_for_confirmed_screen(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_v2_package(root)
@@ -1085,7 +1120,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertTrue(any("неподтверждённый viewport" in error for error in errors))
 
     def test_v2_requires_target_when_one_file_maps_to_multiple_views(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_v2_package(root)
@@ -1101,7 +1136,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertTrue(any("требует target" in error for error in errors))
 
     def test_early_v2_package_may_have_open_traceability_and_no_prototype(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_v2_package(root)
@@ -1140,7 +1175,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertEqual(errors, [])
 
     def test_early_v2_package_cannot_claim_confirmed_package_status(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_v2_package(root, workflow_mode="early-prototype")
@@ -1160,7 +1195,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertTrue(any("early-prototype должен иметь status=proposed" in error for error in errors))
 
     def test_cli_validates_complete_v2_package(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_v2_package(root)
@@ -1176,7 +1211,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertIn('"status": "pass"', result.stdout)
 
     def test_validate_package_rejects_candidate_and_unknown_template(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_valid_package(root)
@@ -1199,7 +1234,7 @@ class UiReferenceTests(unittest.TestCase):
             self.assertTrue(any("identifier" in error for error in errors))
 
     def test_validate_package_rejects_incomplete_traceability_and_escape(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             root = Path(temporary) / "ui-package"
             root.mkdir()
             self._write_valid_package(root)

@@ -1,9 +1,7 @@
-# @todo #IMPL-029:1d Защитить локальное SQLite runtime-хранилище
+# @todo #IMPL-029:1d Улучшить устойчивость локального runtime-хранилища
 # refs: .tasks/IMPL-029.md
-# scope: src/agent_logic/runtime_store.py, src/agent_logic/cli.py, tests/test_agent_logic.py
+# scope: .tools/agent-logic/agent_logic/runtime_store.py
 # type: debt
-# prio: P1
-# accept: runtime ограничен 100 MiB, конкурентная запись и повреждённая БД дают контролируемую диагностику
 '''Local, versioned SQLite storage for explicitly persisted ASIR results.'''
 from __future__ import annotations
 import hashlib
