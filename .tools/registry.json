@@ -102,7 +102,7 @@
   },
   {
     "name": "sdd-template-release",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "path": ".tools/sdd-template-release/build_release.py",
     "entry": "python .tools/sdd-template-release/build_release.py",
     "entry_win": "python .tools/sdd-template-release/build_release.py",

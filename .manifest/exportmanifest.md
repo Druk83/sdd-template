@@ -49,10 +49,14 @@
 - `README.md` релиза и `sdd-template.instructions.md`;
 - `.project-structure.json` проекта-потребителя;
 - `.chatlog/.gitkeep` без истории сессий;
-- consumer-facing manifests from `.manifest/`, `.requirements/`, `.approach/`;
-- exclude source-only `.manifest/README.md`, `.manifest/exportmanifest.md` and
-  `.manifest/versionmanifest.md`;
+- потребительские манифесты из `.manifest/`, `.requirements/`, `.approach/`;
+- `.manifest/versionmanifest.md` с потребительскими правилами определения и
+  изменения версии разрабатываемого продукта;
+- не включай source-only `.manifest/README.md`, `.manifest/exportmanifest.md`,
+  `.manifest/frameworkversionmanifest.md` и
+  `.manifest/frameworkdiagramsmanifest.md`;
 - `.diagrams/` только с эталонными исходниками диаграмм Framework;
+- `.framework-development/` и внутренние схемы жизненного цикла Framework не включай;
 - переносимые рабочие инструменты из `.tools/` и их README;
 - `release-registry.json`, `.gitignore` пакета и `release-manifest.json`.
 
@@ -74,7 +78,9 @@ consumer package; установочные операции остаются в 
 и `catalog/` — его поставляемые данные.
 
 **Не включай в пакет:**
-- `AGENTS.md` мета-репозитория, пользовательский `AGENTS.md` и H0-файлы;
+- `AGENTS.md` мета-репозитория, пользовательский `AGENTS.md` и H0-файлы как
+  отдельные файлы; исходный `AGENTS.md` используется установщиком для формирования
+  полного managed-раздела в потребительском `AGENTS.md`;
 - `.tasks/`, `.issues/`, `.source/` и тесты сборщика;
 - исходные материалы мета-репозитория, кроме разрешённых диаграмм;
 - `.git/`, кэши, runtime, локальные настройки, секреты и временные данные.

@@ -1,0 +1,78 @@
+@startuml
+title Последовательность разработки Task SDD Framework — AS-IS
+autonumber
+actor "Разработчик-создатель" as Creator
+participant "Агент" as Agent
+participant "Task\n.tasks/<TASK-ID>.md" as Task
+participant "Исходники и правила\n.manifest/, .requirements/, код" as Sources
+participant "PDD scanner" as PDD
+participant "Сборщик релиза" as Builder
+participant "Локальный Git" as LocalGit
+participant "Удалённый репозиторий" as Remote
+
+Creator -> Agent : поручить существующую Task
+Agent -> Task : прочитать задачу и критерии
+Agent -> Sources : изучить правила, источники и реализацию
+Sources --> Agent : контекст и связанные зависимости
+Agent -> Agent : оценить область изменений
+
+opt Для незавершённой работы нужна кодовая точка
+  Agent -> Sources : добавить @todo с refs на TASK-ID
+  Agent -> PDD : просканировать код
+  PDD -> Sources : прочитать @todo
+  PDD --> Agent : обновить PDD-реестр
+end
+
+Agent -> Sources : изменить только необходимые артефакты
+Agent -> Sources : выполнить проверки из Task
+Agent -> Task : зафиксировать результат и фактический статус
+Agent --> Creator : сообщить изменения, проверки и остаток
+
+opt Разработчик-создатель поручил подготовить кандидата
+  Creator -> Agent : запросить сборку кандидата
+  Agent -> Builder : собрать и проверить пакет
+  Builder -> Sources : прочитать реестр и разрешённые файлы
+  Builder --> Agent : кандидат и release-manifest.json
+  Agent --> Creator : результат проверки и версия Framework
+end
+
+opt Разработчик-создатель поручил подготовить релизный коммит
+  Creator -> Agent : запросить проверку готовности к коммиту
+  Agent -> LocalGit : проверить рабочее дерево, индекс и ожидаемый состав
+  Agent -> Sources : сверить версию, changelog, README и проверки релиза
+  Agent --> Creator : статус готовности, тема коммита и команда
+  Creator -> LocalGit : создать коммит
+  Creator -> Agent : передать SHA коммита
+  Agent -> LocalGit : проверить объект, SHA и метаданные коммита
+  LocalGit --> Agent : подтверждённый коммит
+  Agent --> Creator : сообщить «коммит проверен»
+
+  alt Прямая отправка в основную ветку
+    Creator -> Remote : отправить проверенный коммит
+  else Публикация через PR
+    Creator -> Remote : создать и провести PR по выбранному пути
+  end
+  Remote --> Creator : результат публикации
+  Agent -> Remote : проверить SHA удалённой основной ветки
+  Remote --> Agent : фактический SHA ветки
+  alt Удалённая ветка содержит проверенный коммит
+    Agent --> Creator : подтвердить публикацию
+  else Состояние не подтверждено
+    Agent --> Creator : сообщить, что публикация не подтверждена
+  end
+end
+
+note over Creator,Remote
+  Task может получить внутренний статус done после реализации
+  и локальной проверки, до коммита и публикации.
+  Коммит и публикацию выполняет разработчик-создатель
+  по .manifest/gitmanifest.md.
+  release-manifest.version — версия Framework.
+  Версию продукта проект-потребитель определяет отдельно
+  по собственным правилам из .manifest/versionmanifest.md.
+  Источники: .manifest/taskmanifest.md,
+  .manifest/pddmanifest.md, .manifest/gitmanifest.md,
+  .manifest/frameworkversionmanifest.md,
+  .manifest/versionmanifest.md.
+end note
+@enduml

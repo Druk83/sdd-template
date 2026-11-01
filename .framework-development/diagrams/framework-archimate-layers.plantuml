@@ -1,0 +1,95 @@
+@startuml SDD_Framework_ArchiMate_Three_Layers
+title SDD Framework: бизнес-, прикладной и технологический слои (ArchiMate 3.2) — AS-IS
+!theme plain
+left to right direction
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontSize 10
+skinparam shadowing false
+skinparam linetype ortho
+skinparam ArrowFontSize 9
+skinparam packageStyle rectangle
+skinparam nodesep 45
+skinparam ranksep 45
+
+' Цвета стереотипов повторяют эталонные примеры .diagrams/example BL, AL и TL.
+skinparam rectangle<<BusinessActor>> {
+    BackgroundColor #FFFACD
+    BorderColor #B8860B
+    FontColor #000000
+}
+skinparam rectangle<<BusinessProcess>> {
+    BackgroundColor #FFFACD
+    BorderColor #B8860B
+    FontColor #000000
+    RoundCorner 8
+}
+skinparam rectangle<<ApplicationService>> {
+    BackgroundColor #B5E7F0
+    BorderColor #1565C0
+    FontColor #000000
+    RoundCorner 8
+}
+skinparam rectangle<<ApplicationComponent>> {
+    BackgroundColor #B5E7F0
+    BorderColor #1565C0
+    FontColor #000000
+}
+skinparam rectangle<<TechnologyNode>> {
+    BackgroundColor #C9E7B7
+    BorderColor #2E7D32
+    FontColor #000000
+}
+skinparam rectangle<<SystemSoftware>> {
+    BackgroundColor #C9E7B7
+    BorderColor #2E7D32
+    FontColor #000000
+}
+
+' ========== ЭЛЕМЕНТЫ ТРЁХ СЛОЁВ ==========
+package "Бизнес-слой (BL)" {
+  rectangle "Разработчик-создатель Framework" as Maintainer <<BusinessActor>>
+  rectangle "Разработчик проекта-потребителя" as ConsumerDeveloper <<BusinessActor>>
+  rectangle "Разработка и выпуск Framework" as FrameworkDevelopment <<BusinessProcess>>
+  rectangle "Подготовка технической документации" as Documentation <<BusinessProcess>>
+}
+
+package "Прикладной слой (AL)" {
+  rectangle "Инструкции агента и манифесты" as Guidance <<ApplicationService>>
+  rectangle "Шаблоны требований" as Templates <<ApplicationComponent>>
+  rectangle "Инструменты Framework\nPDD, профили, рендеринг" as Tools <<ApplicationComponent>>
+  rectangle "Сборщик и установщик релиза" as ReleaseTool <<ApplicationComponent>>
+}
+
+package "Технологический слой (TL)" {
+  rectangle "Git-репозиторий Framework" as Repository <<TechnologyNode>>
+  rectangle "Python и локальный Kroki" as Runtime <<SystemSoftware>>
+  rectangle "Рабочий каталог проекта-потребителя" as Workspace <<TechnologyNode>>
+}
+
+' ========== СВЯЗИ МЕЖДУ СЛОЯМИ ==========
+Maintainer -[#000000,thickness=2]-> FrameworkDevelopment
+ConsumerDeveloper -[#000000,thickness=2]-> Documentation
+
+Guidance -[#4CAF50,thickness=2]-> FrameworkDevelopment : поддержка
+Guidance -[#4CAF50,thickness=2]-> Documentation : правила
+Templates -[#4CAF50,thickness=2]-> Documentation : структура
+Tools -[#4CAF50,thickness=2]-> FrameworkDevelopment : проверки
+Repository -[#4CAF50,thickness=2]-> Tools : хранение
+Runtime -[#4CAF50,thickness=2]-> Tools : запуск
+ReleaseTool -[#FFA500,thickness=2,dashed]-> Workspace : установка
+
+legend right
+|= Слой |= Цвет |
+| Бизнес-слой (BL) | Жёлтый (#FFFACD) |
+| Прикладной слой (AL) | Голубой (#B5E7F0) |
+| Технологический слой (TL) | Зелёный (#C9E7B7) |
+| Связь назначения | Чёрный, сплошная |
+| Обслуживание | Зелёный, сплошная |
+| Передача релиза | Оранжевый, пунктирная |
+endlegend
+
+note bottom
+  Источники: README.md, .project-structure.json,
+  .tools/registry.json и .manifest/exportmanifest.md.
+end note
+@enduml

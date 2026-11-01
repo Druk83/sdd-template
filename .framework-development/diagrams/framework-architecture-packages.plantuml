@@ -1,0 +1,64 @@
+@startuml
+title Пакеты архитектуры SDD Framework — AS-IS
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam nodesep 65
+skinparam ranksep 50
+
+package "Исходный мета-репозиторий" as Source {
+  package "Манифесты" as Manifest {
+    artifact ".manifest/"
+  }
+  package "Методики" as Requirements {
+    artifact ".requirements/"
+  }
+  package "Инструменты" as Tools {
+    artifact ".tools/"
+  }
+  package "Задачи" as Tasks {
+    artifact ".tasks/"
+  }
+  package "Issues" as Issues {
+    artifact ".issues/"
+  }
+  package "Источники исследования" as SourceNotes {
+    artifact ".source/"
+  }
+  package "Внутренний реестр диаграмм" as InternalDiagrams {
+    artifact ".framework-development/diagrams/"
+  }
+  package "Публичные диаграммы" as PublicDiagrams {
+    artifact ".diagrams/"
+  }
+}
+
+package "Consumer package" as Package {
+  artifact "Переносимые инструкции"
+  artifact "Разрешённые манифесты,\nшаблоны и инструменты"
+}
+
+package "Проект-потребитель" as Consumer {
+  package ".agents/sdd-template-X.Y.Z" as Installed
+  package "docs/requirements" as Results
+}
+
+Manifest ..> Requirements : определяет правила
+Manifest ..> Tools : задаёт контракты
+Tasks ..> Issues : трассировка по необходимости
+Tools ..> Tasks : PDD-реестр
+Source --> Package : экспорт по allowlist
+Package --> Installed : установка
+Installed --> Results : правила и шаблоны
+PublicDiagrams --> Package : выбранные схемы
+
+note right of InternalDiagrams
+  Только исходники; в consumer-пакет не входит.
+end note
+
+note bottom of Package
+  .framework-development/ исключён из consumer-экспорта.
+  Источники: .project-structure.json,
+  .manifest/exportmanifest.md,
+  .tools/sdd-template-release/build_release.py.
+end note
+@enduml

@@ -6,9 +6,11 @@ import argparse
 import ast
 import hashlib
 import json
+import re
 import sys
 import tempfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from urllib.parse import unquote, urlsplit
 
 from build_release import (
     BuildError,
@@ -23,6 +25,81 @@ from build_release import (
     validate_stage,
 )
 import fs_boundary
+
+
+MARKDOWN_LINK_PATTERN = re.compile(
+    r"!?\[[^\]]+\]\(\s*(?:<([^>]+)>|((?:\\.|[^()\s]|\([^)]*\))+))"
+)
+MARKDOWN_REFERENCE_PATTERN = re.compile(r"(?m)^\s*\[[^\]]+\]:\s*(?:<([^>]+)>|([^\s]+))")
+SOURCE_ONLY_PACKAGE_PATHS = (
+    "AGENTS.md",
+    ".claude/CLAUDE.md",
+    ".github/agents/copilot-instructions.md",
+    ".manifest/README.md",
+    ".manifest/exportmanifest.md",
+    ".manifest/frameworkversionmanifest.md",
+    ".tools/fs_boundary.py",
+)
+SOURCE_ONLY_PACKAGE_DIRECTORIES = (
+    ".claude/",
+    ".git/",
+    ".issues/",
+    ".source/",
+    ".tasks/",
+    ".tools/sdd-template-release/",
+    "tests/",
+)
+
+
+def validate_markdown_links(package: Path) -> None:
+    """Проверить относительные Markdown-ссылки на состав и границы пакета."""
+    package_root = package.resolve()
+    errors: list[str] = []
+    for markdown_file in package.rglob("*.md"):
+        try:
+            content = markdown_file.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as error:
+            raise BuildError(f"Не удалось прочитать Markdown {markdown_file}: {error}") from error
+        content = re.sub(r"(?ms)^```[^\n]*\n.*?^```[ \t]*$", "", content)
+        content = re.sub(r"`[^`\n]*`", "", content)
+        matches = [*MARKDOWN_LINK_PATTERN.finditer(content), *MARKDOWN_REFERENCE_PATTERN.finditer(content)]
+        for match in matches:
+            destination = match.group(1) or match.group(2) or ""
+            if re.match(r"^[A-Za-z]:[\\/]", destination):
+                errors.append(f"{markdown_file.relative_to(package).as_posix()}: абсолютная локальная ссылка {destination}")
+                continue
+            parsed = urlsplit(destination)
+            if parsed.scheme or parsed.netloc or not parsed.path:
+                continue
+            relative_path = unquote(parsed.path).replace("\\", "/")
+            if relative_path.startswith("/"):
+                errors.append(f"{markdown_file.relative_to(package).as_posix()}: абсолютная локальная ссылка {destination}")
+                continue
+            normalized = PurePosixPath(relative_path)
+            package_relative = (markdown_file.parent / Path(*normalized.parts)).resolve()
+            try:
+                package_path = package_relative.relative_to(package_root).as_posix()
+            except ValueError:
+                errors.append(f"{markdown_file.relative_to(package).as_posix()}: ссылка выходит за пакет {destination}")
+                continue
+            normalized_package_path = package_path.casefold()
+            source_only = (
+                normalized_package_path in {path.casefold() for path in SOURCE_ONLY_PACKAGE_PATHS}
+                or any(
+                    normalized_package_path.startswith(directory.casefold())
+                    for directory in SOURCE_ONLY_PACKAGE_DIRECTORIES
+                )
+                or "tests" in PurePosixPath(normalized_package_path).parts
+            )
+            if source_only:
+                errors.append(
+                    f"{markdown_file.relative_to(package).as_posix()}: "
+                    f"ссылка ведёт на source-only путь {package_path}"
+                )
+            elif not package_relative.exists():
+                errors.append(f"{markdown_file.relative_to(package).as_posix()}: локальная цель отсутствует {destination}")
+    if errors:
+        raise BuildError("Ошибки локальных Markdown-ссылок в consumer-пакете:\n- " + "\n- ".join(errors))
 
 
 def parse_args() -> argparse.Namespace:
@@ -61,13 +138,14 @@ def validate_package(package: Path, version: str, allow_candidate: bool = False)
         package / ".tools" / "sdd-template-release",
         package / ".manifest" / "README.md",
         package / ".manifest" / "exportmanifest.md",
-        package / ".manifest" / "versionmanifest.md",
+        package / ".manifest" / "frameworkversionmanifest.md",
     ):
         if source_only.exists():
-            raise BuildError(f"В consumer-пакет попал source-only инструмент: {source_only.relative_to(package).as_posix()}")
+            raise BuildError(f"В consumer-пакет попал source-only файл или инструмент: {source_only.relative_to(package).as_posix()}")
     runtime_boundary = package / ".tools" / "sdd_runtime" / "fs_boundary.py"
     if not runtime_boundary.is_file():
         raise BuildError("В consumer-пакете отсутствует файловая защита runtime-инструментов.")
+    validate_markdown_links(package)
     for source_file in (package / ".tools").rglob("*.py"):
         try:
             tree = ast.parse(source_file.read_text(encoding="utf-8"), filename=str(source_file))
@@ -151,6 +229,7 @@ def validate_package(package: Path, version: str, allow_candidate: bool = False)
         "release-registry.json",
         ".project-structure.json",
         ".manifest/gitmanifest.md",
+        ".manifest/versionmanifest.md",
         ".tools/registry.json",
         ".tools/pdd/manifest-validator.py",
     )

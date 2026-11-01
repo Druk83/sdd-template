@@ -83,7 +83,6 @@ H8. Зарегистрируй GAP только тогда, когда без к
 **Ответственный:** <NAME, ROLE>
 
 **requirements_profile:** sdd
-**profile_version:** <версия Framework из README.md пакета>
 **profile_source:** SDD Framework, этап [3] и правила трассируемости
 **scope:** <software или system>
 **document_readiness:** draft | ready_for_review

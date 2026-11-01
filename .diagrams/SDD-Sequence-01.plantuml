@@ -1,43 +1,42 @@
 @startuml SDD-Sequence-01-Preparation
-    title Последовательность событий SDD\nПодготовка (ПОДГОТОВКА)
+    title Последовательность событий SDD\nПодготовка и определение активного этапа
 
     actor "Разработчик" as Dev
     participant "Агент" as Agent
-    database ".source/" as Source
+    collections "Системные правила" as Rules
+    database ".project-structure.json" as Structure
+    collections ".manifest/ или FRAMEWORK_ROOT/.manifest/" as Manifest
+    collections ".requirements/ или FRAMEWORK_ROOT/.requirements/" as Templates
     database "docs/requirements/" as Docs
-    collections ".manifest/" as Manifest
-    collections ".requirements/" as Templates
-    collections ".approach/" as Approach
-    participant ".tools/" as Tools
+    database ".source/" as Source
 
-    == ПОДГОТОВКА ==
+    == ПОДГОТОВКА К ЗАПРОШЕННОЙ РАБОТЕ ==
 
-    Dev -> Agent: "Изучи материалы в .source/,\nработаем по SDD"
+    Dev -> Agent: Просит продолжить SDD или выполнить работу по GAP
     activate Agent
+    Agent -> Rules: Читает AGENTS.md и применимые инструкции
+    Agent -> Structure: Определяет корень Framework и пути ресурсов
+    Agent -> Manifest: Читает sddmanifest.md, gapmanifest.md и gapresolutionmanifest.md
+    Agent -> Templates: Читает трек разработки и процедуру выбранного этапа
+    Agent -> Docs: Сверяет документы и состояния этапов, если gap-tracking.md существует
+    Agent -> Source: Читает все файлы .source/ и выделяет относящиеся к задаче факты
+    Agent -> Agent: Определяет активный этап по статусам и зависимостям
 
-    Agent -> Source: Читает ВСЕ файлы
-    Agent -> Manifest: Читает H0, H1, H2 манифесты
-    note right of Agent
-    sddmanifest.md
-    gapmanifest.md
-    diagramsmanifest.md
-    versionmanifest.md
-    end note
-    Agent -> Templates: Читает трек разработки.md (H5)
-    Agent -> Approach: Читает registry.json
-    note right of Agent
-    Реестр подходов:
-    event-storming
-    context-map
-    ddd-patterns
-    archimate
-    end note
-    Agent -> Agent: Анализирует .source/
-    Agent --> Dev: "Готов. Начинаю этап [1]"
+    alt Найдены конфликтующие статусы или нельзя определить активный этап
+        Agent --> Dev: Называет записи и задаёт один вопрос о состоянии
+        Agent -> Agent: Останавливается до разрешения конфликта
+    else Активный этап определён
+        opt Результату этапа требуется версия продукта
+            Agent -> Manifest: Читает versionmanifest.md
+            note right of Manifest
+            Манифест задаёт версию продукта
+            проекта-потребителя, а не версию
+            исходного Framework.
+            end note
+        end
+        Agent --> Dev: Называет выбранный этап и проверенные входы
+        Agent -> Agent: Выполняет только запрошенный этап или работу по GAP
+    end
 
-    /'========================================='/
-    /'  ЭТАП [1]: ПРЕДМЕТНАЯ ОБЛАСТЬ           '/
-    /'========================================='/
-
-
+    deactivate Agent
 @enduml

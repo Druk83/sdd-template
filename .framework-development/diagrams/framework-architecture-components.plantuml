@@ -1,0 +1,54 @@
+@startuml
+title Компоненты архитектуры SDD Framework — AS-IS
+left to right direction
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam nodesep 65
+skinparam ranksep 50
+
+package "Мета-репозиторий SDD Framework" {
+  component "Агентские инструкции\nAGENTS.md" as AgentRules
+  component "Манифесты\n.manifest/" as Manifests
+  component "Шаблоны требований\n.requirements/" as Templates
+  component "PDD scanner\n.tools/pdd/" as PDDScanner
+  component "Профиль требований\n.tools/requirements-profile/" as ProfileTool
+  component "Рендерер диаграмм\n.tools/plantuml-render/" as Renderer
+  component "Исходники диаграмм" as DiagramSources
+  component "PNG-рендеры диаграмм" as DiagramPng
+  component "Сборщик и установщик\n.tools/sdd-template-release/" as ReleaseTool
+  component "Исходный код и реестр\n.tasks/pdd/" as SourceAndRegistry
+}
+
+package "Consumer package" {
+  component "Переносимые инструкции" as ConsumerInstructions
+  component "Разрешённые правила,\nшаблоны и инструменты" as ConsumerAssets
+  component "release-manifest.json" as ReleaseManifest
+}
+
+package "Проект-потребитель" {
+  component "Установленный Framework\n.agents/sdd-template-X.Y.Z" as Installed
+  component "Результаты документации\ndocs/requirements/" as Docs
+}
+
+AgentRules --> Manifests : направляют агента
+Manifests --> Templates : задают правила
+Templates --> ProfileTool : профиль этапа [3]
+PDDScanner --> SourceAndRegistry : читает @todo, обновляет реестр
+DiagramSources --> Renderer : передают исходник
+Renderer --> DiagramPng : создаёт PNG
+ReleaseTool --> ConsumerAssets : собирает allowlist
+ReleaseTool --> ConsumerInstructions
+ReleaseTool --> ReleaseManifest
+ConsumerInstructions --> Installed
+ConsumerAssets --> Installed
+ReleaseManifest --> Installed
+Installed --> Docs : поддерживает подготовку
+Manifests ..> ReleaseTool : контракт экспорта
+
+note bottom
+  В consumer-пакет попадают только разрешённые ресурсы.
+  Источники: .tools/registry.json,
+  .manifest/exportmanifest.md,
+  .tools/sdd-template-release/build_release.py.
+end note
+@enduml

@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_FrameworkDevelopment" targetNamespace="https://github.com/Druk83/sdd-template/framework-development">
+  <bpmn:collaboration id="Collaboration_FrameworkDevelopment">
+    <bpmn:participant id="Participant_FrameworkDevelopment" name="Разработка SDD Framework — AS-IS" processRef="Process_FrameworkDevelopment" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_FrameworkDevelopment" name="Текущий процесс разработки Framework" isExecutable="false">
+    <bpmn:documentation>AS-IS. Источники: .manifest/issuesmanifest.md issues.H4.2/H4.6; .manifest/taskmanifest.md task.H4.4/task.H4.8; .manifest/pddmanifest.md pdd.H4.4; TD-032-10.</bpmn:documentation>
+    <bpmn:laneSet id="LaneSet_FrameworkDevelopment">
+      <bpmn:lane id="Lane_Creator" name="Разработчик-создатель">
+        <bpmn:flowNodeRef>Start_Initiative</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Input</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RecordIssue</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_StartExistingTask</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_TaskCreated</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_NoTask</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Agent" name="Агент">
+        <bpmn:flowNodeRef>Call_ResearchFlow</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ExecuteTask</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_UpdateIssue</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_WorkDone</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Initiative">
+      <bpmn:outgoing>Flow_Start_Input</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Gateway_Input" name="Вход в работу" default="Flow_Input_Research">
+      <bpmn:incoming>Flow_Start_Input</bpmn:incoming>
+      <bpmn:outgoing>Flow_Input_ExistingTask</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Input_OperationalIssue</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Input_Research</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_StartExistingTask" name="Передать готовую Task в выполнение">
+      <bpmn:incoming>Flow_Input_ExistingTask</bpmn:incoming>
+      <bpmn:outgoing>Flow_ExistingTask_Execute</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_RecordIssue" name="Зафиксировать проблему, найденную при эксплуатации, как Issue">
+      <bpmn:incoming>Flow_Input_OperationalIssue</bpmn:incoming>
+      <bpmn:outgoing>Flow_Issue_Research</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Call_ResearchFlow" name="Исследовать по отдельному потоку; артефакт выбирает разработчик-создатель">
+      <bpmn:incoming>Flow_Issue_Research</bpmn:incoming>
+      <bpmn:incoming>Flow_Input_Research</bpmn:incoming>
+      <bpmn:outgoing>Flow_Research_Result</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_TaskCreated" name="По исследованию создана Task?" default="Flow_NoTask">
+      <bpmn:incoming>Flow_Research_Result</bpmn:incoming>
+      <bpmn:outgoing>Flow_TaskYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NoTask</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_ExecuteTask" name="Выполнить Task по её составу работ и критериям">
+      <bpmn:incoming>Flow_ExistingTask_Execute</bpmn:incoming>
+      <bpmn:incoming>Flow_TaskYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_Execute_UpdateIssue</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_UpdateIssue" name="При наличии Issue обновить его по действующему workflow">
+      <bpmn:incoming>Flow_Execute_UpdateIssue</bpmn:incoming>
+      <bpmn:outgoing>Flow_Update_End</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_NoTask" name="Issue остаётся на исследовании или материалы остаются в .source/">
+      <bpmn:incoming>Flow_NoTask</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_WorkDone" name="Task выполнена и проверена">
+      <bpmn:incoming>Flow_Update_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Start_Input" sourceRef="Start_Initiative" targetRef="Gateway_Input" />
+    <bpmn:sequenceFlow id="Flow_Input_ExistingTask" sourceRef="Gateway_Input" targetRef="Task_StartExistingTask" />
+    <bpmn:sequenceFlow id="Flow_Input_OperationalIssue" sourceRef="Gateway_Input" targetRef="Task_RecordIssue" />
+    <bpmn:sequenceFlow id="Flow_Input_Research" sourceRef="Gateway_Input" targetRef="Call_ResearchFlow" />
+    <bpmn:sequenceFlow id="Flow_Issue_Research" sourceRef="Task_RecordIssue" targetRef="Call_ResearchFlow" />
+    <bpmn:sequenceFlow id="Flow_Research_Result" sourceRef="Call_ResearchFlow" targetRef="Gateway_TaskCreated" />
+    <bpmn:sequenceFlow id="Flow_TaskYes" name="Да" sourceRef="Gateway_TaskCreated" targetRef="Task_ExecuteTask" />
+    <bpmn:sequenceFlow id="Flow_NoTask" name="Пока нет команды создать Task" sourceRef="Gateway_TaskCreated" targetRef="End_NoTask" />
+    <bpmn:sequenceFlow id="Flow_ExistingTask_Execute" sourceRef="Task_StartExistingTask" targetRef="Task_ExecuteTask" />
+    <bpmn:sequenceFlow id="Flow_Execute_UpdateIssue" sourceRef="Task_ExecuteTask" targetRef="Task_UpdateIssue" />
+    <bpmn:sequenceFlow id="Flow_Update_End" sourceRef="Task_UpdateIssue" targetRef="End_WorkDone" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_FrameworkDevelopment">
+    <bpmndi:BPMNPlane id="BPMNPlane_FrameworkDevelopment" bpmnElement="Collaboration_FrameworkDevelopment">
+      <bpmndi:BPMNShape id="Participant_FrameworkDevelopment_di" bpmnElement="Participant_FrameworkDevelopment" isHorizontal="true">
+        <dc:Bounds x="30" y="30" width="2200" height="500" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Agent_di" bpmnElement="Lane_Agent" isHorizontal="true">
+        <dc:Bounds x="60" y="270" width="2170" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Creator_di" bpmnElement="Lane_Creator" isHorizontal="true">
+        <dc:Bounds x="60" y="30" width="2170" height="240" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Initiative_di" bpmnElement="Start_Initiative">
+        <dc:Bounds x="130" y="125" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Input_di" bpmnElement="Gateway_Input" isMarkerVisible="true">
+        <dc:Bounds x="220" y="118" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="194" y="73" width="72" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_StartExistingTask_di" bpmnElement="Task_StartExistingTask">
+        <dc:Bounds x="320" y="55" width="210" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RecordIssue_di" bpmnElement="Task_RecordIssue">
+        <dc:Bounds x="320" y="160" width="210" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Call_ResearchFlow_di" bpmnElement="Call_ResearchFlow">
+        <dc:Bounds x="680" y="350" width="250" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_TaskCreated_di" bpmnElement="Gateway_TaskCreated" isMarkerVisible="true">
+        <dc:Bounds x="1090" y="125" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1072" y="40" width="75" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ExecuteTask_di" bpmnElement="Task_ExecuteTask">
+        <dc:Bounds x="1400" y="350" width="230" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_UpdateIssue_di" bpmnElement="Task_UpdateIssue">
+        <dc:Bounds x="1780" y="350" width="230" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_NoTask_di" bpmnElement="End_NoTask">
+        <dc:Bounds x="1220" y="132" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1194" y="177" width="88" height="66" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_WorkDone_di" bpmnElement="End_WorkDone">
+        <dc:Bounds x="2070" y="377" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start_Input_di" bpmnElement="Flow_Start_Input">
+        <di:waypoint x="166" y="143" />
+        <di:waypoint x="220" y="143" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Input_ExistingTask_di" bpmnElement="Flow_Input_ExistingTask">
+        <di:waypoint x="245" y="118" />
+        <di:waypoint x="245" y="95" />
+        <di:waypoint x="320" y="95" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Input_OperationalIssue_di" bpmnElement="Flow_Input_OperationalIssue">
+        <di:waypoint x="270" y="143" />
+        <di:waypoint x="290" y="143" />
+        <di:waypoint x="290" y="200" />
+        <di:waypoint x="320" y="200" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Input_Research_di" bpmnElement="Flow_Input_Research">
+        <di:waypoint x="245" y="168" />
+        <di:waypoint x="245" y="395" />
+        <di:waypoint x="680" y="395" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Issue_Research_di" bpmnElement="Flow_Issue_Research">
+        <di:waypoint x="530" y="200" />
+        <di:waypoint x="805" y="200" />
+        <di:waypoint x="805" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Research_Result_di" bpmnElement="Flow_Research_Result">
+        <di:waypoint x="930" y="395" />
+        <di:waypoint x="1050" y="395" />
+        <di:waypoint x="1050" y="150" />
+        <di:waypoint x="1090" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TaskYes_di" bpmnElement="Flow_TaskYes">
+        <di:waypoint x="1115" y="175" />
+        <di:waypoint x="1115" y="395" />
+        <di:waypoint x="1400" y="395" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_NoTask_di" bpmnElement="Flow_NoTask">
+        <di:waypoint x="1140" y="150" />
+        <di:waypoint x="1220" y="150" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1136" y="100" width="88" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ExistingTask_Execute_di" bpmnElement="Flow_ExistingTask_Execute">
+        <di:waypoint x="530" y="95" />
+        <di:waypoint x="1515" y="95" />
+        <di:waypoint x="1515" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Execute_UpdateIssue_di" bpmnElement="Flow_Execute_UpdateIssue">
+        <di:waypoint x="1630" y="395" />
+        <di:waypoint x="1780" y="395" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Update_End_di" bpmnElement="Flow_Update_End">
+        <di:waypoint x="2010" y="395" />
+        <di:waypoint x="2070" y="395" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

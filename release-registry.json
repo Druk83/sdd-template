@@ -4,7 +4,7 @@
   "display_name": "SDD Framework",
   "source_repository": "Druk83/sdd-template.git",
   "minimum_supported_version": "1.9.0",
-  "default_version": "1.9.6",
+  "default_version": "1.9.7",
   "releases": [
     {
       "version": "1.9.0",
@@ -81,6 +81,17 @@
       "install_path": ".agents/sdd-template-1.9.6",
       "commit_subject": "1.9.6 Ускорение обновления и единый указатель Framework",
       "released_at": "2026-10-27",
+      "status": "supported"
+    },
+    {
+      "version": "1.9.7",
+      "ref": "sdd-template-1.9.7",
+      "ref_type": "tag",
+      "tag": "sdd-template-1.9.7",
+      "commit": null,
+      "install_path": ".agents/sdd-template-1.9.7",
+      "commit_subject": "1.9.7 Уточнение процессов и документации SDD Framework",
+      "released_at": "2026-11-01",
       "status": "supported"
     }
   ]

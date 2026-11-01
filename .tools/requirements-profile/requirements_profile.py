@@ -94,14 +94,6 @@ def framework_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-def read_version(root: Path) -> str:
-    text = (root / "README.md").read_text(encoding="utf-8")
-    matches = re.findall(r"^>\s*\*\*Версия:\*\*\s*`?([0-9]+\.[0-9]+\.[0-9]+)`?\s*$", text, re.MULTILINE)
-    if len(matches) != 1:
-        raise ProfileError("Не найдена единственная версия Framework в README.md.")
-    return matches[0]
-
-
 def load_registry(root: Path) -> dict[str, Any]:
     path = root / ".requirements" / "требования" / "профили.json"
     try:
@@ -198,14 +190,13 @@ def select_profile(project_root: Path, registry: dict[str, Any]) -> tuple[dict[s
     return matching[0], origin
 
 
-def check_result(project_root: Path, profile: dict[str, Any], version: str) -> None:
+def check_result(project_root: Path, profile: dict[str, Any]) -> None:
     path = project_root / profile["output"]
     try:
         content = path.read_text(encoding="utf-8")
     except OSError as error:
         raise ProfileError(f"Не найден результат профиля: {path}") from error
-    expected = {"requirements_profile": profile["id"], "profile_version": version,
-                "profile_source": profile["source"]}
+    expected = {"requirements_profile": profile["id"], "profile_source": profile["source"]}
     for key, value in expected.items():
         if not re.search(rf"^\*\*{key}:\*\*\s*`?{re.escape(value)}`?\s*$", content, re.MULTILINE):
             raise ProfileError(f"Результат содержит неверное или отсутствующее поле {key}.")
@@ -266,12 +257,11 @@ def main() -> int:
         profile, origin = select_profile(args.project_root.resolve(), registry)
         result = {"profile": profile["id"], "origin": origin,
                   "instruction": profile["instruction"], "output": profile["output"],
-                  "source": profile["source"], "scope": profile["scope"],
-                  "profile_version": read_version(root)}
+                  "source": profile["source"], "scope": profile["scope"]}
         if profile.get("source_document_url"):
             result["source_document_url"] = profile["source_document_url"]
         if args.action == "check-result":
-            check_result(args.project_root.resolve(), profile, read_version(root))
+            check_result(args.project_root.resolve(), profile)
             result["status"] = "pass"
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0

@@ -21,6 +21,12 @@
       "required": false
     },
     {
+      "name": ".framework-development/diagrams",
+      "path": ".framework-development/diagrams",
+      "description": "Source-only architecture and development diagrams of SDD Framework; excluded from consumer releases.",
+      "required": false
+    },
+    {
       "name": ".requirements",
       "path": ".requirements",
       "description": "Requirements, scenarios, architecture and related specs.",

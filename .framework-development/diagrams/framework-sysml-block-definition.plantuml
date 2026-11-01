@@ -1,0 +1,35 @@
+@startuml
+title Блоки архитектуры SDD Framework (SysML BDD, PlantUML-представление) — AS-IS
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam nodesep 75
+skinparam ranksep 50
+
+' Представление блоков через PlantUML class diagram и стереотип <<block>>.
+class "SDD Framework" as Framework <<block>>
+class "Правила и манифесты\nAGENTS.md, .manifest/" as Rules <<block>>
+class "Методики\n.requirements/" as Methods <<block>>
+class "Учёт разработки\n.tasks/, .issues/, .source/" as WorkTracking <<block>>
+class "Инструменты\n.tools/" as Tools <<block>>
+class "Потребительский пакет\n.agents/sdd-template-X.Y.Z/" as Package <<block>>
+class "Проект-потребитель" as Consumer <<block>>
+
+Framework *-- Rules
+Framework *-- Methods
+Framework *-- WorkTracking
+Framework *-- Tools
+Tools --> Package : сборка
+Rules --> Package : перенос
+Methods --> Package : шаблоны
+Package --> Consumer : установка
+Consumer --> Methods : создаёт документы
+
+note bottom of Framework
+  PlantUML-представление BDD; см. примечание
+  об ограничении SysML в README этого каталога.
+  Источники: .project-structure.json,
+  .manifest/exportmanifest.md,
+  .tools/sdd-template-release/build_release.py
+end note
+@enduml

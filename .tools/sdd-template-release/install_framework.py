@@ -17,8 +17,14 @@ from collections.abc import Mapping
 from pathlib import Path
 from urllib.parse import quote, unquote
 
-import build_release
-import fs_boundary
+# Не создавать __pycache__ в неизменяемом клоне источника.
+_dont_write_bytecode = sys.dont_write_bytecode
+sys.dont_write_bytecode = True
+try:
+    import build_release
+    import fs_boundary
+finally:
+    sys.dont_write_bytecode = _dont_write_bytecode
 
 
 def _read_text(path: Path) -> str:
@@ -401,18 +407,25 @@ def _rewrite_framework_paths(value: str, version: str) -> str:
 
 
 def agents_managed_block(source_root: Path) -> str:
-    """Сформировать краткий managed-блок для использования Framework в проекте."""
-    source = source_root / ".tools" / "sdd-template-release" / "templates" / "consumer-agents.md"
-    if not source.is_file():
-        raise build_release.BuildError(f"В источнике отсутствует шаблон инструкций проекта-потребителя: {source}")
-    try:
-        content = _read_text(source)
-    except (OSError, UnicodeError) as error:
-        raise build_release.BuildError(f"Невозможно прочитать шаблон инструкций проекта-потребителя: {error}") from error
-    if not content.strip():
-        raise build_release.BuildError("Шаблон инструкций проекта-потребителя не должен быть пустым.")
-    if AGENTS_MANAGED_BEGIN in content or AGENTS_MANAGED_END in content:
-        raise build_release.BuildError("Шаблон инструкций проекта-потребителя не должен содержать управляемые маркеры.")
+    """Сформировать управляемый блок из полных H0 и дополнений для потребителя."""
+    sources = (
+        source_root / "AGENTS.md",
+        source_root / ".tools" / "sdd-template-release" / "templates" / "consumer-agents.md",
+    )
+    sections: list[str] = []
+    for source in sources:
+        if not source.is_file():
+            raise build_release.BuildError(f"В источнике отсутствуют инструкции Framework: {source}")
+        try:
+            content = _read_text(source)
+        except (OSError, UnicodeError) as error:
+            raise build_release.BuildError(f"Невозможно прочитать инструкции Framework: {error}") from error
+        if not content.strip():
+            raise build_release.BuildError(f"Инструкции Framework не должны быть пустыми: {source}")
+        if AGENTS_MANAGED_BEGIN in content or AGENTS_MANAGED_END in content:
+            raise build_release.BuildError(f"Исходные инструкции Framework не должны содержать управляемые маркеры: {source}")
+        sections.append(content.rstrip("\r\n"))
+    content = "\n\n---\n\n".join(sections)
     return f"{AGENTS_MANAGED_BEGIN}\n{content.rstrip(chr(13) + chr(10))}\n{AGENTS_MANAGED_END}\n"
 
 

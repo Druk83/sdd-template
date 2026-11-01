@@ -76,7 +76,7 @@ package как их runtime-зависимость.
 
 Это канонический источник версии инструмента. Поле `version` в `.tools/registry.json`
 дублирует значение и служит быстрым справочником текущих версий зарегистрированных инструментов.
-Общие правила SemVer находятся в `.manifest/versionmanifest.md`, а правила increment
+Общие правила SemVer находятся в `.manifest/frameworkversionmanifest.md`, а правила increment
 для CLI-инструментов — в `.manifest/toolsmanifest.md`, разделе `tools.H4.11`.
 
 В исходном коде инструмента hardcoded-версия не указывается.
@@ -136,5 +136,5 @@ python .tools/plantuml-render/plantuml_render.py \
 * В корень проекта: `/README.md`
 * Реестр инструментов: `.tools/registry.json`
 * Правила инструментов: `.manifest/toolsmanifest.md`
-* Общие правила версионирования: `.manifest/versionmanifest.md`
+* Общие правила версионирования: `.manifest/frameworkversionmanifest.md`
 * Стандарт экспорта SDD Framework: `.manifest/exportmanifest.md`

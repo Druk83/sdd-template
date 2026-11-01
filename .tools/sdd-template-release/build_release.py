@@ -39,7 +39,8 @@ DIAGRAM_REFERENCE_FILES = (
 SOURCE_ONLY_MANIFESTS = frozenset({
     "README.md",
     "exportmanifest.md",
-    "versionmanifest.md",
+    "frameworkdiagramsmanifest.md",
+    "frameworkversionmanifest.md",
 })
 CONSUMER_MANIFESTS = frozenset({
     "chatlogmanifest.md",
@@ -62,6 +63,7 @@ CONSUMER_MANIFESTS = frozenset({
     "tddmanifest.md",
     "toolsmanifest.md",
     "uimanifest.md",
+    "versionmanifest.md",
 })
 SOURCE_ONLY_AUDIENCE = "**Аудитория:** только мета-репозиторий SDD Framework; **Экспорт:** исключён"
 CONSUMER_AUDIENCE = "**Аудитория:** проект-потребитель SDD Framework; **Экспорт:** включён"

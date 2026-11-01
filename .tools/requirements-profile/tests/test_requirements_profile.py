@@ -100,7 +100,6 @@ class RequirementsProfileTests(unittest.TestCase):
                 output.parent.mkdir(parents=True, exist_ok=True)
                 metadata = (
                     f"**requirements_profile:** {profile['id']}\n"
-                    f"**profile_version:** {module.read_version(ROOT)}\n"
                     f"**profile_source:** {profile['source']}\n"
                     f"**scope:** {profile['scope'][0]}\n"
                 )
@@ -128,16 +127,16 @@ class RequirementsProfileTests(unittest.TestCase):
                     )
                 output.write_text(metadata + headings + "\n" + source_url + "\n" + iso_details,
                                   encoding="utf-8")
-                module.check_result(self.project, profile, module.read_version(ROOT))
+                module.check_result(self.project, profile)
                 if source_url:
                     output.write_text(metadata + headings + "\n" + iso_details, encoding="utf-8")
                     with self.assertRaises(module.ProfileError):
-                        module.check_result(self.project, profile, module.read_version(ROOT))
+                        module.check_result(self.project, profile)
                 output.write_text(metadata.replace("**scope:**", "**wrong_scope:**") + headings + "\n" +
                                   source_url + "\n" + iso_details,
                                   encoding="utf-8")
                 with self.assertRaises(module.ProfileError):
-                    module.check_result(self.project, profile, module.read_version(ROOT))
+                    module.check_result(self.project, profile)
 
     def test_iso_requires_correct_item_and_complete_clause_coverage(self) -> None:
         profile = next(p for p in self.registry["profiles"] if p["id"] == "iso-29148")
@@ -148,7 +147,6 @@ class RequirementsProfileTests(unittest.TestCase):
         )
         base = (
             f"**requirements_profile:** iso-29148\n"
-            f"**profile_version:** {module.read_version(ROOT)}\n"
             f"**profile_source:** {profile['source']}\n"
             f"{profile['source_document_url']}\n{headings}\n"
         )
@@ -160,12 +158,12 @@ class RequirementsProfileTests(unittest.TestCase):
                 "| ID | Требование | Тип | Информационный объект/уровень | Родительские ID | Источник | Приоритет | Риск | Обоснование | Владелец | Сложность | Версия | Критерий | Метод | Статус |\n" + \
                 "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n" + rows
         output.write_text(valid, encoding="utf-8")
-        module.check_result(self.project, profile, module.read_version(ROOT))
+        module.check_result(self.project, profile)
         draft = valid.replace("**document_readiness:** ready_for_review",
                              "**document_readiness:** draft").replace(
                                  "| 9.5.19 | covered", "| 9.5.19 | gap")
         output.write_text(draft, encoding="utf-8")
-        module.check_result(self.project, profile, module.read_version(ROOT))
+        module.check_result(self.project, profile)
         for invalid in (
             valid.replace("**information_item:** SyRS", "**information_item:** SRS"),
             valid.replace("| 9.5.19 | covered | раздел 9.5.19 | решение |\n", ""),
@@ -174,7 +172,7 @@ class RequirementsProfileTests(unittest.TestCase):
             with self.subTest(invalid=invalid[-120:]):
                 output.write_text(invalid, encoding="utf-8")
                 with self.assertRaises(module.ProfileError):
-                    module.check_result(self.project, profile, module.read_version(ROOT))
+                    module.check_result(self.project, profile)
 
     def test_release_package_runs_profile_selection(self) -> None:
         builder_path = ROOT / ".tools" / "sdd-template-release" / "build_release.py"
@@ -183,14 +181,14 @@ class RequirementsProfileTests(unittest.TestCase):
         builder = importlib.util.module_from_spec(builder_spec)
         builder_spec.loader.exec_module(builder)
         stage = self.project / "package"
-        builder.build_stage(ROOT, module.read_version(ROOT), stage)
+        builder.build_stage(ROOT, builder.read_version(ROOT), stage)
         self.decision.write_text("**Профиль требований:** iso-29148\n", encoding="utf-8")
         command = [sys.executable, "-B", str(stage / ".tools" / "requirements-profile" /
                     "requirements_profile.py"), "resolve", "--project-root", str(self.project)]
         completed = subprocess.run(command, capture_output=True, text=True, check=True)
         result = json.loads(completed.stdout)
         self.assertEqual(result["profile"], "iso-29148")
-        self.assertEqual(result["profile_version"], module.read_version(ROOT))
+        self.assertNotIn("profile_version", result)
         self.assertEqual(result["source_document_url"],
                          self.registry["profiles"][-1]["source_document_url"])
         self.assertFalse((stage / ".tools" / "requirements-profile" / "tests").exists())

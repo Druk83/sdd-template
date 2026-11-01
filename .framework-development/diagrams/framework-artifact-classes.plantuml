@@ -1,0 +1,63 @@
+@startuml
+title Артефакты разработки SDD Framework — UML class, AS-IS
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam nodesep 100
+skinparam ranksep 50
+
+class Issue {
+  type label
+  priority label
+  status label
+  task links (optional)
+}
+
+class Task {
+  TASK-ID
+  status
+  accept criteria
+  Issue reference (optional)
+}
+
+class CodeTodo {
+  @todo
+  refs: TASK-ID
+}
+
+class PddRegistryEntry {
+  source path
+  code line/reference
+  TASK-ID reference
+}
+
+class ReleaseManifest {
+  package_id
+  version (Framework)
+  release_dir
+  source commit
+  file list and SHA-256
+}
+
+class ConsumerProject {
+  framework.release_dir
+}
+
+Issue "0..1" -- "0..*" Task : трассирует
+Task "1" -- "0..*" CodeTodo : refs
+CodeTodo "1" --> "1" PddRegistryEntry : сканируется
+ReleaseManifest "1" --> "1" ConsumerProject : задаёт путь
+
+note bottom
+  Task может существовать без Issue. Поля и связи показаны
+  только в объёме, подтверждённом манифестами.
+  ReleaseManifest.version — версия SDD Framework.
+  Версию продукта задаёт проект-потребитель по собственным правилам;
+  она не выводится из версии Framework.
+  Источники: .manifest/issuesmanifest.md,
+  .manifest/taskmanifest.md, .manifest/pddmanifest.md,
+  .manifest/exportmanifest.md,
+  .manifest/frameworkversionmanifest.md,
+  .manifest/versionmanifest.md.
+end note
+@enduml

@@ -11,7 +11,6 @@
 .tools/agent-logic/.runtime/
 .tools/check-encoding/tests/
 tmp/
-.playwright-mcp/
 .chatlog/session.md
 .tasks/done/
 .issues/done/*
@@ -32,3 +31,14 @@ tmp/
 .tasks/TD-025.md
 .tasks/A9.md
 .tasks/IMPL-029.md
+.tasks/TD-032.md
+.tasks/TD-032-04.md
+.tasks/TD-032-03.md
+.tasks/TD-032-02.md
+.tasks/TD-032-01.md
+.issues/IS-10.md
+.issues/IS-09.md
+.issues/IS-08.md
+.issues/IS-07.md
+.issues/IS-06.md
+.issues/IS-05.md

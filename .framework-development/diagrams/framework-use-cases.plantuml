@@ -1,0 +1,43 @@
+@startuml
+title Варианты использования SDD Framework — AS-IS
+left to right direction
+skinparam shadowing false
+
+actor "Разработчик-создатель" as Creator
+actor "Агент мета-репозитория" as FrameworkAgent
+actor "Разработчик проекта-потребителя" as ConsumerDeveloper
+actor "Агент проекта-потребителя" as ConsumerAgent
+
+rectangle "Исходный мета-репозиторий Framework" {
+  usecase "Исследовать вопрос" as Research
+  usecase "Создать Issue или Task" as TrackWork
+  usecase "Изменить Framework\nпо Task" as Implement
+  usecase "Проверить диаграммы\nи инструменты" as Verify
+  usecase "Собрать и проверить\nconsumer-кандидат" as BuildCandidate
+}
+
+rectangle "Установленный Framework\nв проекте-потребителе" {
+  usecase "Установить или обновить\nFramework" as Install
+  usecase "Подготовить техническую\nдокументацию" as CreateDocs
+  usecase "Проверить документы\nпо правилам Framework" as ValidateDocs
+}
+
+Creator -- Research
+Creator -- TrackWork
+Creator -- Verify
+Creator -- BuildCandidate
+FrameworkAgent -- Research
+FrameworkAgent -- Implement
+FrameworkAgent -- Verify
+ConsumerDeveloper -- Install
+ConsumerDeveloper -- CreateDocs
+ConsumerAgent -- CreateDocs
+ConsumerAgent -- ValidateDocs
+CreateDocs ..> ValidateDocs : включает проверку
+
+note bottom
+  Источники: .manifest/issuesmanifest.md,
+  .manifest/taskmanifest.md, .manifest/gitmanifest.md,
+  README.md и переносимые инструкции Framework.
+end note
+@enduml

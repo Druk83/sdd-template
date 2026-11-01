@@ -22,6 +22,7 @@ sys.path.insert(0, str(TOOL_ROOT))
 
 import build_release  # noqa: E402
 import install_framework  # noqa: E402
+import verify_release  # noqa: E402
 
 
 def file_record(path: Path, relative: str) -> dict[str, object]:
@@ -50,10 +51,92 @@ def write_consumer_manifest(package: Path, files: list[Path]) -> None:
     (package / "release-manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
 
 
-def write_consumer_agents_template(source: Path, content: str = "# Consumer instructions\n") -> None:
-    template = source / ".tools" / "sdd-template-release" / "templates" / "consumer-agents.md"
-    template.parent.mkdir(parents=True, exist_ok=True)
-    template.write_text(content, encoding="utf-8")
+def write_source_agents_instructions(source: Path, content: str = "# Framework H0 instructions\n") -> None:
+    (source / "AGENTS.md").write_text(content, encoding="utf-8")
+    supplement = source / ".tools" / "sdd-template-release" / "templates" / "consumer-agents.md"
+    supplement.parent.mkdir(parents=True, exist_ok=True)
+    supplement.write_text("# Consumer instructions\n", encoding="utf-8")
+
+
+class ExportLinkValidationTests(unittest.TestCase):
+    def test_external_urls_and_anchor_links_are_ignored(self) -> None:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
+            package = Path(temporary) / "package"
+            package.mkdir()
+            (package / "README.md").write_text(
+                "[site](https://example.invalid/docs) [mail](mailto:team@example.invalid) [section](#intro)\n",
+                encoding="utf-8",
+            )
+            verify_release.validate_markdown_links(package)
+
+    def test_missing_local_link_is_reported(self) -> None:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
+            package = Path(temporary) / "package"
+            package.mkdir()
+            (package / "README.md").write_text("[missing](docs/missing.md)\n", encoding="utf-8")
+            with self.assertRaisesRegex(build_release.BuildError, "docs/missing.md"):
+                verify_release.validate_markdown_links(package)
+
+    def test_source_only_link_is_reported_even_when_target_is_absent(self) -> None:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
+            package = Path(temporary) / "package"
+            package.mkdir()
+            (package / "README.md").write_text("[task](.tasks/TD-032.md)\n", encoding="utf-8")
+            with self.assertRaisesRegex(build_release.BuildError, r"source-only.*\.tasks/TD-032.md"):
+                verify_release.validate_markdown_links(package)
+
+    def test_link_cannot_escape_package_root(self) -> None:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
+            package = Path(temporary) / "package"
+            package.mkdir()
+            (package / "README.md").write_text("[outside](../../outside.md)\n", encoding="utf-8")
+            with self.assertRaisesRegex(build_release.BuildError, "выходит за пакет"):
+                verify_release.validate_markdown_links(package)
+
+
+class InitialSetupStateTests(unittest.TestCase):
+    def test_missing_project_structure_is_created_for_explicit_init(self) -> None:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
+            target = Path(temporary) / "consumer"
+            target.mkdir()
+            result = install_framework.ensure_project_structure(
+                target, build_release.repository_root(), "1.9.7"
+            )
+            self.assertEqual(result["status"], "created")
+            structure = json.loads((target / ".project-structure.json").read_text(encoding="utf-8"))
+            self.assertEqual(structure["framework"]["release_dir"], ".agents/sdd-template-1.9.7")
+
+    def test_single_release_without_pointer_has_one_deterministic_result(self) -> None:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
+            target = Path(temporary) / "consumer"
+            release = target / ".agents" / "sdd-template-1.9.6"
+            release.mkdir(parents=True)
+            version, path = install_framework.installed_release(target)
+            self.assertEqual(version, "1.9.6")
+            self.assertEqual(path, release)
+
+    def test_multiple_releases_without_pointer_require_resolution(self) -> None:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
+            target = Path(temporary) / "consumer"
+            agents = target / ".agents"
+            (agents / "sdd-template-1.9.5").mkdir(parents=True)
+            (agents / "sdd-template-1.9.6").mkdir()
+            with self.assertRaisesRegex(build_release.BuildError, "Несколько релизов"):
+                install_framework.installed_release(target)
+
+    def test_invalid_project_structure_is_reported_as_conflict(self) -> None:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
+            target = Path(temporary) / "consumer"
+            target.mkdir()
+            (target / ".project-structure.json").write_text("{invalid", encoding="utf-8")
+            review = cast(
+                dict[str, Any],
+                install_framework.inspect_project_structure(
+                    target, build_release.repository_root(), "1.9.7"
+                ),
+            )
+            self.assertEqual(review["status"], "conflict")
+            self.assertEqual(review["differences"][0]["code"], "invalid_json")
 
 
 class SourceLocationTests(unittest.TestCase):
@@ -118,7 +201,10 @@ class SymlinkBoundaryTests(unittest.TestCase):
             self.assertFalse((stage / ".tools" / "fs_boundary.py").exists())
             self.assertFalse((stage / ".tools" / "sdd-template-release").exists())
             self.assertFalse((stage / ".manifest" / "exportmanifest.md").exists())
-            self.assertFalse((stage / ".manifest" / "versionmanifest.md").exists())
+            self.assertFalse((stage / ".manifest" / "frameworkdiagramsmanifest.md").exists())
+            self.assertFalse((stage / ".manifest" / "frameworkversionmanifest.md").exists())
+            self.assertFalse((stage / ".framework-development").exists())
+            self.assertTrue((stage / ".manifest" / "versionmanifest.md").is_file())
             self.assertFalse((stage / ".manifest" / "README.md").exists())
             self.assertEqual(
                 {path.name for path in (stage / ".manifest").glob("*.md")},
@@ -396,7 +482,7 @@ class SymlinkBoundaryTests(unittest.TestCase):
             target = base / "target"
             source.mkdir()
             target.mkdir()
-            write_consumer_agents_template(source)
+            write_source_agents_instructions(source)
             outside = base / "outside.md"
             outside.write_text("user data\n", encoding="utf-8")
             self.make_symlink(outside, target / "AGENTS.md")
@@ -451,6 +537,31 @@ class SymlinkBoundaryTests(unittest.TestCase):
 
 
 class SafetyInventoryTests(unittest.TestCase):
+    def test_installer_help_does_not_write_bytecode_into_source_tree(self) -> None:
+        with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
+            source = Path(temporary)
+            tool_dir = source / ".tools"
+            release_dir = tool_dir / "sdd-template-release"
+            release_dir.mkdir(parents=True)
+            shutil.copy2(TOOL_ROOT / "install_framework.py", release_dir / "install_framework.py")
+            shutil.copy2(TOOL_ROOT / "build_release.py", release_dir / "build_release.py")
+            shutil.copy2(TOOL_ROOT.parents[0] / "fs_boundary.py", tool_dir / "fs_boundary.py")
+            shutil.copytree(
+                TOOL_ROOT.parents[0] / "sdd_runtime",
+                tool_dir / "sdd_runtime",
+                ignore=shutil.ignore_patterns("__pycache__"),
+            )
+
+            result = subprocess.run(
+                [sys.executable, str(release_dir / "install_framework.py"), "--help"],
+                cwd=source,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr.decode(errors="replace"))
+            self.assertFalse(list(tool_dir.rglob("__pycache__")))
+
     def test_install_source_requires_clean_clone_and_matching_tag(self) -> None:
         with tempfile.TemporaryDirectory(dir=TEST_TMP) as temporary:
             source = Path(temporary) / "source"
@@ -881,6 +992,10 @@ class SafetyInventoryTests(unittest.TestCase):
             )
             self.assertIn("old_release", plan)
             self.assertEqual(plan["next_action"]["type"], "user_confirmation")
+            message = plan["next_action"]["message"]
+            self.assertIn("test conflict", message)
+            self.assertIn("--agents-action migrate", message)
+            self.assertIn("--project-structure-action migrate", message)
             self.assertFalse((target / ".agents" / "sdd-template-1.9.6").exists())
             self.assertTrue((old / "custom.txt").exists())
             self.assertTrue(source.exists())
@@ -1487,7 +1602,7 @@ class FrameworkPathMigrationTests(unittest.TestCase):
             base = Path(temporary)
             source = base / "source"
             source.mkdir()
-            write_consumer_agents_template(source, "# Current framework instructions\n")
+            write_source_agents_instructions(source, "# Current framework instructions\n")
             target = base / "target"
             target.mkdir()
             old_block = (
@@ -1518,7 +1633,7 @@ class FrameworkPathMigrationTests(unittest.TestCase):
             base = Path(temporary)
             source = base / "source"
             source.mkdir()
-            write_consumer_agents_template(source, "# Current framework instructions\n")
+            write_source_agents_instructions(source, "# Current framework instructions\n")
             target = base / "target"
             target.mkdir()
             agents = target / "AGENTS.md"

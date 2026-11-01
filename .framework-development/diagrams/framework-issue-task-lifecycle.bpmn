@@ -1,0 +1,439 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_IssueTaskLifecycle" targetNamespace="https://github.com/Druk83/sdd-template/framework-development">
+  <bpmn:collaboration id="Collaboration_IssueTaskLifecycle">
+    <bpmn:participant id="Participant_IssueTaskLifecycle" name="Жизненный цикл Issue и Task SDD Framework — AS-IS" processRef="Process_IssueTaskLifecycle" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_IssueTaskLifecycle" name="Внутренний жизненный цикл Issue и Task" isExecutable="false">
+    <bpmn:documentation>AS-IS. Issue: .manifest/issuesmanifest.md issues.H4.5/issues.H4.6. Task: .manifest/taskmanifest.md task.H4.2/task.H4.4. Для мета-репозитория статус done зависит от выполнения критериев и локальной проверки, но не от коммита или публикации. Статус Task dropped перечислен в taskmanifest.md; условие перехода не определено и на схеме не моделируется.</bpmn:documentation>
+    <bpmn:laneSet id="LaneSet_IssueTaskLifecycle">
+      <bpmn:lane id="Lane_Creator" name="Разработчик-создатель">
+        <bpmn:flowNodeRef>Start_WorkItem</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_IssueExists</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ProvideInfo</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CreateTask</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ResolveBlocker</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CloseWithReason</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_IssueClosed</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Research</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Agent" name="Агент">
+        <bpmn:flowNodeRef>Task_TriageIssue</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_InfoSufficient</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_TriageDecision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_StartTask</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Blocked</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Execute</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_DoneCriteria</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_MarkTaskDone</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_IssueOutcome</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_MarkBlocked</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Revise</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_TaskDone</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_IssueOpen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_MarkIssueDone</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_IssueDone</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_RequestInfo</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_WorkItem" name="Issue создана или Task взята в работу">
+      <bpmn:outgoing>Flow_Start_IssueExists</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Gateway_IssueExists" name="Есть Issue?" default="Flow_NoIssue">
+      <bpmn:incoming>Flow_Start_IssueExists</bpmn:incoming>
+      <bpmn:outgoing>Flow_HasIssue</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NoIssue</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_TriageIssue" name="Разобрать Issue; установить status:triaged">
+      <bpmn:incoming>Flow_HasIssue</bpmn:incoming>
+      <bpmn:incoming>Flow_InfoProvided</bpmn:incoming>
+      <bpmn:outgoing>Flow_Triage_Info</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_InfoSufficient" name="Данных достаточно?" default="Flow_InfoYes">
+      <bpmn:incoming>Flow_Triage_Info</bpmn:incoming>
+      <bpmn:outgoing>Flow_InfoNo</bpmn:outgoing>
+      <bpmn:outgoing>Flow_InfoYes</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_ProvideInfo" name="Предоставить недостающие сведения">
+      <bpmn:incoming>Flow_Request_Provide</bpmn:incoming>
+      <bpmn:outgoing>Flow_InfoProvided</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_TriageDecision" name="Решение по Issue" default="Flow_KeepResearch">
+      <bpmn:incoming>Flow_InfoYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_CreateTask</bpmn:outgoing>
+      <bpmn:outgoing>Flow_KeepResearch</bpmn:outgoing>
+      <bpmn:outgoing>Flow_CloseReason</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_CreateTask" name="Создать Task и связать с Issue; status:ready">
+      <bpmn:incoming>Flow_CreateTask</bpmn:incoming>
+      <bpmn:outgoing>Flow_TaskCreated</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_StartTask" name="Начать Task: draft/planned → in-progress; связанную Issue — в in-progress">
+      <bpmn:incoming>Flow_NoIssue</bpmn:incoming>
+      <bpmn:incoming>Flow_TaskCreated</bpmn:incoming>
+      <bpmn:incoming>Flow_Unblocked</bpmn:incoming>
+      <bpmn:outgoing>Flow_TaskStart_Blocked</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Blocked" name="Есть блокер?" default="Flow_NotBlocked">
+      <bpmn:incoming>Flow_TaskStart_Blocked</bpmn:incoming>
+      <bpmn:outgoing>Flow_IsBlocked</bpmn:outgoing>
+      <bpmn:outgoing>Flow_NotBlocked</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_ResolveBlocker" name="Устранить блокер или зафиксировать внешнюю зависимость">
+      <bpmn:incoming>Flow_Blocked_Resolve</bpmn:incoming>
+      <bpmn:outgoing>Flow_Unblocked</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Execute" name="Выполнить Task и проверки из её критериев">
+      <bpmn:incoming>Flow_NotBlocked</bpmn:incoming>
+      <bpmn:incoming>Flow_Revise</bpmn:incoming>
+      <bpmn:outgoing>Flow_Execute_DoneCheck</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_DoneCriteria" name="Критерии Task выполнены?" default="Flow_DoneNo">
+      <bpmn:incoming>Flow_Execute_DoneCheck</bpmn:incoming>
+      <bpmn:outgoing>Flow_DoneNo</bpmn:outgoing>
+      <bpmn:outgoing>Flow_DoneYes</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_MarkTaskDone" name="Установить Task: done и переместить в .tasks/done/">
+      <bpmn:incoming>Flow_DoneYes</bpmn:incoming>
+      <bpmn:outgoing>Flow_TaskDone_IssueOutcome</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_IssueOutcome" name="Есть связанная Issue и выполнены её критерии?" default="Flow_IssueOpen">
+      <bpmn:incoming>Flow_TaskDone_IssueOutcome</bpmn:incoming>
+      <bpmn:outgoing>Flow_NoIssueDone</bpmn:outgoing>
+      <bpmn:outgoing>Flow_IssueOpen</bpmn:outgoing>
+      <bpmn:outgoing>Flow_IssueDone</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_Start_IssueExists" sourceRef="Start_WorkItem" targetRef="Gateway_IssueExists" />
+    <bpmn:sequenceFlow id="Flow_HasIssue" name="Да" sourceRef="Gateway_IssueExists" targetRef="Task_TriageIssue" />
+    <bpmn:sequenceFlow id="Flow_NoIssue" name="Нет; Task может быть создана напрямую" sourceRef="Gateway_IssueExists" targetRef="Task_StartTask" />
+    <bpmn:sequenceFlow id="Flow_Triage_Info" sourceRef="Task_TriageIssue" targetRef="Gateway_InfoSufficient" />
+    <bpmn:sequenceFlow id="Flow_InfoNo" name="Нет" sourceRef="Gateway_InfoSufficient" targetRef="Task_RequestInfo" />
+    <bpmn:sequenceFlow id="Flow_Request_Provide" sourceRef="Task_RequestInfo" targetRef="Task_ProvideInfo" />
+    <bpmn:sequenceFlow id="Flow_InfoProvided" sourceRef="Task_ProvideInfo" targetRef="Task_TriageIssue" />
+    <bpmn:sequenceFlow id="Flow_InfoYes" name="Да" sourceRef="Gateway_InfoSufficient" targetRef="Gateway_TriageDecision" />
+    <bpmn:sequenceFlow id="Flow_CreateTask" name="Создать Task" sourceRef="Gateway_TriageDecision" targetRef="Task_CreateTask" />
+    <bpmn:sequenceFlow id="Flow_KeepResearch" name="Исследовать или отложить" sourceRef="Gateway_TriageDecision" targetRef="End_Research" />
+    <bpmn:sequenceFlow id="Flow_CloseReason" name="Закрыть без реализации" sourceRef="Gateway_TriageDecision" targetRef="Task_CloseWithReason" />
+    <bpmn:sequenceFlow id="Flow_Close_End" sourceRef="Task_CloseWithReason" targetRef="End_IssueClosed" />
+    <bpmn:sequenceFlow id="Flow_TaskCreated" sourceRef="Task_CreateTask" targetRef="Task_StartTask" />
+    <bpmn:sequenceFlow id="Flow_TaskStart_Blocked" sourceRef="Task_StartTask" targetRef="Gateway_Blocked" />
+    <bpmn:sequenceFlow id="Flow_IsBlocked" name="Да" sourceRef="Gateway_Blocked" targetRef="Task_MarkBlocked" />
+    <bpmn:sequenceFlow id="Flow_Blocked_Resolve" sourceRef="Task_MarkBlocked" targetRef="Task_ResolveBlocker" />
+    <bpmn:sequenceFlow id="Flow_Unblocked" name="Блокер снят" sourceRef="Task_ResolveBlocker" targetRef="Task_StartTask" />
+    <bpmn:sequenceFlow id="Flow_NotBlocked" name="Нет" sourceRef="Gateway_Blocked" targetRef="Task_Execute" />
+    <bpmn:sequenceFlow id="Flow_Execute_DoneCheck" sourceRef="Task_Execute" targetRef="Gateway_DoneCriteria" />
+    <bpmn:sequenceFlow id="Flow_DoneNo" name="Нет" sourceRef="Gateway_DoneCriteria" targetRef="Task_Revise" />
+    <bpmn:sequenceFlow id="Flow_Revise" sourceRef="Task_Revise" targetRef="Task_Execute" />
+    <bpmn:sequenceFlow id="Flow_DoneYes" name="Да" sourceRef="Gateway_DoneCriteria" targetRef="Task_MarkTaskDone" />
+    <bpmn:sequenceFlow id="Flow_TaskDone_IssueOutcome" sourceRef="Task_MarkTaskDone" targetRef="Gateway_IssueOutcome" />
+    <bpmn:sequenceFlow id="Flow_NoIssueDone" name="Issue нет" sourceRef="Gateway_IssueOutcome" targetRef="End_TaskDone" />
+    <bpmn:sequenceFlow id="Flow_IssueOpen" name="Критерии Issue не закрыты" sourceRef="Gateway_IssueOutcome" targetRef="End_IssueOpen" />
+    <bpmn:sequenceFlow id="Flow_IssueDone" name="Критерии Issue закрыты" sourceRef="Gateway_IssueOutcome" targetRef="Task_MarkIssueDone" />
+    <bpmn:sequenceFlow id="Flow_IssueDone_End" sourceRef="Task_MarkIssueDone" targetRef="End_IssueDone" />
+    <bpmn:task id="Task_MarkBlocked" name="Зафиксировать блокер; установить status:blocked у заблокированной Task/Issue">
+      <bpmn:incoming>Flow_IsBlocked</bpmn:incoming>
+      <bpmn:outgoing>Flow_Blocked_Resolve</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Revise" name="Доработать результат по проверке">
+      <bpmn:incoming>Flow_DoneNo</bpmn:incoming>
+      <bpmn:outgoing>Flow_Revise</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_TaskDone" name="Task завершена; коммит и публикация — отдельные этапы">
+      <bpmn:incoming>Flow_NoIssueDone</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_IssueOpen" name="Task завершена; Issue остаётся открытой">
+      <bpmn:incoming>Flow_IssueOpen</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="Task_MarkIssueDone" name="После локальной проверки установить Issue: done и переместить в .issues/done/">
+      <bpmn:incoming>Flow_IssueDone</bpmn:incoming>
+      <bpmn:outgoing>Flow_IssueDone_End</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_IssueDone" name="Issue закрыта после локальной проверки">
+      <bpmn:incoming>Flow_IssueDone_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="Task_CloseWithReason" name="Установить Issue: done с причиной won&#39;t-fix, duplicate, cannot-reproduce или out-of-scope">
+      <bpmn:incoming>Flow_CloseReason</bpmn:incoming>
+      <bpmn:outgoing>Flow_Close_End</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_IssueClosed" name="Issue закрыта с причиной">
+      <bpmn:incoming>Flow_Close_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_Research" name="Оставить Issue на исследовании или отложить без Task">
+      <bpmn:incoming>Flow_KeepResearch</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="Task_RequestInfo" name="Установить status:needs-info и запросить данные">
+      <bpmn:incoming>Flow_InfoNo</bpmn:incoming>
+      <bpmn:outgoing>Flow_Request_Provide</bpmn:outgoing>
+    </bpmn:task>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_IssueTaskLifecycle">
+    <bpmndi:BPMNPlane id="BPMNPlane_IssueTaskLifecycle" bpmnElement="Collaboration_IssueTaskLifecycle">
+      <bpmndi:BPMNShape id="Participant_IssueTaskLifecycle_di" bpmnElement="Participant_IssueTaskLifecycle" isHorizontal="true">
+        <dc:Bounds x="30" y="30" width="3200" height="740" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Agent_di" bpmnElement="Lane_Agent" isHorizontal="true">
+        <dc:Bounds x="60" y="330" width="3170" height="440" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Creator_di" bpmnElement="Lane_Creator" isHorizontal="true">
+        <dc:Bounds x="60" y="30" width="3170" height="300" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_WorkItem_di" bpmnElement="Start_WorkItem">
+        <dc:Bounds x="100" y="145" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_IssueExists_di" bpmnElement="Gateway_IssueExists" isMarkerVisible="true">
+        <dc:Bounds x="210" y="138" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="200" y="105" width="72" height="20" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_TriageIssue_di" bpmnElement="Task_TriageIssue">
+        <dc:Bounds x="360" y="470" width="190" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_InfoSufficient_di" bpmnElement="Gateway_InfoSufficient" isMarkerVisible="true">
+        <dc:Bounds x="610" y="485" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ProvideInfo_di" bpmnElement="Task_ProvideInfo">
+        <dc:Bounds x="700" y="145" width="200" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_TriageDecision_di" bpmnElement="Gateway_TriageDecision" isMarkerVisible="true">
+        <dc:Bounds x="960" y="485" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CreateTask_di" bpmnElement="Task_CreateTask">
+        <dc:Bounds x="1110" y="145" width="230" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_StartTask_di" bpmnElement="Task_StartTask">
+        <dc:Bounds x="1450" y="470" width="250" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Blocked_di" bpmnElement="Gateway_Blocked" isMarkerVisible="true">
+        <dc:Bounds x="1780" y="485" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ResolveBlocker_di" bpmnElement="Task_ResolveBlocker">
+        <dc:Bounds x="1880" y="145" width="250" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Execute_di" bpmnElement="Task_Execute">
+        <dc:Bounds x="1990" y="470" width="230" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_DoneCriteria_di" bpmnElement="Gateway_DoneCriteria" isMarkerVisible="true">
+        <dc:Bounds x="2290" y="485" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2278" y="447.5" width="74" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_MarkTaskDone_di" bpmnElement="Task_MarkTaskDone">
+        <dc:Bounds x="2400" y="470" width="220" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_IssueOutcome_di" bpmnElement="Gateway_IssueOutcome" isMarkerVisible="true">
+        <dc:Bounds x="2690" y="485" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2680" y="422" width="80" height="53" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_MarkBlocked_di" bpmnElement="Task_MarkBlocked">
+        <dc:Bounds x="1880" y="373" width="220" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Revise_di" bpmnElement="Task_Revise">
+        <dc:Bounds x="2035" y="600" width="210" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_TaskDone_di" bpmnElement="End_TaskDone">
+        <dc:Bounds x="3140" y="372" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3114" y="422" width="89" height="53" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_IssueOpen_di" bpmnElement="End_IssueOpen">
+        <dc:Bounds x="3140" y="497" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3116" y="541" width="85" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_MarkIssueDone_di" bpmnElement="Task_MarkIssueDone">
+        <dc:Bounds x="2805" y="600" width="270" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_IssueDone_di" bpmnElement="End_IssueDone">
+        <dc:Bounds x="3140" y="622" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3106" y="675" width="88" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CloseWithReason_di" bpmnElement="Task_CloseWithReason">
+        <dc:Bounds x="1095" y="55" width="260" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_IssueClosed_di" bpmnElement="End_IssueClosed">
+        <dc:Bounds x="1462" y="72" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1441" y="116" width="79" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Research_di" bpmnElement="End_Research">
+        <dc:Bounds x="1207" y="232" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1180" y="268" width="90" height="53" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RequestInfo_di" bpmnElement="Task_RequestInfo">
+        <dc:Bounds x="700" y="425" width="210" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start_IssueExists_di" bpmnElement="Flow_Start_IssueExists">
+        <di:waypoint x="136" y="163" />
+        <di:waypoint x="210" y="163" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_HasIssue_di" bpmnElement="Flow_HasIssue">
+        <di:waypoint x="235" y="188" />
+        <di:waypoint x="235" y="510" />
+        <di:waypoint x="360" y="510" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="323" y="493" width="14" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_NoIssue_di" bpmnElement="Flow_NoIssue">
+        <di:waypoint x="260" y="163" />
+        <di:waypoint x="300" y="163" />
+        <di:waypoint x="300" y="400" />
+        <di:waypoint x="1540" y="400" />
+        <di:waypoint x="1540" y="470" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1439" y="340" width="83" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Triage_Info_di" bpmnElement="Flow_Triage_Info">
+        <di:waypoint x="550" y="510" />
+        <di:waypoint x="610" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_InfoNo_di" bpmnElement="Flow_InfoNo">
+        <di:waypoint x="635" y="485" />
+        <di:waypoint x="635" y="460" />
+        <di:waypoint x="700" y="460" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="609" y="466" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Request_Provide_di" bpmnElement="Flow_Request_Provide">
+        <di:waypoint x="805" y="425" />
+        <di:waypoint x="805" y="215" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_InfoProvided_di" bpmnElement="Flow_InfoProvided">
+        <di:waypoint x="700" y="180" />
+        <di:waypoint x="455" y="180" />
+        <di:waypoint x="455" y="470" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_InfoYes_di" bpmnElement="Flow_InfoYes">
+        <di:waypoint x="660" y="510" />
+        <di:waypoint x="960" y="510" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="913" y="523" width="14" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CreateTask_di" bpmnElement="Flow_CreateTask">
+        <di:waypoint x="989" y="489" />
+        <di:waypoint x="1040" y="180" />
+        <di:waypoint x="1110" y="180" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1006" y="163" width="68" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_KeepResearch_di" bpmnElement="Flow_KeepResearch">
+        <di:waypoint x="1010" y="510" />
+        <di:waypoint x="1150" y="510" />
+        <di:waypoint x="1160" y="250" />
+        <di:waypoint x="1207" y="250" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1075.9999999999998" y="236.00000000000082" width="88" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CloseReason_di" bpmnElement="Flow_CloseReason">
+        <di:waypoint x="985" y="485" />
+        <di:waypoint x="985" y="90" />
+        <di:waypoint x="1095" y="90" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1008" y="46" width="63" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Close_End_di" bpmnElement="Flow_Close_End">
+        <di:waypoint x="1355" y="90" />
+        <di:waypoint x="1462" y="90" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TaskCreated_di" bpmnElement="Flow_TaskCreated">
+        <di:waypoint x="1340" y="180" />
+        <di:waypoint x="1560" y="180" />
+        <di:waypoint x="1560" y="470" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TaskStart_Blocked_di" bpmnElement="Flow_TaskStart_Blocked">
+        <di:waypoint x="1700" y="510" />
+        <di:waypoint x="1780" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_IsBlocked_di" bpmnElement="Flow_IsBlocked">
+        <di:waypoint x="1805" y="485" />
+        <di:waypoint x="1805" y="408" />
+        <di:waypoint x="1880" y="408" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1783" y="442" width="14" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Blocked_Resolve_di" bpmnElement="Flow_Blocked_Resolve">
+        <di:waypoint x="1990" y="373" />
+        <di:waypoint x="1990" y="215" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Unblocked_di" bpmnElement="Flow_Unblocked">
+        <di:waypoint x="1880" y="180" />
+        <di:waypoint x="1575" y="180" />
+        <di:waypoint x="1575" y="470" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1788" y="163" width="63" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_NotBlocked_di" bpmnElement="Flow_NotBlocked">
+        <di:waypoint x="1830" y="510" />
+        <di:waypoint x="1990" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Execute_DoneCheck_di" bpmnElement="Flow_Execute_DoneCheck">
+        <di:waypoint x="2220" y="510" />
+        <di:waypoint x="2290" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_DoneNo_di" bpmnElement="Flow_DoneNo">
+        <di:waypoint x="2315" y="535" />
+        <di:waypoint x="2315" y="635" />
+        <di:waypoint x="2245" y="635" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2321" y="575" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Revise_di" bpmnElement="Flow_Revise">
+        <di:waypoint x="2105" y="600" />
+        <di:waypoint x="2105" y="550" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_DoneYes_di" bpmnElement="Flow_DoneYes">
+        <di:waypoint x="2340" y="510" />
+        <di:waypoint x="2400" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_TaskDone_IssueOutcome_di" bpmnElement="Flow_TaskDone_IssueOutcome">
+        <di:waypoint x="2620" y="510" />
+        <di:waypoint x="2690" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_NoIssueDone_di" bpmnElement="Flow_NoIssueDone">
+        <di:waypoint x="2735" y="505" />
+        <di:waypoint x="3141" y="395" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3016" y="393" width="47" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_IssueOpen_di" bpmnElement="Flow_IssueOpen">
+        <di:waypoint x="2737" y="513" />
+        <di:waypoint x="3140" y="513" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="3011" y="526" width="78" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_IssueDone_di" bpmnElement="Flow_IssueDone">
+        <di:waypoint x="2715" y="535" />
+        <di:waypoint x="2715" y="640" />
+        <di:waypoint x="2805" y="640" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2715" y="596" width="78" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_IssueDone_End_di" bpmnElement="Flow_IssueDone_End">
+        <di:waypoint x="3075" y="640" />
+        <di:waypoint x="3140" y="640" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
